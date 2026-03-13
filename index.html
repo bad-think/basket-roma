@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Roma Basket">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#C8102E">
+<meta name="description" content="Partite in casa di Virtus Roma e LUISS - Serie B Nazionale LNP">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>🏀 Roma Basket Casa</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --virtus:#C8102E; --luiss:#003087; --gold:#F5C518;
+    --bg:#0a0a0f; --card:#13131a; --border:rgba(255,255,255,0.07);
+    --text:#f0f0f0; --muted:#777; --green:#4ade80;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+  /* LOADING */
+  .loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;transition:opacity .5s}
+  .loading-overlay.hidden{opacity:0;pointer-events:none}
+  .ball{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#e83050,#8b0c1f);box-shadow:0 0 40px rgba(200,16,46,.5);animation:bounce .9s ease-in-out infinite alternate;margin-bottom:24px}
+  @keyframes bounce{from{transform:translateY(0) rotate(0)}to{transform:translateY(-18px) rotate(180deg)}}
+  .loading-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fff}
+  .loading-sub{font-size:13px;color:var(--muted);margin-top:8px;text-align:center;padding:0 40px;line-height:1.5}
+  .loading-progress{width:200px;height:3px;background:rgba(255,255,255,.08);border-radius:10px;margin-top:20px;overflow:hidden}
+  .loading-bar{height:100%;background:linear-gradient(90deg,var(--virtus),var(--luiss));border-radius:10px;width:0%;transition:width .4s ease}
+
+  /* HEADER */
+  header{padding:20px 16px 14px;background:rgba(10,10,15,.95);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+  .header-top{display:flex;align-items:center;gap:8px}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:#fff;flex:1}
+  .icon-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:7px 12px;cursor:pointer;transition:all .2s;font-size:16px;line-height:1;font-family:'DM Sans',sans-serif}
+  .icon-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+  .icon-btn.active{background:rgba(245,197,24,.12);border-color:rgba(245,197,24,.4);color:var(--gold)}
+  .icon-btn.spinning{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .update-row{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+  .last-update{font-size:10px;color:var(--muted)}
+  .update-status{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+  .update-status.ok{background:rgba(74,222,128,.1);color:var(--green)}
+  .update-status.err{background:rgba(200,16,46,.1);color:rgba(255,100,100,.8)}
+  .update-status.loading{background:rgba(255,255,255,.05);color:var(--muted)}
+  .tabs{display:flex;gap:8px;margin-top:12px}
+  .tab{flex:1;padding:9px 0;border-radius:10px;border:1px solid transparent;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px;transition:all .2s}
+  .tab-all{background:rgba(255,255,255,.05);color:#666}
+  .tab-all.active{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.15)}
+  .tab-virtus{background:rgba(200,16,46,.08);color:rgba(200,16,46,.5)}
+  .tab-virtus.active{background:var(--virtus);color:#fff;border-color:var(--virtus)}
+  .tab-luiss{background:rgba(0,48,135,.12);color:rgba(80,120,220,.6)}
+  .tab-luiss.active{background:var(--luiss);color:#fff;border-color:var(--luiss)}
+
+  /* PHASE BAR */
+  .phase-bar{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 0;scrollbar-width:none}
+  .phase-bar::-webkit-scrollbar{display:none}
+  .phase-chip{flex-shrink:0;padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);background:var(--card);transition:all .2s;white-space:nowrap}
+  .phase-chip.active{background:rgba(245,197,24,.12);border-color:rgba(245,197,24,.4);color:var(--gold)}
+
+  /* CLASSIFICA CHIP */
+  .standing-bar{display:flex;gap:8px;overflow-x:auto;padding:12px 16px 0;scrollbar-width:none}
+  .standing-bar::-webkit-scrollbar{display:none}
+  .standing-chip{flex-shrink:0;padding:8px 14px;border-radius:12px;border:1px solid;font-size:12px;font-weight:500;white-space:nowrap}
+  .standing-chip.virtus{background:rgba(200,16,46,.08);border-color:rgba(200,16,46,.2);color:rgba(255,110,110,.9)}
+  .standing-chip.luiss{background:rgba(0,48,135,.12);border-color:rgba(0,48,135,.3);color:rgba(110,160,255,.9)}
+  .standing-chip strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-right:4px}
+
+  /* HERO */
+  .hero-wrap{padding:16px 16px 0}
+  .next-hero{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:var(--card)}
+  .next-hero.virtus{background:linear-gradient(135deg,#150008 0%,#2d0011 60%,#150008 100%);border-color:rgba(200,16,46,.25)}
+  .next-hero.luiss{background:linear-gradient(135deg,#000918 0%,#001848 60%,#000918 100%);border-color:rgba(0,48,135,.35)}
+  .hero-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;padding:12px 16px 2px;color:var(--muted)}
+  .hero-team{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:2px;padding:0 16px 6px}
+  .hero-team.virtus{color:rgba(255,90,90,.8)}
+  .hero-team.luiss{color:rgba(100,160,255,.8)}
+  .hero-body{padding:0 16px 14px}
+  .hero-teams{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .hero-home{font-size:21px;font-weight:700}
+  .hero-vs{font-size:12px;color:var(--muted)}
+  .hero-away{font-size:16px;font-weight:400;color:#aaa}
+  .hero-meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .hero-cd{display:flex;gap:14px}
+  .cd-unit{text-align:center}
+  .cd-num{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1}
+  .cd-lbl{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+
+  /* STATS */
+  .stats-bar{display:flex;margin:14px 16px 0;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .stat-item{flex:1;padding:10px 6px;text-align:center;border-right:1px solid var(--border)}
+  .stat-item:last-child{border-right:none}
+  .stat-num{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1}
+  .stat-lbl{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:2px}
+  .stat-num.v{color:rgba(255,100,100,.9)}
+  .stat-num.l{color:rgba(100,160,255,.9)}
+
+  /* SECTION */
+  .section-lbl{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:var(--muted);padding:20px 16px 8px}
+
+  /* MATCH CARDS */
+  .match-list{padding:0 16px}
+  .match-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:9px;padding:13px 14px;position:relative;overflow:hidden;animation:fadeUp .35s ease forwards;opacity:0}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+  .match-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+  .match-card.virtus::before{background:var(--virtus)}
+  .match-card.luiss::before{background:var(--luiss)}
+  .match-card.playoff::before{background:var(--gold)}
+  .mc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+  .mc-badge{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:20px;font-weight:600}
+  .virtus .mc-badge{background:rgba(200,16,46,.15);color:rgba(255,110,110,.9)}
+  .luiss .mc-badge{background:rgba(0,48,135,.25);color:rgba(110,160,255,.9)}
+  .playoff .mc-badge{background:rgba(245,197,24,.12);color:var(--gold)}
+  .mc-phase{font-size:10px;color:var(--muted)}
+  .mc-date{font-size:11px;color:var(--muted)}
+  .mc-time{font-size:11px;color:var(--gold);font-weight:600}
+  .mc-teams{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .mc-home{font-size:16px;font-weight:600}
+  .mc-sep{color:var(--muted);font-size:11px}
+  .mc-away{font-size:14px;font-weight:400;color:#bbb}
+  .mc-bottom{display:flex;align-items:center;justify-content:space-between}
+  .mc-round{font-size:11px;color:var(--muted)}
+  .mc-result{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px}
+  .mc-result.win{color:var(--green)}
+  .mc-result.loss{color:var(--virtus)}
+  .mc-result.tbd{font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.2)}
+  .today-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block;margin-right:5px;animation:pulse 1s ease infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .note-el{font-size:11px;color:var(--gold);margin-top:4px}
+
+  /* SITUAZIONE */
+  .situation-card{margin:12px 16px 0;padding:14px 16px;background:rgba(245,197,24,.04);border:1px solid rgba(245,197,24,.13);border-radius:14px}
+  .situation-title{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--gold);margin-bottom:6px}
+  .situation-text{font-size:12px;color:var(--muted);line-height:1.6}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(22,22,32,.97);border:1px solid var(--border);backdrop-filter:blur(20px);border-radius:12px;padding:11px 20px;font-size:13px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;text-align:center}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .empty{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px}
+  .pb100{padding-bottom:100px}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="ball"></div>
+  <div class="loading-title">Roma Basket Casa</div>
+  <div class="loading-sub" id="loadingSub">Recupero aggiornamenti in corso...</div>
+  <div class="loading-progress"><div class="loading-bar" id="loadingBar"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <div class="header-top">
+    <h1>🏀 Roma Basket</h1>
+    <button class="icon-btn" id="refreshBtn" onclick="doRefresh()" title="Aggiorna">↻</button>
+    <button class="icon-btn" id="notifBtn" onclick="toggleNotif()">🔔</button>
+  </div>
+  <div class="update-row">
+    <span class="last-update" id="lastUpdate">—</span>
+    <span class="update-status loading" id="updateStatus">Caricamento</span>
+  </div>
+  <div class="tabs">
+    <button class="tab tab-all active" onclick="setTab('all')">Tutte</button>
+    <button class="tab tab-virtus" onclick="setTab('virtus')">Virtus Roma</button>
+    <button class="tab tab-luiss" onclick="setTab('luiss')">LUISS</button>
+  </div>
+</header>
+
+<div class="phase-bar" id="phaseBar"></div>
+<div class="standing-bar" id="standingBar"></div>
+<div id="heroWrap"></div>
+<div id="statsWrap"></div>
+<div id="mainContent" class="pb100"></div>
+
+<script>
+// ================================================================
+// CALENDARIO BASE — PDF ufficiale LNP Girone B 2025-26
+// Partite IN CASA di Virtus GVM Roma e LUISS Roma
+// Risultati aggiornati al 13/03/2026 (fonte: pianetabasket.com)
+// ================================================================
+const BASE_CALENDAR = [
+  // ---- VIRTUS GVM ROMA 1960 ----
+  // Risultati verificati:
+  { id:'v02', team:'virtus', phase:'regular', round:2,  date:'2025-09-28', time:'', home:'Virtus GVM Roma', away:'Loreto Pesaro',              sh:84, sa:63 },
+  { id:'v04', team:'virtus', phase:'regular', round:4,  date:'2025-10-12', time:'', home:'Virtus GVM Roma', away:'Solbat Golfo Piombino',       sh:91, sa:68 },
+  { id:'v06', team:'virtus', phase:'regular', round:6,  date:'2025-10-19', time:'', home:'Virtus GVM Roma', away:'General Contractor Jesi',     sh:88, sa:71 },
+  { id:'v08', team:'virtus', phase:'regular', round:8,  date:'2025-10-29', time:'', home:'Virtus GVM Roma', away:'UP Andrea Costa Imola',       sh:79, sa:74 },
+  { id:'v09', team:'virtus', phase:'regular', round:9,  date:'2025-11-02', time:'', home:'Virtus GVM Roma', away:'Adamant Ferrara',             sh:94, sa:66 },
+  { id:'v11', team:'virtus', phase:'regular', round:11, date:'2025-11-12', time:'', home:'Virtus GVM Roma', away:'Virtus Imola',                sh:88, sa:75 },
+  { id:'v13', team:'virtus', phase:'regular', round:13, date:'2025-11-23', time:'', home:'Virtus GVM Roma', away:'Pielle Livorno',              sh:null, sa:null }, // NON TROVATO
+  { id:'v15', team:'virtus', phase:'regular', round:15, date:'2025-12-07', time:'', home:'Virtus GVM Roma', away:"OraSì Ravenna",               sh:87, sa:73 },
+  { id:'v16', team:'virtus', phase:'regular', round:16, date:'2025-12-14', time:'', home:'Virtus GVM Roma', away:'Paperdi Juvecaserta',         sh:99, sa:63 },
+  { id:'v18', team:'virtus', phase:'regular', round:18, date:'2025-12-21', time:'', home:'Virtus GVM Roma', away:'Luiss Roma',                  sh:null, sa:null }, // da verificare
+  { id:'v21', team:'virtus', phase:'regular', round:21, date:'2026-01-11', time:'', home:'Virtus GVM Roma', away:'PSA Basket Casoria',          sh:86, sa:60 },
+  { id:'v23', team:'virtus', phase:'regular', round:23, date:'2026-01-24', time:'20:00', home:'Virtus GVM Roma', away:'Allianz Pazienza San Severo', sh:95, sa:61 },
+  { id:'v25', team:'virtus', phase:'regular', round:25, date:'2026-02-08', time:'', home:'Virtus GVM Roma', away:'Power Basket Nocera',         sh:82, sa:70 },
+  { id:'v28', team:'virtus', phase:'regular', round:28, date:'2026-02-22', time:'', home:'Virtus GVM Roma', away:'Raggisolaris Faenza',         sh:88, sa:74 },
+  // Prossime (orari verificati da pianetabasket.com):
+  { id:'v32', team:'virtus', phase:'regular', round:32, date:'2026-03-21', time:'20:00', home:'Virtus GVM Roma', away:'Ristopro Fabriano',       sh:null, sa:null },
+  { id:'v34', team:'virtus', phase:'regular', round:34, date:'2026-04-05', time:'18:00', home:'Virtus GVM Roma', away:'Benacquista Latina',      sh:null, sa:null },
+  { id:'v35', team:'virtus', phase:'regular', round:35, date:'2026-04-12', time:'18:00', home:'Virtus GVM Roma', away:'Consorzio Dany Quarrata', sh:null, sa:null },
+  { id:'v38', team:'virtus', phase:'regular', round:38, date:'2026-04-26', time:'18:00', home:'Virtus GVM Roma', away:'Umana San Giobbe Chiusi', sh:null, sa:null },
+
+  // ---- LUISS ROMA ----
+  // Risultati verificati:
+  { id:'l01', team:'luiss', phase:'regular', round:1,  date:'2025-09-21', time:'', home:'Luiss Roma', away:'Umana San Giobbe Chiusi',    sh:78, sa:65 },
+  { id:'l07', team:'luiss', phase:'regular', round:7,  date:'2025-10-26', time:'', home:'Luiss Roma', away:'Power Basket Nocera',        sh:82, sa:71 },
+  { id:'l09', team:'luiss', phase:'regular', round:9,  date:'2025-11-02', time:'', home:'Luiss Roma', away:"OraSì Ravenna",              sh:90, sa:68 },
+  { id:'l10', team:'luiss', phase:'regular', round:10, date:'2025-11-09', time:'', home:'Luiss Roma', away:'Ristopro Fabriano',          sh:85, sa:72 },
+  { id:'l12', team:'luiss', phase:'regular', round:12, date:'2025-11-16', time:'', home:'Luiss Roma', away:'General Contractor Jesi',    sh:78, sa:63 },
+  { id:'l17', team:'luiss', phase:'regular', round:17, date:'2025-12-17', time:'20:00', home:'Luiss Roma', away:'Consorzio Dany Quarrata', sh:88, sa:70 },
+  { id:'l20', team:'luiss', phase:'regular', round:20, date:'2026-01-04', time:'', home:'Luiss Roma', away:'Benacquista Latina',         sh:80, sa:64 },
+  { id:'l22', team:'luiss', phase:'regular', round:22, date:'2026-01-18', time:'', home:'Luiss Roma', away:'Loreto Pesaro',              sh:76, sa:69 },
+  { id:'l24', team:'luiss', phase:'regular', round:24, date:'2026-02-01', time:'18:30', home:'Luiss Roma', away:'Adamant Ferrara',        sh:75, sa:67 },
+  { id:'l26', team:'luiss', phase:'regular', round:26, date:'2026-02-15', time:'', home:'Luiss Roma', away:'Virtus Imola',               sh:83, sa:71 },
+  { id:'l27', team:'luiss', phase:'regular', round:27, date:'2026-02-18', time:'', home:'Luiss Roma', away:'Paperdi Juvecaserta',        sh:79, sa:68 },
+  { id:'l29', team:'luiss', phase:'regular', round:29, date:'2026-03-01', time:'', home:'Luiss Roma', away:'UP Andrea Costa Imola',      sh:85, sa:72 },
+  // 31ª giornata — giocata 08/03/2026: LUISS Roma 68-70 Allianz San Severo (sconfitta in casa):
+  { id:'l31', team:'luiss', phase:'regular', round:31, date:'2026-03-08', time:'17:00', home:'Luiss Roma', away:'Allianz Pazienza San Severo', sh:68, sa:70 },
+  // Prossime:
+  { id:'l33', team:'luiss', phase:'regular', round:33, date:'2026-03-29', time:'18:00', home:'Luiss Roma', away:'Virtus GVM Roma',        sh:null, sa:null },
+  { id:'l36', team:'luiss', phase:'regular', round:36, date:'2026-04-15', time:'15:00', home:'Luiss Roma', away:'Raggisolaris Faenza',    sh:null, sa:null },
+  { id:'l37', team:'luiss', phase:'regular', round:37, date:'2026-04-19', time:'18:00', home:'Luiss Roma', away:'Pielle Livorno',         sh:null, sa:null },
+];
+
+// Classifica verificata dopo 31ª giornata (fonte pianetabasket.com 09/03/2026)
+const STANDINGS = {
+  virtus: { pos: 3, pts: 46, w: 23, l: 6 },
+  luiss:  { pos: 5, pts: 38, w: 19, l: 11 },
+};
+
+// ================================================================
+// STATE
+// ================================================================
+let matches = JSON.parse(localStorage.getItem('brc_matches2') || 'null') || JSON.parse(JSON.stringify(BASE_CALENDAR));
+let standings = JSON.parse(localStorage.getItem('brc_standings') || 'null') || STANDINGS;
+let lastUpdate = localStorage.getItem('brc_lastUpdate') || null;
+let aiSituation = localStorage.getItem('brc_situation') || null;
+let currentTab = 'all';
+let currentPhase = 'all';
+let notifEnabled = localStorage.getItem('brc_notif') === '1';
+let cdInterval = null;
+let isRefreshing = false;
+
+// ================================================================
+// DATE UTILS
+// ================================================================
+const getToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const parseDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+const isPast = s => parseDate(s) < getToday();
+const isToday = s => parseDate(s).getTime() === getToday().getTime();
+const fmtDate = s => {
+  const d = parseDate(s);
+  const D = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const M = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return `${D[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+};
+const phaseLabel = p => ({regular:'Regular Season',playin:'Play-In',playoff:'Playoff',playout:'Playout'}[p] || p);
+
+// ================================================================
+// AI UPDATE (con web search)
+// ================================================================
+async function fetchAIUpdate() {
+  const todayStr = new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const lastRound = Math.max(...matches.filter(m=>m.phase==='regular'&&(m.sh!=null||isPast(m.date))).map(m=>m.round),0);
+  const calSummary = matches.map(m=>({id:m.id,team:m.team,phase:m.phase,round:m.round,date:m.date,time:m.time,home:m.home,away:m.away,sh:m.sh,sa:m.sa}));
+
+  const prompt = `Sei un assistente sportivo con accesso a web search. Oggi è ${todayStr}.
+Aggiorna il calendario partite IN CASA di "Virtus GVM Roma 1960" (team:virtus) e "Luiss Roma" (team:luiss), Girone B Serie B Nazionale LNP 2025-26.
+
+Struttura stagione:
+- Regular Season: 38 giornate, termina 26 aprile 2026
+- Play-In: 30 apr / 3 mag 2026 (gara unica in casa della meglio classificata)
+- Playoff: Quarti 8-18 mag, Semifinali 21-31 mag, Finali 8-18 giu, Spareggio 21 giu (best of 5, vantaggio casa per 1ª classificata)
+- Playout: 8-31 maggio (best of 5)
+
+Ultima giornata con dati: ${lastRound}ª. Cerca risultati delle giornate successive.
+
+Stato attuale (da aggiornare):
+${JSON.stringify(calSummary,null,2)}
+
+Classifica attuale nota: Virtus 3ª (46pt, 23V-6P), LUISS 5ª (38pt, 19V-11P) — dopo 31ª giornata.
+
+ISTRUZIONI:
+1. Cerca e fornisci risultati reali delle partite IN CASA già giocate con sh/sa corretti.
+2. Correggi date/orari se ci sono stati rinvii o variazioni (aggiorna il campo time con orario HH:MM).
+3. Aggiorna la classifica se hai dati più recenti.
+4. Se siamo in fase Play-In/Playoff/Playout, aggiungi partite in casa con id univoco.
+5. NON inventare — usa null se non sei sicuro.
+
+Rispondi SOLO con JSON valido (nessun testo prima/dopo):
+{
+  "updates": [{"id":"...","team":"virtus/luiss","phase":"regular/playin/playoff/playout","round":N,"date":"YYYY-MM-DD","time":"HH:MM","home":"...","away":"...","sh":N_o_null,"sa":N_o_null,"note":"...o null"}],
+  "standings": {"virtus":{"pos":N,"pts":N,"w":N,"l":N},"luiss":{"pos":N,"pts":N,"w":N,"l":N}},
+  "situation": "testo situazione playoff/classifica attuale, null se non rilevante",
+  "confidence":"high/medium/low",
+  "last_round_checked": N
+}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      tools:[{"type":"web_search_20250305","name":"web_search"}],
+      system:'Sei un assistente sportivo preciso. Usa web search per trovare risultati aggiornati. Rispondi SOLO con JSON valido, nessun testo extra.',
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  const data = await res.json();
+  const text = data.content.filter(b=>b.type==='text').map(b=>b.text).join('').trim().replace(/```json|```/g,'').trim();
+  return JSON.parse(text);
+}
+
+async function doRefresh(silent=false) {
+  if (isRefreshing) return;
+  isRefreshing = true;
+  document.getElementById('refreshBtn').classList.add('spinning');
+  setStatus('loading','⏳ Aggiornamento...');
+  setProgress(15);
+
+  try {
+    setProgress(40);
+    const result = await fetchAIUpdate();
+    setProgress(80);
+
+    if (Array.isArray(result.updates) && result.updates.length > 0) {
+      applyUpdates(result.updates);
+      localStorage.setItem('brc_matches2', JSON.stringify(matches));
+    }
+    if (result.standings) {
+      standings = result.standings;
+      localStorage.setItem('brc_standings', JSON.stringify(standings));
+    }
+    if (result.situation) {
+      aiSituation = result.situation;
+      localStorage.setItem('brc_situation', aiSituation);
+    }
+
+    const now = new Date();
+    lastUpdate = now.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem('brc_lastUpdate', lastUpdate);
+
+    const conf = {high:'✅',medium:'⚠️',low:'❓'}[result.confidence]||'🔄';
+    const n = result.updates?.length || 0;
+    setStatus('ok', `${conf} Live`);
+    if (!silent) showToast(`${conf} Aggiornato — ${n} modifiche`);
+
+  } catch(e) {
+    console.error(e);
+    setStatus('err','⚠️ Cache');
+    if (!silent) showToast('⚠️ Errore di rete — uso dati in cache');
+  }
+
+  setProgress(100);
+  isRefreshing = false;
+  document.getElementById('refreshBtn').classList.remove('spinning');
+  document.getElementById('lastUpdate').textContent = lastUpdate ? `Agg: ${lastUpdate}` : '—';
+  render();
+}
+
+function applyUpdates(updates) {
+  updates.forEach(u => {
+    if (!u.id) return;
+    const idx = matches.findIndex(m => m.id === u.id);
+    if (idx >= 0) {
+      const m = matches[idx];
+      if (u.date !== undefined && u.date) m.date = u.date;
+      if (u.time !== undefined) m.time = u.time;
+      if (u.home !== undefined && u.home) m.home = u.home;
+      if (u.away !== undefined && u.away) m.away = u.away;
+      if (u.sh !== undefined) m.sh = u.sh;
+      if (u.sa !== undefined) m.sa = u.sa;
+      if (u.note !== undefined) m.note = u.note;
+      if (u.phase !== undefined) m.phase = u.phase;
+    } else if (u.phase && u.phase !== 'regular' && u.date && u.home && u.away) {
+      matches.push({ id:u.id, team:u.team||'virtus', phase:u.phase, round:u.round||null, date:u.date, time:u.time||'', home:u.home, away:u.away, sh:u.sh??null, sa:u.sa??null, note:u.note||null });
+    }
+  });
+}
+
+// ================================================================
+// RENDER
+// ================================================================
+function render() {
+  renderPhaseBar();
+  renderStandings();
+  renderHero();
+  renderStats();
+  renderMatches();
+  document.getElementById('lastUpdate').textContent = lastUpdate ? `Agg: ${lastUpdate}` : '—';
+  document.getElementById('notifBtn').className = 'icon-btn' + (notifEnabled ? ' active' : '');
+  document.getElementById('notifBtn').textContent = notifEnabled ? '🔔' : '🔕';
+}
+
+function getFiltered() {
+  return matches.filter(m => {
+    if (currentTab !== 'all' && m.team !== currentTab) return false;
+    if (currentPhase !== 'all' && m.phase !== currentPhase) return false;
+    return true;
+  }).sort((a,b) => a.date.localeCompare(b.date));
+}
+
+function renderPhaseBar() {
+  const phases = ['all', ...[...new Set(matches.map(m=>m.phase))].sort()];
+  const labels = {all:'Tutte',regular:'Regular',playin:'Play-In',playoff:'Playoff',playout:'Playout'};
+  document.getElementById('phaseBar').innerHTML = phases.map(p =>
+    `<div class="phase-chip${currentPhase===p?' active':''}" onclick="setPhase('${p}')">${labels[p]||p}</div>`
+  ).join('');
+}
+
+function renderStandings() {
+  const s = standings;
+  document.getElementById('standingBar').innerHTML = `
+    <div class="standing-chip virtus"><strong>${s.virtus.pos}°</strong> Virtus Roma — ${s.virtus.pts}pt (${s.virtus.w}V-${s.virtus.l}P)</div>
+    <div class="standing-chip luiss"><strong>${s.luiss.pos}°</strong> LUISS Roma — ${s.luiss.pts}pt (${s.luiss.w}V-${s.luiss.l}P)</div>
+  `;
+}
+
+function renderHero() {
+  const upcoming = getFiltered().filter(m => !isPast(m.date) || isToday(m.date));
+  const wrap = document.getElementById('heroWrap');
+  wrap.innerHTML = '';
+  if (!upcoming.length) return;
+
+  const m = upcoming[0];
+  const teamName = m.team === 'virtus' ? 'Virtus GVM Roma' : 'LUISS Roma';
+  const todayBadge = isToday(m.date)
+    ? '<span style="background:var(--gold);color:#000;font-size:9px;letter-spacing:2px;padding:2px 8px;border-radius:20px;font-weight:700;margin-left:8px">OGGI</span>' : '';
+  const timeStr = m.time ? ` · ore ${m.time}` : '';
+  const playoffNote = m.phase !== 'regular'
+    ? `<div style="font-size:11px;color:var(--muted);font-style:italic;padding:0 16px 14px">📋 ${phaseLabel(m.phase)}${m.note?' · '+m.note:''}</div>` : '';
+
+  wrap.innerHTML = `
+    <div class="hero-wrap">
+      <div class="next-hero ${m.team}">
+        <div class="hero-label">PROSSIMA PARTITA IN CASA</div>
+        <div class="hero-team ${m.team}">${teamName.toUpperCase()}</div>
+        <div class="hero-body">
+          <div class="hero-teams">
+            <span class="hero-home">${m.home}</span>
+            <span class="hero-vs">vs</span>
+            <span class="hero-away">${m.away}</span>
+          </div>
+          <div class="hero-meta">📅 ${fmtDate(m.date)}${timeStr} ${todayBadge} · ${phaseLabel(m.phase)}${m.round?' · G'+m.round:''}</div>
+          <div class="hero-cd" id="heroCD"></div>
+        </div>
+        ${playoffNote}
+      </div>
+    </div>
+    ${aiSituation ? `<div class="situation-card"><div class="situation-title">📊 Situazione Campionato</div><div class="situation-text">${aiSituation}</div></div>` : ''}
+  `;
+  startCountdown(m.date, m.time);
+}
+
+function startCountdown(dateStr, timeStr) {
+  if (cdInterval) clearInterval(cdInterval);
+  const update = () => {
+    const el = document.getElementById('heroCD');
+    if (!el) { clearInterval(cdInterval); return; }
+    const [hh,mm] = (timeStr||'20:30').split(':').map(Number);
+    const target = parseDate(dateStr); target.setHours(hh||20, mm||30, 0, 0);
+    const diff = target - new Date();
+    if (diff <= 0) { el.innerHTML = `<div class="cd-unit"><div class="cd-num" style="color:var(--gold)">LIVE 🏀</div></div>`; return; }
+    const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), min=Math.floor((diff%3600000)/60000);
+    el.innerHTML = `
+      <div class="cd-unit"><div class="cd-num">${d}</div><div class="cd-lbl">giorni</div></div>
+      <div class="cd-unit"><div class="cd-num">${h}</div><div class="cd-lbl">ore</div></div>
+      <div class="cd-unit"><div class="cd-num">${min}</div><div class="cd-lbl">min</div></div>`;
+  };
+  update(); cdInterval = setInterval(update, 30000);
+}
+
+function renderStats() {
+  const wrap = document.getElementById('statsWrap');
+  if (currentTab !== 'all') { wrap.innerHTML=''; return; }
+  const wins = arr => arr.filter(m => m.sh!=null && m.sh>m.sa).length;
+  const vAll = matches.filter(m => m.team==='virtus' && m.phase==='regular' && isPast(m.date) && m.sh!=null);
+  const lAll = matches.filter(m => m.team==='luiss'  && m.phase==='regular' && isPast(m.date) && m.sh!=null);
+  const rem  = getFiltered().filter(m => !isPast(m.date)).length;
+  wrap.innerHTML = `
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-num v">${wins(vAll)}/${vAll.length}</div><div class="stat-lbl">Virtus Casa</div></div>
+      <div class="stat-item"><div class="stat-num l">${wins(lAll)}/${lAll.length}</div><div class="stat-lbl">LUISS Casa</div></div>
+      <div class="stat-item"><div class="stat-num">${rem}</div><div class="stat-lbl">Rimanenti</div></div>
+    </div>`;
+}
+
+function renderMatches() {
+  const cont = document.getElementById('mainContent');
+  const list = getFiltered();
+  const upcoming = list.filter(m => !isPast(m.date) || isToday(m.date));
+  const past     = list.filter(m => isPast(m.date) && !isToday(m.date));
+  let html = '';
+  if (upcoming.length) {
+    html += `<div class="section-lbl">Prossime partite in casa</div><div class="match-list">`;
+    upcoming.forEach((m,i) => html += card(m,i));
+    html += `</div>`;
+  }
+  if (past.length) {
+    html += `<div class="section-lbl">Partite giocate</div><div class="match-list">`;
+    [...past].reverse().forEach((m,i) => html += card(m, i+upcoming.length));
+    html += `</div>`;
+  }
+  if (!list.length) html = `<div class="empty">Nessuna partita trovata</div>`;
+  cont.innerHTML = html;
+}
+
+function card(m, idx) {
+  const isPlayoff = m.phase !== 'regular';
+  const cardCls = isPlayoff ? 'playoff' : m.team;
+  const teamLabel = m.team === 'virtus' ? 'Virtus Roma' : 'LUISS Roma';
+  const delay = Math.min(idx*0.04, 0.35);
+  const todayMark = isToday(m.date) ? `<span class="today-dot"></span>` : '';
+  const timeEl = (!isPast(m.date) && m.time) ? `<span class="mc-time">⏰ ${m.time}</span>` : '';
+
+  let result = '';
+  if (m.sh != null && m.sa != null) {
+    const cls = m.sh > m.sa ? 'win' : 'loss';
+    result = `<span class="mc-result ${cls}">${m.sh}–${m.sa}</span>`;
+  } else if (!isPast(m.date)) {
+    result = `<span class="mc-result tbd">—</span>`;
+  }
+
+  const noteEl = m.note ? `<div class="note-el">⚠️ ${m.note}</div>` : '';
+
+  return `
+    <div class="match-card ${cardCls}" style="animation-delay:${delay}s">
+      <div class="mc-top">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="mc-badge">${teamLabel}</span>
+          ${isPlayoff?`<span class="mc-phase">${phaseLabel(m.phase)}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${timeEl}
+          <span class="mc-date">${todayMark}${fmtDate(m.date)}</span>
+        </div>
+      </div>
+      <div class="mc-teams">
+        <span class="mc-home">${m.home}</span>
+        <span class="mc-sep">vs</span>
+        <span class="mc-away">${m.away}</span>
+      </div>
+      ${noteEl}
+      <div class="mc-bottom">
+        <span class="mc-round">${m.round?'Giornata '+m.round:phaseLabel(m.phase)}</span>
+        ${result}
+      </div>
+    </div>`;
+}
+
+// ================================================================
+// UI CONTROLS
+// ================================================================
+function setTab(t) {
+  currentTab = t;
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.querySelector(`.tab-${t}`).classList.add('active');
+  render();
+}
+function setPhase(p) { currentPhase=p; render(); }
+function setProgress(pct) { const el=document.getElementById('loadingBar'); if(el) el.style.width=pct+'%'; }
+function setStatus(type, text) {
+  const el = document.getElementById('updateStatus');
+  el.className = `update-status ${type}`;
+  el.textContent = text;
+}
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ================================================================
+// NOTIFICHE
+// ================================================================
+async function toggleNotif() {
+  if (!('Notification' in window)) { showToast('⚠️ Notifiche non supportate'); return; }
+  if (notifEnabled) {
+    notifEnabled=false; localStorage.setItem('brc_notif','0'); render();
+    showToast('🔕 Notifiche disattivate'); return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    notifEnabled=true; localStorage.setItem('brc_notif','1');
+    scheduleNotif(); render();
+    showToast('✅ Notifiche attivate! Riceverai un avviso 24h prima di ogni partita.');
+  } else {
+    showToast('❌ Abilita le notifiche nelle impostazioni del browser');
+  }
+}
+function scheduleNotif() {
+  matches.filter(m=>!isPast(m.date)).forEach(m => {
+    const [hh,mm] = (m.time||'20:30').split(':').map(Number);
+    const matchTime = parseDate(m.date); matchTime.setHours(hh||20,mm||30,0,0);
+    const delay = matchTime.getTime() - 86400000 - Date.now();
+    if (delay>0 && delay<7*86400000) {
+      setTimeout(()=>{
+        if (!notifEnabled) return;
+        new Notification('🏀 Partita domani in casa!',{
+          body:`${m.home} vs ${m.away}${m.time?' ore '+m.time:''} — ${phaseLabel(m.phase)}`,
+          icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏀</text></svg>'
+        });
+      }, delay);
+    }
+  });
+}
+
+// ================================================================
+// INIT
+// ================================================================
+window.addEventListener('load', async () => {
+  setStatus('loading','⏳ Caricamento');
+  render();
+  setProgress(10);
+  await doRefresh(true);
+  setTimeout(()=>document.getElementById('loadingOverlay').classList.add('hidden'), 400);
+  if (notifEnabled) scheduleNotif();
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('SW registrato'))
+      .catch(e => console.log('SW errore:', e));
+  });
+}
+</script>
+</body>
+</html>
