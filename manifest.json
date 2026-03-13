@@ -2,7 +2,7 @@
   "name": "Roma Basket Casa",
   "short_name": "Roma Basket",
   "description": "Partite in casa di Virtus Roma e LUISS — Serie B Nazionale LNP",
-  "start_url": "/",
+  "start_url": "/basket-roma/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#C8102E",
