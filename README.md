@@ -5,7 +5,7 @@ Web app PWA per seguire le partite **in casa** di Virtus GVM Roma e LUISS Roma �
 ## Come installare su Android
 
 1. Apri Chrome sul telefono
-2. Vai su **https://[TUO-USERNAME].github.io/basket-roma**
+2. Vai su **https://bad-think.github.io/basket-roma**
 3. Tocca i tre puntini (⋮) in alto a destra
 4. Seleziona **"Aggiungi a schermata Home"**
 5. Conferma → appare l'icona come un'app!
