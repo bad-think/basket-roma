@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Roma Basket">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#C8102E">
+<meta name="description" content="Partite in casa delle tue squadre di basket preferite">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>🏀 Roma Basket Casa</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--virtus:#C8102E;--luiss:#003087;--gold:#F5C518;--bg:#0a0a0f;--card:#13131a;--card2:#1a1a24;--border:rgba(255,255,255,0.07);--text:#f0f0f0;--muted:#777;--green:#4ade80;--purple:#a855f7}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;transition:opacity .5s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.ball{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#e83050,#8b0c1f);box-shadow:0 0 40px rgba(200,16,46,.5);animation:bounce .9s ease-in-out infinite alternate;margin-bottom:24px}
+@keyframes bounce{from{transform:translateY(0) rotate(0)}to{transform:translateY(-18px) rotate(180deg)}}
+.loading-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fff}
+.loading-sub{font-size:13px;color:var(--muted);margin-top:8px;text-align:center;padding:0 40px;line-height:1.5}
+.loading-progress{width:200px;height:3px;background:rgba(255,255,255,.08);border-radius:10px;margin-top:20px;overflow:hidden}
+.loading-bar{height:100%;background:linear-gradient(90deg,var(--virtus),var(--luiss));border-radius:10px;width:0%;transition:width .4s ease}
+
+/* HEADER */
+header{padding:16px 16px 12px;background:rgba(10,10,15,.95);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.header-top{display:flex;align-items:center;gap:8px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:#fff;flex:1}
+.icon-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:7px 11px;cursor:pointer;transition:all .2s;font-size:15px;line-height:1;font-family:'DM Sans',sans-serif}
+.icon-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.icon-btn.active{background:rgba(245,197,24,.12);border-color:rgba(245,197,24,.4);color:var(--gold)}
+.icon-btn.spinning{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.update-row{display:flex;align-items:center;justify-content:space-between;margin-top:5px}
+.last-update{font-size:10px;color:var(--muted)}
+.update-status{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.update-status.ok{background:rgba(74,222,128,.1);color:var(--green)}
+.update-status.err{background:rgba(200,16,46,.1);color:rgba(255,100,100,.8)}
+.update-status.loading{background:rgba(255,255,255,.05);color:var(--muted)}
+
+/* NAV TABS */
+.nav-tabs{display:flex;gap:5px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{flex-shrink:0;padding:7px 13px;border-radius:10px;border:1px solid transparent;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;transition:all .2s;white-space:nowrap;background:rgba(255,255,255,.04);color:#555}
+.nav-tab.active{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.15)}
+.nav-tab.team-tab{border-left:3px solid transparent}
+
+/* SCREENS */
+.screen{display:none;padding-bottom:100px}
+.screen.active{display:block}
+
+/* STANDING BAR */
+.standing-bar{display:flex;gap:8px;overflow-x:auto;padding:12px 16px 0;scrollbar-width:none}
+.standing-bar::-webkit-scrollbar{display:none}
+.standing-chip{flex-shrink:0;padding:7px 12px;border-radius:12px;border:1px solid;font-size:11px;font-weight:500;white-space:nowrap}
+.standing-chip strong{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;margin-right:3px}
+.serie-badge{font-size:9px;letter-spacing:1px;text-transform:uppercase;opacity:.7;margin-left:4px}
+
+/* HERO */
+.hero-wrap{padding:14px 16px 0}
+.next-hero{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:var(--card)}
+.hero-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;padding:12px 16px 2px;color:var(--muted)}
+.hero-team-tag{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:2px;padding:0 16px 6px}
+.hero-body{padding:0 16px 14px}
+.hero-teams{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.hero-home{font-size:20px;font-weight:700}
+.hero-vs{font-size:12px;color:var(--muted)}
+.hero-away{font-size:15px;font-weight:400;color:#aaa}
+.hero-meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+.hero-venue{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:10px;padding:9px 12px;margin-bottom:12px}
+.hero-venue-icon{font-size:15px}
+.hero-venue-info{flex:1}
+.hero-venue-name{font-size:12px;font-weight:600;color:rgba(255,255,255,.8)}
+.hero-venue-addr{font-size:11px;color:var(--muted);margin-top:1px}
+.hero-venue-map{background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.3);color:var(--gold);border-radius:8px;padding:5px 11px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap}
+.hero-cd{display:flex;gap:14px}
+.cd-unit{text-align:center}
+.cd-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1}
+.cd-lbl{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+
+/* STATS */
+.stats-bar{display:flex;margin:12px 16px 0;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.stat-item{flex:1;padding:9px 4px;text-align:center;border-right:1px solid var(--border)}
+.stat-item:last-child{border-right:none}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1}
+.stat-lbl{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:2px}
+
+/* SECTION */
+.section-lbl{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:var(--muted);padding:18px 16px 8px}
+
+/* MATCH CARDS */
+.match-list{padding:0 16px}
+.match-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;padding:12px 13px;position:relative;overflow:hidden;animation:fadeUp .3s ease forwards;opacity:0}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.match-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.mc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.mc-badge{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:20px;font-weight:600}
+.mc-date{font-size:11px;color:var(--muted)}
+.mc-time{font-size:11px;font-weight:600}
+.mc-teams{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.mc-home{font-size:15px;font-weight:600}
+.mc-sep{color:var(--muted);font-size:11px}
+.mc-away{font-size:13px;font-weight:400;color:#bbb}
+.mc-bottom{display:flex;align-items:center;justify-content:space-between}
+.mc-round{font-size:11px;color:var(--muted)}
+.mc-result{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px}
+.mc-result.win{color:var(--green)}
+.mc-result.loss{color:var(--virtus)}
+.mc-result.tbd{font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.2)}
+.mc-venue{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+.mc-venue-text{font-size:10px;color:var(--muted);flex:1}
+.mc-venue-name{font-weight:600;color:rgba(255,255,255,.5)}
+.mc-venue-map{flex-shrink:0;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.15);color:var(--gold);border-radius:7px;padding:3px 9px;font-size:10px;font-weight:600;text-decoration:none}
+.today-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);display:inline-block;margin-right:4px;animation:pulse 1s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.note-el{font-size:11px;color:var(--gold);margin-top:3px}
+
+/* FORMULA SCREEN */
+.formula-screen{}
+.formula-hero{margin:16px;padding:16px;border-radius:14px;border:1px solid var(--border);background:var(--card)}
+.formula-serie-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px}
+.formula-season{font-size:12px;color:var(--muted);margin-top:2px}
+.formula-block{margin:0 16px 12px;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.formula-block-header{padding:11px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:rgba(255,255,255,.02)}
+.formula-block-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1.5px;color:#ddd}
+.formula-block-chevron{color:var(--muted);transition:transform .2s;font-size:13px}
+.formula-block.open .formula-block-chevron{transform:rotate(180deg)}
+.formula-block-body{display:none;padding:12px 14px;border-top:1px solid var(--border)}
+.formula-block.open .formula-block-body{display:block}
+.formula-row{display:flex;gap:8px;font-size:12px;color:var(--muted);margin-bottom:5px;line-height:1.5}
+.formula-key{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--gold);flex-shrink:0;min-width:28px}
+.formula-row em{color:rgba(255,255,255,.65);font-style:normal}
+.formula-dates-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.formula-date-cell{background:rgba(255,255,255,.03);border-radius:8px;padding:7px 9px}
+.formula-date-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.formula-date-val{font-size:12px;font-weight:600;color:rgba(255,255,255,.8)}
+
+/* POST SEASON */
+.ps-phase-block{margin:0 16px 10px;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+.ps-phase-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.ps-phase-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px}
+.ps-phase-dates{font-size:11px;color:var(--muted);margin-top:2px}
+.ps-phase-chevron{font-size:13px;color:var(--muted);transition:transform .2s}
+.ps-phase-block.open .ps-phase-chevron{transform:rotate(180deg)}
+.ps-phase-body{display:none;padding:12px 16px 14px;border-top:1px solid var(--border)}
+.ps-phase-block.open .ps-phase-body{display:block}
+.ps-phase-block.playoff .ps-phase-header{background:rgba(255,80,80,.05)}
+.ps-phase-block.playoff .ps-phase-title{color:rgba(255,130,130,.9)}
+.ps-phase-block.playin .ps-phase-header{background:rgba(245,197,24,.05)}
+.ps-phase-block.playin .ps-phase-title{color:var(--gold)}
+.ps-phase-block.playout .ps-phase-header{background:rgba(120,120,120,.05)}
+.ps-phase-block.playout .ps-phase-title{color:rgba(180,180,180,.8)}
+.ps-team-section{margin-top:10px}
+.ps-team-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
+.ps-status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-top:6px}
+.ps-status-badge.qualified{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.ps-status-badge.at-risk{background:rgba(245,197,24,.12);color:var(--gold);border:1px solid rgba(245,197,24,.2)}
+.ps-status-badge.eliminated{background:rgba(200,16,46,.1);color:rgba(255,100,100,.8);border:1px solid rgba(200,16,46,.2)}
+.ps-info-row{display:flex;gap:7px;font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
+.ps-info-row em{color:rgba(255,255,255,.6);font-style:normal}
+.ps-formula-box{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px}
+.ps-formula-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.ps-separator{height:1px;background:var(--border);margin:10px 0}
+.ps-game-row{background:rgba(255,255,255,.03);border-radius:10px;padding:9px 11px;margin-top:6px}
+.ps-game-top{display:flex;justify-content:space-between;margin-bottom:3px}
+.ps-game-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.ps-game-date{font-size:11px;color:var(--gold)}
+.ps-game-result{font-family:'Bebas Neue',sans-serif;font-size:15px;margin-top:3px}
+.ps-game-result.win{color:var(--green)}
+.ps-game-result.loss{color:var(--virtus)}
+.ps-game-result.tbd{font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.2)}
+
+/* SETTINGS SCREEN */
+.settings-screen{padding:16px 16px 100px}
+.settings-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fff;margin-bottom:4px}
+.settings-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.settings-section{margin-bottom:24px}
+.settings-section-title{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:var(--muted);margin-bottom:10px}
+.team-config-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;position:relative}
+.team-config-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.team-config-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.team-config-name{font-size:15px;font-weight:700}
+.team-config-serie{font-size:11px;color:var(--muted);margin-top:2px}
+.team-config-actions{display:flex;gap:6px}
+.btn-small{padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-small:hover{background:rgba(255,255,255,.1);color:#fff}
+.btn-small.danger{border-color:rgba(200,16,46,.3);color:rgba(255,100,100,.7)}
+.btn-small.danger:hover{background:rgba(200,16,46,.15)}
+.btn-small.primary{background:rgba(245,197,24,.1);border-color:rgba(245,197,24,.3);color:var(--gold)}
+.btn-small.primary:hover{background:rgba(245,197,24,.2)}
+.config-field{margin-bottom:8px}
+.config-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.config-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s}
+.config-input:focus{border-color:rgba(245,197,24,.4)}
+.config-select{width:100%;background:#1a1a24;border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.config-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn-add-team{width:100%;padding:12px;border-radius:12px;border:1px dashed rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-add-team:hover{border-color:var(--gold);color:var(--gold)}
+.btn-save{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--virtus),#8b0020);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-save:hover{opacity:.85}
+.season-info{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+.season-info-label{font-size:11px;color:var(--muted)}
+.season-info-val{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px}
+.promote-banner{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:rgba(120,255,160,.8);line-height:1.5}
+.promote-banner strong{color:var(--green)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(22,22,32,.97);border:1px solid var(--border);backdrop-filter:blur(20px);border-radius:12px;padding:11px 20px;font-size:13px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:#1a1a24;border-radius:20px 20px 0 0;padding:20px 20px 40px;width:100%;max-width:500px;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.1,.64,1)}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{font-size:18px;cursor:pointer;color:var(--muted)}
+
+.empty{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px}
+.phase-bar{display:flex;gap:6px;overflow-x:auto;padding:10px 16px 0;scrollbar-width:none}
+.phase-bar::-webkit-scrollbar{display:none}
+.phase-chip{flex-shrink:0;padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);background:var(--card);transition:all .2s;white-space:nowrap}
+.phase-chip.active{background:rgba(245,197,24,.12);border-color:rgba(245,197,24,.4);color:var(--gold)}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="ball"></div>
+  <div class="loading-title">Roma Basket Casa</div>
+  <div class="loading-sub" id="loadingSub">Recupero risultati aggiornati...</div>
+  <div class="loading-progress"><div class="loading-bar" id="loadingBar"></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <div class="modal-title"><span id="modalTitle">Modifica squadra</span><span class="modal-close" onclick="closeModal()">✕</span></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<header>
+  <div class="header-top">
+    <h1>🏀 Roma Basket</h1>
+    <button class="icon-btn" id="refreshBtn" onclick="doRefresh()" title="Aggiorna">↻</button>
+    <button class="icon-btn" id="notifBtn" onclick="toggleNotif()">🔔</button>
+    <button class="icon-btn" onclick="showScreen('settings')" title="Impostazioni">⚙️</button>
+  </div>
+  <div class="update-row">
+    <span class="last-update" id="lastUpdate">—</span>
+    <span class="update-status loading" id="updateStatus">Caricamento</span>
+  </div>
+  <div class="nav-tabs" id="navTabs"></div>
+</header>
+
+<!-- SCREENS -->
+<div id="screen-all"   class="screen active"></div>
+<div id="screen-post"  class="screen"></div>
+<div id="screen-formula" class="screen"></div>
+<div id="screen-settings" class="screen">
+  <div class="settings-screen" id="settingsContent"></div>
+</div>
+
+<script>
+// ================================================================
+// SERIE SUPPORTATE — con scraping URL e formula
+// ================================================================
+const SERIE_CONFIG = {
+  'lba': {
+    name: 'LBA Serie A', short: 'Serie A', color: '#FFD700',
+    pb_pattern: 'legabasket-serie-a',
+    formula: {
+      desc: '16 squadre, girone unico, 30 giornate (andata e ritorno).',
+      phases: [
+        {key:'rs',    label:'Regular Season',  dates:'Ottobre — Aprile', detail:'30 giornate, girone unico'},
+        {key:'po',    label:'Playoff',          dates:'Maggio — Giugno', detail:'Quarti, Semifinali, Finale — best of 7'},
+        {key:'plout', label:'Playout',          dates:'Aprile — Maggio', detail:'14°-15° classificato — best of 3. Retrocede il 16°'},
+      ]
+    }
+  },
+  'a2': {
+    name: 'Serie A2', short: 'A2', color: '#e88c30',
+    pb_pattern: 'serie-a2',
+    formula: {
+      desc: '32 squadre divise in 2 gironi (Est/Ovest), 30 giornate.',
+      phases: [
+        {key:'rs',    label:'Regular Season',   dates:'Ottobre — Aprile', detail:'30 giornate per girone'},
+        {key:'pi',    label:'Play-In',           dates:'Aprile — Maggio', detail:'7°-10° di ogni girone, gare singole'},
+        {key:'po',    label:'Playoff',           dates:'Maggio — Giugno', detail:'Quarti/Semifinali/Finale — best of 5'},
+        {key:'plout', label:'Playout',           dates:'Aprile — Maggio', detail:'Rischio retrocessione 13°-16°'},
+      ]
+    }
+  },
+  'bn': {
+    name: 'Serie B Nazionale', short: 'B Naz.', color: '#C8102E',
+    pb_pattern: 'serie-b',
+    formula: {
+      desc: '38 squadre divise in 2 gironi (A/B) da 19, 38 giornate.',
+      phases: [
+        {key:'rs',    label:'Regular Season',   dates:'Settembre — Aprile', detail:'38 giornate, 36 partite per squadra'},
+        {key:'pi',    label:'Play-In',           dates:'30 apr / 3 mag',     detail:'7°-12° di ogni girone, gare singole'},
+        {key:'po',    label:'Playoff',           dates:'Maggio — Giugno',    detail:'Tabelloni incrociati A×B — best of 5. 2 promozioni + spareggio'},
+        {key:'plout', label:'Playout',           dates:'Maggio',             detail:'15°-18° — best of 5. Perdenti retrocedono'},
+      ],
+      extra_dates: {
+        'Prima giornata': '21 settembre 2025',
+        'Fine andata': '28 dicembre 2025',
+        'Fine ritorno': '26 aprile 2026',
+        'Play-In': '30 apr / 3 mag 2026',
+        'Quarti Playoff': '8-18 maggio 2026',
+        'Semifinali': '21-31 maggio 2026',
+        'Finali': '8-18 giugno 2026',
+        'Spareggio': '21 giugno 2026',
+      }
+    }
+  },
+  'bi': {
+    name: 'Serie B Interregionale', short: 'B Inter.', color: '#6366f1',
+    pb_pattern: 'serie-b-interregionale',
+    formula: {
+      desc: 'Campionato regionale/interregionale, quarto livello nazionale.',
+      phases: [
+        {key:'rs',  label:'Regular Season',  dates:'Ottobre — Marzo',  detail:'Girone regionale/interregionale'},
+        {key:'po',  label:'Playoff',         dates:'Aprile — Maggio',  detail:'Fase a eliminazione'},
+      ]
+    }
+  },
+};
+
+// ================================================================
+// DATI DEFAULT — Virtus Roma e LUISS in Serie B Nazionale 2025-26
+// ================================================================
+const DEFAULT_TEAMS = [
+  {
+    id: 'virtus',
+    name: 'Virtus GVM Roma',
+    shortName: 'Virtus Roma',
+    serie: 'bn',
+    girone: 'B',
+    season: '2025-26',
+    color: '#C8102E',
+    venue: {name:'PalaTiziano – Palazzetto dello Sport', address:'Piazza Apollodoro 10, 00196 Roma', maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'},
+    standing: {pos:3, pts:46, w:23, l:7},
+    matches: [
+      {id:'v02',phase:'regular',round:2, date:'2025-09-28',time:'18:00',home:'Virtus GVM Roma',away:'Loreto Pesaro',sh:84,sa:63},
+      {id:'v04',phase:'regular',round:4, date:'2025-10-12',time:'18:00',home:'Virtus GVM Roma',away:'Solbat Golfo Piombino',sh:91,sa:68},
+      {id:'v06',phase:'regular',round:6, date:'2025-10-19',time:'18:00',home:'Virtus GVM Roma',away:'General Contractor Jesi',sh:88,sa:71},
+      {id:'v08',phase:'regular',round:8, date:'2025-10-29',time:'20:30',home:'Virtus GVM Roma',away:'UP Andrea Costa Imola',sh:79,sa:74},
+      {id:'v09',phase:'regular',round:9, date:'2025-11-02',time:'18:00',home:'Virtus GVM Roma',away:'Adamant Ferrara',sh:94,sa:66},
+      {id:'v11',phase:'regular',round:11,date:'2025-11-12',time:'20:30',home:'Virtus GVM Roma',away:'Virtus Imola',sh:88,sa:75},
+      {id:'v13',phase:'regular',round:13,date:'2025-11-23',time:'18:00',home:'Virtus GVM Roma',away:'Pielle Livorno',sh:null,sa:null},
+      {id:'v15',phase:'regular',round:15,date:'2025-12-07',time:'18:00',home:'Virtus GVM Roma',away:"OraSì Ravenna",sh:87,sa:73},
+      {id:'v16',phase:'regular',round:16,date:'2025-12-14',time:'18:00',home:'Virtus GVM Roma',away:'Paperdi Juvecaserta',sh:99,sa:63},
+      {id:'v18',phase:'regular',round:18,date:'2025-12-21',time:'18:00',home:'Virtus GVM Roma',away:'Luiss Roma',sh:null,sa:null},
+      {id:'v21',phase:'regular',round:21,date:'2026-01-11',time:'18:00',home:'Virtus GVM Roma',away:'PSA Basket Casoria',sh:86,sa:60},
+      {id:'v23',phase:'regular',round:23,date:'2026-01-25',time:'18:00',home:'Virtus GVM Roma',away:'Allianz Pazienza San Severo',sh:95,sa:61},
+      {id:'v25',phase:'regular',round:25,date:'2026-02-08',time:'18:00',home:'Virtus GVM Roma',away:'Power Basket Nocera',sh:82,sa:70},
+      {id:'v28',phase:'regular',round:28,date:'2026-02-22',time:'18:00',home:'Virtus GVM Roma',away:'Raggisolaris Faenza',sh:88,sa:74},
+      {id:'v32',phase:'regular',round:32,date:'2026-03-21',time:'20:00',home:'Virtus GVM Roma',away:'Ristopro Fabriano',sh:null,sa:null},
+      {id:'v34',phase:'regular',round:34,date:'2026-04-05',time:'18:00',home:'Virtus GVM Roma',away:'Benacquista Latina',sh:null,sa:null},
+      {id:'v35',phase:'regular',round:35,date:'2026-04-12',time:'18:00',home:'Virtus GVM Roma',away:'Consorzio Dany Quarrata',sh:null,sa:null},
+      {id:'v38',phase:'regular',round:38,date:'2026-04-26',time:'18:00',home:'Virtus GVM Roma',away:'Umana San Giobbe Chiusi',sh:null,sa:null},
+    ]
+  },
+  {
+    id: 'luiss',
+    name: 'Luiss Roma',
+    shortName: 'LUISS',
+    serie: 'bn',
+    girone: 'B',
+    season: '2025-26',
+    color: '#003087',
+    venue: {name:'PalaTiziano – Palazzetto dello Sport', address:'Piazza Apollodoro 10, 00196 Roma', maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'},
+    standing: {pos:5, pts:38, w:19, l:11},
+    matches: [
+      {id:'l01',phase:'regular',round:1, date:'2025-09-21',time:'18:00',home:'Luiss Roma',away:'Umana San Giobbe Chiusi',sh:78,sa:65},
+      {id:'l07',phase:'regular',round:7, date:'2025-10-26',time:'18:00',home:'Luiss Roma',away:'Power Basket Nocera',sh:82,sa:71},
+      {id:'l09',phase:'regular',round:9, date:'2025-11-02',time:'18:00',home:'Luiss Roma',away:"OraSì Ravenna",sh:90,sa:68},
+      {id:'l10',phase:'regular',round:10,date:'2025-11-09',time:'18:00',home:'Luiss Roma',away:'Ristopro Fabriano',sh:85,sa:72},
+      {id:'l12',phase:'regular',round:12,date:'2025-11-16',time:'18:00',home:'Luiss Roma',away:'General Contractor Jesi',sh:78,sa:63},
+      {id:'l17',phase:'regular',round:17,date:'2025-12-17',time:'20:00',home:'Luiss Roma',away:'Consorzio Dany Quarrata',sh:88,sa:70},
+      {id:'l20',phase:'regular',round:20,date:'2026-01-04',time:'18:00',home:'Luiss Roma',away:'Benacquista Latina',sh:80,sa:64},
+      {id:'l22',phase:'regular',round:22,date:'2026-01-18',time:'18:00',home:'Luiss Roma',away:'Loreto Pesaro',sh:76,sa:69},
+      {id:'l24',phase:'regular',round:24,date:'2026-02-01',time:'18:30',home:'Luiss Roma',away:'Adamant Ferrara',sh:75,sa:67},
+      {id:'l26',phase:'regular',round:26,date:'2026-02-14',time:'18:30',home:'Luiss Roma',away:'Virtus Imola',sh:73,sa:77},
+      {id:'l27',phase:'regular',round:27,date:'2026-02-18',time:'20:00',home:'Luiss Roma',away:'Paperdi Juvecaserta',sh:69,sa:80},
+      {id:'l29',phase:'regular',round:29,date:'2026-03-01',time:'18:00',home:'Luiss Roma',away:'UP Andrea Costa Imola',sh:85,sa:72},
+      {id:'l31',phase:'regular',round:31,date:'2026-03-08',time:'17:00',home:'Luiss Roma',away:'Allianz Pazienza San Severo',sh:68,sa:70},
+      {id:'l33',phase:'regular',round:33,date:'2026-03-29',time:'18:00',home:'Luiss Roma',away:'Virtus GVM Roma',sh:null,sa:null},
+      {id:'l36',phase:'regular',round:36,date:'2026-04-15',time:'15:00',home:'Luiss Roma',away:'Raggisolaris Faenza',sh:null,sa:null},
+      {id:'l37',phase:'regular',round:37,date:'2026-04-19',time:'18:00',home:'Luiss Roma',away:'Pielle Livorno',sh:null,sa:null},
+    ]
+  }
+];
+
+// ================================================================
+// STATE
+// ================================================================
+let teams      = JSON.parse(localStorage.getItem('brc_teams5') || 'null') || JSON.parse(JSON.stringify(DEFAULT_TEAMS));
+let lastUpdate = localStorage.getItem('brc_lu5') || null;
+let currentScreen = 'all';
+let currentPhase  = 'all';
+let notifEnabled  = localStorage.getItem('brc_notif') === '1';
+let cdInterval    = null;
+let isRefreshing  = false;
+let editingTeamId = null;
+
+// ================================================================
+// DATE UTILS
+// ================================================================
+const getToday  = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+const parseDate = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const isPast    = s => parseDate(s) < getToday();
+const isToday   = s => parseDate(s).getTime() === getToday().getTime();
+const fmtDate   = s => {
+  const d=parseDate(s);
+  return `${['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][d.getDay()]} ${d.getDate()} ${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][d.getMonth()]} ${d.getFullYear()}`;
+};
+const phaseLabel = p => ({regular:'Regular Season',playin:'Play-In',playoff:'Playoff',playout:'Playout'}[p]||p);
+const hex2rgba  = (hex,a) => { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `rgba(${r},${g},${b},${a})`; };
+
+// ================================================================
+// AGGIORNAMENTO — legge data.json generato da GitHub Actions
+// GitHub Actions gira ogni lunedì e aggiorna data.json
+// con risultati, orari e classifica aggiornati
+// ================================================================
+
+async function doRefresh(silent=false) {
+  if (isRefreshing) return;
+  isRefreshing = true;
+  document.getElementById('refreshBtn').classList.add('spinning');
+  if (!silent) setStatus('loading','⏳ Aggiornamento...');
+  setProgress(20);
+
+  // Timeout di sicurezza: dopo 8 secondi sblocca comunque
+  const safetyTimer = setTimeout(() => {
+    if (isRefreshing) {
+      isRefreshing = false;
+      document.getElementById('refreshBtn').classList.remove('spinning');
+      setProgress(100);
+      setStatus('ok', lastUpdate ? '📋 ' + lastUpdate : '📋 Cache');
+      document.getElementById('lastUpdate').textContent = lastUpdate ? 'Agg: ' + lastUpdate : '—';
+      render();
+    }
+  }, 8000);
+
+  try {
+    const url = 'data.json?t=' + Date.now();
+    const resp = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(6000)
+    });
+
+    setProgress(70);
+
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data.matches) && data.matches.length > 0) {
+        matches = data.matches;
+        localStorage.setItem('brc_m4', JSON.stringify(matches));
+      }
+      if (data.standings) {
+        standings = data.standings;
+        localStorage.setItem('brc_s4', JSON.stringify(standings));
+      }
+      if (data.config && data.config.teams) {
+        if (data.config.teams.virtus) {
+          VENUES.virtus = {name:data.config.teams.virtus.venue_name, address:data.config.teams.virtus.venue_address, maps:data.config.teams.virtus.venue_maps};
+        }
+        if (data.config.teams.luiss) {
+          VENUES.luiss = {name:data.config.teams.luiss.venue_name, address:data.config.teams.luiss.venue_address, maps:data.config.teams.luiss.venue_maps};
+        }
+      }
+      const ts = data.last_updated
+        ? new Date(data.last_updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+        : new Date().toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      lastUpdate = ts;
+      localStorage.setItem('brc_lu4', lastUpdate);
+      setStatus('ok','✅ Live');
+      if (!silent) showToast('✅ Dati aggiornati');
+    } else {
+      // data.json non trovato — usa cache locale senza errore
+      setStatus('ok', lastUpdate ? '📋 ' + lastUpdate : '📋 Cache');
+    }
+
+  } catch(e) {
+    // Rete non disponibile — usa cache locale senza bloccarsi
+    setStatus('ok', lastUpdate ? '📋 ' + lastUpdate : '📋 Cache');
+    if (!silent) showToast('⚠️ Rete non disponibile — dati locali');
+  }
+
+  clearTimeout(safetyTimer);
+  setProgress(100);
+  isRefreshing = false;
+  document.getElementById('refreshBtn').classList.remove('spinning');
+  document.getElementById('lastUpdate').textContent = lastUpdate ? 'Agg: ' + lastUpdate : '—';
+  render();
+}
+
+// RENDER PRINCIPALE
+// ================================================================
+function renderAll() {
+  buildNav();
+  if(currentScreen==='settings') { renderSettings(); return; }
+  if(currentScreen==='formula')  { renderFormula(); return; }
+  if(currentScreen==='post')     { renderPostSeason(); return; }
+  renderMainScreen();
+}
+
+function getScreenMatches() {
+  let allMatches=[];
+  const filtered = currentScreen==='all' ? teams : teams.filter(t=>t.id===currentScreen);
+  filtered.forEach(t=>{
+    t.matches.filter(m=>currentPhase==='all'||m.phase===currentPhase)
+      .forEach(m=>allMatches.push({...m,teamId:t.id,teamName:t.shortName,teamColor:t.color,venue:t.venue,serie:t.serie}));
+  });
+  return allMatches.sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function renderMainScreen() {
+  const container=document.getElementById('screen-'+(currentScreen==='all'?'all':currentScreen));
+  if(!container) return;
+
+  // Phase bar
+  const phases=['all',...new Set(teams.flatMap(t=>t.matches.map(m=>m.phase))).values()].filter((v,i,a)=>a.indexOf(v)===i);
+  const phaseHTML=phases.map(p=>`<div class="phase-chip${currentPhase===p?' active':''}" onclick="setPhase('${p}')">${{all:'Tutte',regular:'Regular',playin:'Play-In',playoff:'Playoff',playout:'Playout'}[p]||p}</div>`).join('');
+
+  // Standing chips
+  const standHTML=teams.map(t=>{
+    const sc=SERIE_CONFIG[t.serie];
+    return `<div class="standing-chip" style="background:${hex2rgba(t.color,.08)};border-color:${hex2rgba(t.color,.25)};color:${hex2rgba(t.color,1)}">
+      <strong>${t.standing.pos}°</strong>${t.shortName}<span class="serie-badge">${sc?.short||''}</span> — ${t.standing.pts}pt (${t.standing.w}V-${t.standing.l}P)
+    </div>`;
+  }).join('');
+
+  // Hero
+  const allMatches=getScreenMatches();
+  const upcoming=allMatches.filter(m=>!isPast(m.date)||isToday(m.date));
+  const past=allMatches.filter(m=>isPast(m.date)&&!isToday(m.date));
+
+  let heroHTML='';
+  if(upcoming.length){
+    const m=upcoming[0];
+    const todayBadge=isToday(m.date)?'<span style="background:var(--gold);color:#000;font-size:9px;letter-spacing:2px;padding:2px 8px;border-radius:20px;font-weight:700;margin-left:8px">OGGI</span>':'';
+    const timeStr=m.time?` · ore ${m.time}`:'';
+    heroHTML=`<div class="hero-wrap"><div class="next-hero" style="background:linear-gradient(135deg,${hex2rgba(m.teamColor,.08)},${hex2rgba(m.teamColor,.18)} 60%,${hex2rgba(m.teamColor,.08)});border-color:${hex2rgba(m.teamColor,.25)}">
+      <div class="hero-label">PROSSIMA PARTITA IN CASA</div>
+      <div class="hero-team-tag" style="padding:0 16px 6px;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:2px;color:${hex2rgba(m.teamColor,.8)}">${m.teamName.toUpperCase()} · ${SERIE_CONFIG[m.serie]?.short||''}</div>
+      <div class="hero-body">
+        <div class="hero-teams"><span class="hero-home">${m.home}</span><span class="hero-vs">vs</span><span class="hero-away">${m.away}</span></div>
+        <div class="hero-meta">📅 ${fmtDate(m.date)}${timeStr} ${todayBadge} · ${phaseLabel(m.phase)}${m.round?' · G'+m.round:''}</div>
+        <div class="hero-venue">
+          <span class="hero-venue-icon">📍</span>
+          <div class="hero-venue-info"><div class="hero-venue-name">${m.venue.name}</div><div class="hero-venue-addr">${m.venue.address}</div></div>
+          <a class="hero-venue-map" href="${m.venue.maps}" target="_blank">Mappa</a>
+        </div>
+        <div class="hero-cd" id="heroCD"></div>
+      </div>
+    </div></div>`;
+  }
+
+  // Stats
+  const statsHTML=(()=>{
+    const wins=arr=>arr.filter(m=>m.sh!=null&&m.sh>m.sa).length;
+    const vAll=teams[0]?.matches.filter(m=>m.phase==='regular'&&isPast(m.date)&&m.sh!=null)||[];
+    const lAll=teams[1]?.matches.filter(m=>m.phase==='regular'&&isPast(m.date)&&m.sh!=null)||[];
+    const rem=upcoming.length;
+    return `<div class="stats-bar">
+      ${teams.map(t=>{const arr=t.matches.filter(m=>m.phase==='regular'&&isPast(m.date)&&m.sh!=null);return`<div class="stat-item"><div class="stat-num" style="color:${t.color}">${wins(arr)}/${arr.length}</div><div class="stat-lbl">${t.shortName}</div></div>`;}).join('')}
+      <div class="stat-item"><div class="stat-num">${rem}</div><div class="stat-lbl">Rimanenti</div></div>
+    </div>`;
+  })();
+
+  // Cards
+  let cardsHTML='';
+  if(upcoming.length){cardsHTML+=`<div class="section-lbl">Prossime partite in casa</div><div class="match-list">`;upcoming.forEach((m,i)=>cardsHTML+=matchCard(m,i));cardsHTML+=`</div>`;}
+  if(past.length){cardsHTML+=`<div class="section-lbl">Partite giocate</div><div class="match-list">`;[...past].reverse().forEach((m,i)=>cardsHTML+=matchCard(m,i+upcoming.length));cardsHTML+=`</div>`;}
+  if(!allMatches.length) cardsHTML=`<div class="empty">Nessuna partita trovata</div>`;
+
+  container.innerHTML=`
+    <div class="phase-bar" id="phaseBar">${phaseHTML}</div>
+    <div class="standing-bar">${standHTML}</div>
+    ${heroHTML}
+    ${statsHTML}
+    ${cardsHTML}
+    <div style="height:20px"></div>
+  `;
+
+  if(upcoming.length) startCountdown(upcoming[0].date, upcoming[0].time);
+}
+
+function matchCard(m,idx) {
+  const isPlayoff=m.phase!=='regular';
+  const delay=Math.min(idx*0.04,0.35);
+  const todayMark=isToday(m.date)?`<span class="today-dot"></span>`:'';
+  const timeEl=(!isPast(m.date)&&m.time)?`<span class="mc-time" style="color:${m.teamColor}">⏰ ${m.time}</span>`:'';
+  let result='';
+  if(m.sh!=null&&m.sa!=null){const cls=m.sh>m.sa?'win':'loss';result=`<span class="mc-result ${cls}">${m.sh}–${m.sa}</span>`;}
+  else if(!isPast(m.date)){result=`<span class="mc-result tbd">—</span>`;}
+  const venueEl=!isPast(m.date)?`<div class="mc-venue"><span style="font-size:12px">📍</span><span class="mc-venue-text"><span class="mc-venue-name">${m.venue.name}</span> · ${m.venue.address}</span><a class="mc-venue-map" href="${m.venue.maps}" target="_blank">Mappa</a></div>`:'';
+  const noteEl=m.note?`<div class="note-el">⚠️ ${m.note}</div>`:'';
+  const serieBadge=isPlayoff?`<span style="font-size:10px;color:var(--muted);margin-left:4px">${phaseLabel(m.phase)}</span>`:'';
+  return `<div class="match-card" style="animation-delay:${delay}s;border-left:3px solid ${m.teamColor}">
+    <div class="mc-top">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="mc-badge" style="background:${hex2rgba(m.teamColor,.15)};color:${m.teamColor}">${m.teamName}</span>
+        <span style="font-size:9px;color:var(--muted)">${SERIE_CONFIG[m.serie]?.short||''}</span>
+        ${serieBadge}
+      </div>
+      <div style="display:flex;align-items:center;gap:5px">${timeEl}<span class="mc-date">${todayMark}${fmtDate(m.date)}</span></div>
+    </div>
+    <div class="mc-teams"><span class="mc-home">${m.home}</span><span class="mc-sep">vs</span><span class="mc-away">${m.away}</span></div>
+    ${noteEl}
+    <div class="mc-bottom"><span class="mc-round">${m.round?'Giornata '+m.round:phaseLabel(m.phase)}</span>${result}</div>
+    ${venueEl}
+  </div>`;
+}
+
+function startCountdown(dateStr,timeStr) {
+  if(cdInterval) clearInterval(cdInterval);
+  const update=()=>{
+    const el=document.getElementById('heroCD'); if(!el){clearInterval(cdInterval);return;}
+    const [hh,mm]=(timeStr||'20:30').split(':').map(Number);
+    const target=parseDate(dateStr); target.setHours(hh||20,mm||30,0,0);
+    const diff=target-new Date();
+    if(diff<=0){el.innerHTML=`<div class="cd-unit"><div class="cd-num" style="color:var(--gold)">LIVE 🏀</div></div>`;return;}
+    const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),min=Math.floor((diff%3600000)/60000);
+    el.innerHTML=`<div class="cd-unit"><div class="cd-num">${d}</div><div class="cd-lbl">giorni</div></div><div class="cd-unit"><div class="cd-num">${h}</div><div class="cd-lbl">ore</div></div><div class="cd-unit"><div class="cd-num">${min}</div><div class="cd-lbl">min</div></div>`;
+  };
+  update(); cdInterval=setInterval(update,30000);
+}
+
+// ================================================================
+// FORMULA SCREEN
+// ================================================================
+function renderFormula() {
+  const container=document.getElementById('screen-formula');
+  // Mostra formula per ogni serie usata dalle squadre configurate
+  const usedSeries=[...new Set(teams.map(t=>t.serie))];
+
+  let html=`<div style="padding:16px 16px 0"><div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fff;margin-bottom:4px">Formula Campionati</div><div style="font-size:12px;color:var(--muted);margin-bottom:16px">Regolamento e date delle serie seguite</div></div>`;
+
+  // Mostra anche le altre serie come riferimento
+  Object.entries(SERIE_CONFIG).forEach(([key,sc])=>{
+    const isUsed=usedSeries.includes(key);
+    const f=sc.formula;
+    html+=`<div style="margin:0 16px 12px;border-radius:14px;overflow:hidden;border:1px solid ${isUsed?hex2rgba(sc.color,.3):hex2rgba(sc.color,.1)}">
+      <div style="padding:12px 16px;background:${isUsed?hex2rgba(sc.color,.08):hex2rgba(sc.color,.03)};display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:${isUsed?sc.color:'#555'}">${sc.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${f.desc}</div>
+        </div>
+        ${isUsed?`<span style="font-size:9px;letter-spacing:2px;background:${hex2rgba(sc.color,.15)};color:${sc.color};padding:3px 8px;border-radius:20px">SEGUITA</span>`:''}
+      </div>
+      <div style="padding:12px 16px">
+        ${f.phases.map(p=>`<div style="display:flex;gap:10px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--gold);min-width:90px">${p.label}</div>
+          <div><div style="font-size:12px;color:rgba(255,255,255,.7)">${p.dates}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${p.detail}</div></div>
+        </div>`).join('')}
+        ${f.extra_dates?`<div style="margin-top:4px"><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Date chiave 2025-26</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">${Object.entries(f.extra_dates).map(([k,v])=>`<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:6px 8px"><div style="font-size:9px;color:var(--muted)">${k}</div><div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8);margin-top:1px">${v}</div></div>`).join('')}</div></div>`:''}
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML=html+'<div style="height:20px"></div>';
+}
+
+// ================================================================
+// POST SEASON
+// ================================================================
+function renderPostSeason() {
+  const container=document.getElementById('screen-post');
+  let html=`<div style="padding:16px 16px 0"><div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fff;margin-bottom:4px">Post Season</div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Regular Season termina il 26 aprile 2026</div></div>`;
+
+  teams.forEach(t=>{
+    const sc=SERIE_CONFIG[t.serie];
+    const pos=t.standing.pos;
+    let status,statusCls,phase;
+    if(t.serie==='bn'){
+      if(pos<=6){status='Playoff diretto';statusCls='qualified';phase='playoff';}
+      else if(pos<=12){status='Play-In';statusCls='at-risk';phase='playin';}
+      else if(pos<=14){status='Confermato B Naz.';statusCls='eliminated';phase=null;}
+      else if(pos<=18){status='Playout';statusCls='at-risk';phase='playout';}
+      else{status='Retrocesso';statusCls='eliminated';phase=null;}
+    } else {
+      status='Vedi formula'; statusCls='at-risk'; phase='playoff';
+    }
+
+    const postMatches=t.matches.filter(m=>m.phase!=='regular');
+    html+=`<div style="margin:12px 16px 0;border-radius:14px;border:1px solid ${hex2rgba(t.color,.2)};overflow:hidden">
+      <div style="padding:12px 16px;background:${hex2rgba(t.color,.06)};display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:${t.color}">${t.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${sc?.short||''} · ${t.standing.pos}° posto — ${t.standing.pts}pt (${t.standing.w}V-${t.standing.l}P)</div>
+        </div>
+        <span class="ps-status-badge ${statusCls}">${statusCls==='qualified'?'✅':statusCls==='at-risk'?'⚠️':'❌'} ${status}</span>
+      </div>
+      <div style="padding:12px 16px">
+        ${t.serie==='bn'&&pos<=6?`<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Percorso Playoff atteso</div>
+          ${pos<=4?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px">🏆 Tabellone 2 · ${pos}ª testa di serie</div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">🤝 Quarti: vs ${pos===1?'8ª':pos===2?'7ª':pos===3?'6ª':'5ª'} Girone A</div><div style="font-size:12px;color:var(--muted)">🏠 Casa in gare 1,2,5 · PalaTiziano, Roma</div>`
+          :`<div style="font-size:12px;color:var(--muted)">🏆 Tabellone 1 · Fuori in gare 1,2,5</div>`}
+        </div>`:''}
+        ${postMatches.length>0?postMatches.map(m=>{
+          let res='';
+          if(m.sh!=null&&m.sa!=null){const cls=m.sh>m.sa?'win':'loss';res=`<div class="ps-game-result ${cls}">${m.sh}–${m.sa}</div>`;}
+          else res=`<div class="ps-game-result tbd">Da giocare</div>`;
+          return `<div class="ps-game-row"><div class="ps-game-top"><span class="ps-game-label">${phaseLabel(m.phase)}${m.round?' · G'+m.round:''}</span><span class="ps-game-date">${fmtDate(m.date)}${m.time?' · '+m.time:''}</span></div><div><span style="font-size:14px;font-weight:600">${m.home}</span><span style="color:var(--muted);font-size:11px;margin:0 5px">vs</span><span style="font-size:13px;color:#bbb">${m.away}</span></div>${res}<div style="font-size:10px;color:var(--muted);margin-top:3px">📍 ${t.venue.name}</div></div>`;
+        }).join(''):'<div style="font-size:12px;color:var(--muted)">Nessuna partita post-season ancora programmata</div>'}
+      </div>
+    </div>`;
+  });
+
+  // Formula rapida
+  html+=`<div style="margin:12px 16px 0;border-radius:14px;border:1px solid var(--border);overflow:hidden">
+    <div style="padding:12px 16px;background:rgba(255,255,255,.02);cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--muted)">📖 Formula Serie B Nazionale</div>
+    </div>
+    <div style="display:none;padding:12px 16px">
+      ${[['1-6','Playoff diretto'],['7-12','Play-In (2 turni)'],['13-14','Rimane in B Naz.'],['15-18','Playout'],['19°','Retrocessione diretta']].map(([k,v])=>`<div style="display:flex;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px"><span style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--gold);min-width:35px">${k}</span><span>${v}</span></div>`).join('')}
+    </div>
+  </div><div style="height:20px"></div>`;
+
+  container.innerHTML=html;
+}
+
+// ================================================================
+// SETTINGS SCREEN
+// ================================================================
+function renderSettings() {
+  const container=document.getElementById('settingsContent');
+  const currentSeason=teams[0]?.season||'2025-26';
+
+  let html=`<div class="settings-title">⚙️ Impostazioni</div>
+  <div class="settings-sub">Configura le squadre da seguire, le serie e gli stadi. Le modifiche sono valide per la stagione corrente.</div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Stagione corrente</div>
+    <div class="season-info">
+      <div><div class="season-info-label">Stagione attiva</div><div class="season-info-val">${currentSeason}</div></div>
+      <button class="btn-small primary" onclick="newSeasonModal()">🔄 Nuova stagione</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Squadre seguite</div>
+    ${teams.map(t=>{
+      const sc=SERIE_CONFIG[t.serie];
+      return `<div class="team-config-card" style="border-left-color:${t.color}">
+        <div class="team-config-header">
+          <div><div class="team-config-name">${t.name}</div><div class="team-config-serie">${sc?.name||t.serie} ${t.girone?'· Girone '+t.girone:''} · ${t.season}</div></div>
+          <div class="team-config-actions">
+            <button class="btn-small primary" onclick="editTeam('${t.id}')">✏️ Modifica</button>
+            <button class="btn-small danger" onclick="removeTeam('${t.id}')">✕</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:var(--muted)">
+          <div>📍 ${t.venue.name}</div>
+          <div>📊 ${t.standing.pos}° posto — ${t.standing.pts}pt</div>
+          <div>🏀 ${t.serie.toUpperCase()} ${t.girone?'Gir.'+t.girone:''}</div>
+          <div>📅 ${t.season}</div>
+        </div>
+      </div>`;
+    }).join('')}
+    <button class="btn-add-team" onclick="addTeamModal()">➕ Aggiungi squadra</button>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Aggiornamento dati</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px">
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px">I risultati vengono recuperati automaticamente da pianetabasket.com ad ogni apertura. Usa il pulsante ↻ per un aggiornamento manuale immediato.</div>
+      <div style="font-size:11px;color:var(--muted)">Ultimo aggiornamento: <span style="color:rgba(255,255,255,.6)">${lastUpdate||'Mai'}</span></div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Dati</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-small" style="flex:1;padding:10px" onclick="exportData()">📤 Esporta dati</button>
+      <button class="btn-small danger" style="flex:1;padding:10px" onclick="resetData()">🗑️ Ripristina default</button>
+    </div>
+  </div>`;
+
+  container.innerHTML=html;
+}
+
+// ================================================================
+// SETTINGS ACTIONS
+// ================================================================
+function editTeam(id) {
+  const t=teams.find(t=>t.id===id);
+  if(!t) return;
+  editingTeamId=id;
+  document.getElementById('modalTitle').textContent='Modifica squadra';
+  document.getElementById('modalBody').innerHTML=teamFormHTML(t);
+  openModal();
+}
+
+function addTeamModal() {
+  editingTeamId=null;
+  document.getElementById('modalTitle').textContent='Aggiungi squadra';
+  document.getElementById('modalBody').innerHTML=teamFormHTML(null);
+  openModal();
+}
+
+function teamFormHTML(t) {
+  const serieOptions=Object.entries(SERIE_CONFIG).map(([k,sc])=>
+    `<option value="${k}"${t?.serie===k?' selected':''}>${sc.name}</option>`).join('');
+  return `
+    <div class="config-field"><div class="config-label">Nome squadra</div><input class="config-input" id="cf-name" value="${t?.name||''}" placeholder="es. Virtus GVM Roma"></div>
+    <div class="config-row">
+      <div class="config-field"><div class="config-label">Nome breve</div><input class="config-input" id="cf-short" value="${t?.shortName||''}" placeholder="es. Virtus Roma"></div>
+      <div class="config-field"><div class="config-label">Colore</div><input class="config-input" id="cf-color" value="${t?.color||'#C8102E'}" type="color" style="height:38px;padding:2px 4px;cursor:pointer"></div>
+    </div>
+    <div class="config-row">
+      <div class="config-field"><div class="config-label">Serie</div><select class="config-select" id="cf-serie">${serieOptions}</select></div>
+      <div class="config-field"><div class="config-label">Girone (A/B/Est/Ovest)</div><input class="config-input" id="cf-girone" value="${t?.girone||''}" placeholder="es. B"></div>
+    </div>
+    <div class="config-field"><div class="config-label">Stagione</div><input class="config-input" id="cf-season" value="${t?.season||'2025-26'}" placeholder="es. 2025-26"></div>
+    <div class="config-field"><div class="config-label">Nome impianto</div><input class="config-input" id="cf-vname" value="${t?.venue?.name||''}" placeholder="es. PalaTiziano"></div>
+    <div class="config-field"><div class="config-label">Indirizzo impianto</div><input class="config-input" id="cf-vaddr" value="${t?.venue?.address||''}" placeholder="es. Piazza Apollodoro 10, Roma"></div>
+    <div class="config-row">
+      <div class="config-field"><div class="config-label">Posizione in classifica</div><input class="config-input" id="cf-pos" type="number" value="${t?.standing?.pos||1}" min="1" max="20"></div>
+      <div class="config-field"><div class="config-label">Punti</div><input class="config-input" id="cf-pts" type="number" value="${t?.standing?.pts||0}" min="0"></div>
+    </div>
+    <div class="config-row">
+      <div class="config-field"><div class="config-label">Vittorie</div><input class="config-input" id="cf-w" type="number" value="${t?.standing?.w||0}" min="0"></div>
+      <div class="config-field"><div class="config-label">Sconfitte</div><input class="config-input" id="cf-l" type="number" value="${t?.standing?.l||0}" min="0"></div>
+    </div>
+    <button class="btn-save" onclick="saveTeam()">SALVA</button>
+  `;
+}
+
+function saveTeam() {
+  const name=document.getElementById('cf-name').value.trim();
+  if(!name){showToast('⚠️ Inserisci il nome della squadra');return;}
+  const data={
+    name,shortName:document.getElementById('cf-short').value.trim()||name,
+    color:document.getElementById('cf-color').value,
+    serie:document.getElementById('cf-serie').value,
+    girone:document.getElementById('cf-girone').value.trim().toUpperCase(),
+    season:document.getElementById('cf-season').value.trim(),
+    venue:{name:document.getElementById('cf-vname').value.trim(),address:document.getElementById('cf-vaddr').value.trim(),maps:`https://maps.google.com/?q=${encodeURIComponent(document.getElementById('cf-vaddr').value.trim())}`},
+    standing:{pos:+document.getElementById('cf-pos').value,pts:+document.getElementById('cf-pts').value,w:+document.getElementById('cf-w').value,l:+document.getElementById('cf-l').value},
+  };
+
+  if(editingTeamId){
+    const idx=teams.findIndex(t=>t.id===editingTeamId);
+    if(idx>=0){teams[idx]={...teams[idx],...data};}
+  } else {
+    const newId='team_'+Date.now();
+    teams.push({id:newId,matches:[],...data});
+  }
+
+  localStorage.setItem('brc_teams5',JSON.stringify(teams));
+  closeModal();
+  showToast('✅ Squadra salvata');
+  renderAll();
+}
+
+function removeTeam(id) {
+  if(teams.length<=1){showToast('⚠️ Deve esserci almeno una squadra');return;}
+  if(!confirm('Rimuovere questa squadra?')) return;
+  teams=teams.filter(t=>t.id!==id);
+  localStorage.setItem('brc_teams5',JSON.stringify(teams));
+  showToast('Squadra rimossa');
+  renderAll();
+}
+
+function newSeasonModal() {
+  document.getElementById('modalTitle').textContent='Nuova stagione';
+  document.getElementById('modalBody').innerHTML=`
+    <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:rgba(120,255,160,.8);line-height:1.5">
+      <strong>Nuova stagione:</strong> aggiorna la serie di ogni squadra se ci sono stati cambi di categoria. I calendari verranno azzerati e dovranno essere reinseriti.
+    </div>
+    ${teams.map(t=>`<div style="margin-bottom:12px;padding:10px;background:var(--card);border-radius:10px;border-left:3px solid ${t.color}">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${t.name}</div>
+      <div class="config-row">
+        <div class="config-field"><div class="config-label">Serie ${new Date().getFullYear()}-${new Date().getFullYear()-1999}</div>
+          <select class="config-select" id="ns-serie-${t.id}">${Object.entries(SERIE_CONFIG).map(([k,sc])=>`<option value="${k}"${t.serie===k?' selected':''}>${sc.short}</option>`).join('')}</select>
+        </div>
+        <div class="config-field"><div class="config-label">Girone</div><input class="config-input" id="ns-girone-${t.id}" value="${t.girone}" placeholder="A/B"></div>
+      </div>
+    </div>`).join('')}
+    <button class="btn-save" onclick="applyNewSeason()">APPLICA NUOVA STAGIONE</button>
+  `;
+  openModal();
+}
+
+function applyNewSeason() {
+  const y=new Date().getFullYear();
+  const newSeason=`${y}-${String(y-1999).padStart(2,'0')}`;
+  teams.forEach(t=>{
+    const newSerie=document.getElementById(`ns-serie-${t.id}`)?.value;
+    const newGirone=document.getElementById(`ns-girone-${t.id}`)?.value;
+    if(newSerie) t.serie=newSerie;
+    if(newGirone) t.girone=newGirone.toUpperCase();
+    t.season=newSeason;
+    t.matches=[];
+    t.standing={pos:1,pts:0,w:0,l:0};
+  });
+  localStorage.setItem('brc_teams5',JSON.stringify(teams));
+  closeModal();
+  showToast('✅ Nuova stagione configurata! Ora inserisci i calendari.');
+  renderAll();
+}
+
+function exportData() {
+  const data=JSON.stringify({teams,lastUpdate,exported:new Date().toISOString()},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`basket-roma-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('📤 Dati esportati');
+}
+
+function resetData() {
+  if(!confirm('Ripristinare i dati di default? Tutte le modifiche andranno perse.')) return;
+  localStorage.removeItem('brc_teams5');
+  localStorage.removeItem('brc_lu5');
+  teams=JSON.parse(JSON.stringify(DEFAULT_TEAMS));
+  lastUpdate=null;
+  showToast('✅ Dati ripristinati');
+  renderAll();
+}
+
+// ================================================================
+// MODAL
+// ================================================================
+function openModal(){document.getElementById('modalOverlay').classList.add('open');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+
+// ================================================================
+// UI HELPERS
+// ================================================================
+function setPhase(p){currentPhase=p;renderAll();}
+function setProgress(pct){const el=document.getElementById('loadingBar');if(el)el.style.width=pct+'%';}
+function setStatus(type,text){const el=document.getElementById('updateStatus');el.className=`update-status ${type}`;el.textContent=text;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);}
+
+// ================================================================
+// NOTIFICHE
+// ================================================================
+async function toggleNotif(){
+  if(!('Notification' in window)){showToast('⚠️ Notifiche non supportate');return;}
+  if(notifEnabled){notifEnabled=false;localStorage.setItem('brc_notif','0');renderAll();showToast('🔕 Disattivate');return;}
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){notifEnabled=true;localStorage.setItem('brc_notif','1');scheduleNotif();renderAll();showToast('✅ Notifiche attivate!');}
+  else showToast('❌ Abilita le notifiche nelle impostazioni Chrome');
+}
+function scheduleNotif(){
+  teams.flatMap(t=>t.matches.filter(m=>!isPast(m.date)).map(m=>({...m,teamName:t.shortName}))).forEach(m=>{
+    const [hh,mm]=(m.time||'20:30').split(':').map(Number);
+    const t=parseDate(m.date); t.setHours(hh||20,mm||30,0,0);
+    const delay=t.getTime()-86400000-Date.now();
+    if(delay>0&&delay<7*86400000) setTimeout(()=>{
+      if(!notifEnabled)return;
+      new Notification('🏀 Partita domani in casa!',{body:`${m.home} vs ${m.away}${m.time?' ore '+m.time:''} — ${m.teamName}`,icon:'icon-192.png'});
+    },delay);
+  });
+}
+
+// ================================================================
+// INIT
+// ================================================================
+window.addEventListener('load',async()=>{
+  setStatus('loading','⏳ Caricamento');
+  renderAll();
+  setProgress(10);
+  await doRefresh(true);
+  setTimeout(()=>document.getElementById('loadingOverlay').classList.add('hidden'),400);
+  if(notifEnabled) scheduleNotif();
+  const nb=document.getElementById('notifBtn');
+  nb.className='icon-btn'+(notifEnabled?' active':'');
+  nb.textContent=notifEnabled?'🔔':'🔕';
+});
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
