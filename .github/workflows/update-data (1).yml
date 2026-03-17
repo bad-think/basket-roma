@@ -1,0 +1,35 @@
+name: Aggiorna Dati Basket Roma
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Esegui aggiornamento dati
+        run: python scripts/update_data.py
+        continue-on-error: false
+
+      - name: Commit e push se ci sono modifiche
+        run: |
+          git config user.name "Roma Basket Bot"
+          git config user.email "bot@romabasket.app"
+          git add data.json
+          git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
