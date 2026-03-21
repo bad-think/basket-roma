@@ -1,1 +1,48 @@
+name: Aggiorna Dati Basket Roma
 
+on:
+  schedule:
+    # Mercoledì notte 23:30 italiana (22:30 UTC) — turni infrasettimanali
+    - cron: '30 22 * * 3'
+    # Giovedì notte 01:00 italiana (00:00 UTC) — pulizia posticipi mercoledì
+    - cron: '0 0 * * 4'
+    # Sabato notte 23:30 italiana (22:30 UTC) — gare del sabato
+    - cron: '30 22 * * 6'
+    # Domenica notte 01:00 italiana (00:00 UTC) — pulizia posticipi sabato
+    - cron: '0 0 * * 0'
+    # Domenica notte 23:30 italiana (22:30 UTC) — gare domenicali
+    - cron: '30 22 * * 0'
+    # Lunedì notte 01:00 italiana (00:00 UTC) — pulizia posticipi domenica
+    - cron: '0 0 * * 1'
+    # Ogni notte alle 02:00 (01:00 UTC) — aggiornamento generale
+    - cron: '0 1 * * *'
+  # Avvio manuale dalla tab Actions
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Esegui aggiornamento dati
+        run: python scripts/update_data.py
+
+      - name: Commit e push se ci sono modifiche
+        run: |
+          git config user.name "Roma Basket Bot"
+          git config user.email "bot@romabasket.app"
+          git add data.json
+          git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
