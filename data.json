@@ -1,38 +1,50 @@
 {
-  "last_updated": "2026-03-22T20:29:30.505329",
+  "last_updated": "2026-03-22T20:34:52.493955",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
+    "next_season": "2026-27",
     "teams": {
       "virtus": {
         "name": "Virtus GVM Roma",
-        "serie": "B Nazionale",
-        "girone": "B",
-        "venue_name": "PalaTiziano – Palazzetto dello Sport",
-        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma",
         "name_aliases": [
           "virtus gvm roma",
           "virtus roma",
-          "virtus gvm roma 1960",
-          "pallacanestro virtus roma"
-        ]
-      },
-      "luiss": {
-        "name": "Luiss Roma",
+          "virtus gvm roma 1960"
+        ],
         "serie": "B Nazionale",
         "girone": "B",
         "venue_name": "PalaTiziano – Palazzetto dello Sport",
         "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma",
+        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      },
+      "luiss": {
+        "name": "Luiss Roma",
         "name_aliases": [
           "luiss roma",
-          "luiss",
-          "luiss basketball"
-        ]
+          "luiss"
+        ],
+        "serie": "B Nazionale",
+        "girone": "B",
+        "venue_name": "PalaTiziano – Palazzetto dello Sport",
+        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
+        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
       }
+    }
+  },
+  "standings": {
+    "virtus": {
+      "pos": 2,
+      "pts": 48,
+      "w": 24,
+      "l": 6
     },
-    "next_season": "2026-27"
+    "luiss": {
+      "pos": 5,
+      "pts": 38,
+      "w": 19,
+      "l": 10
+    }
   },
   "matches": [
     {
@@ -116,8 +128,8 @@
       "time": "18:00",
       "home": "Virtus GVM Roma",
       "away": "Pielle Livorno",
-      "sh": null,
-      "sa": null
+      "sh": 70,
+      "sa": 68
     },
     {
       "id": "v15",
@@ -152,8 +164,8 @@
       "time": "18:00",
       "home": "Virtus GVM Roma",
       "away": "Luiss Roma",
-      "sh": null,
-      "sa": null
+      "sh": 71,
+      "sa": 72
     },
     {
       "id": "v21",
@@ -443,19 +455,5 @@
       "sh": null,
       "sa": null
     }
-  ],
-  "standings": {
-    "virtus": {
-      "pos": 2,
-      "pts": 48,
-      "w": 24,
-      "l": 6
-    },
-    "luiss": {
-      "pos": 5,
-      "pts": 38,
-      "w": 19,
-      "l": 10
-    }
-  }
+  ]
 }
