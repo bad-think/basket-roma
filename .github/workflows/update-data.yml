@@ -2,10 +2,13 @@ name: Aggiorna Dati Basket Roma
 
 on:
   schedule:
-    # Ogni 30 minuti dalle 19:00 alle 24:00 ora italiana (18:00-23:00 UTC)
-    - cron: '0,30 18,19,20,21,22,23 * * *'
-    # Aggiornamento mattutino alle 06:00 (05:00 UTC)
-    - cron: '0 5 * * *'
+    # Ogni 30 minuti dalle 19:00 alle 24:00 ora italiana
+    # Ora legale (UTC+2, mar-ott): 17:00-22:00 UTC
+    # Ora solare (UTC+1, ott-mar): 18:00-23:00 UTC
+    # Usiamo 17:00-22:00 UTC per coprire entrambe le stagioni
+    - cron: '0,30 17,18,19,20,21,22 * * *'
+    # Aggiornamento mattutino alle 06:00 italiane (04:00 UTC in estate)
+    - cron: '0 4 * * *'
   workflow_dispatch:
 
 env:
@@ -34,4 +37,5 @@ jobs:
           git config user.name "Roma Basket Bot"
           git config user.email "bot@romabasket.app"
           git add data.json
+          git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
           git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
