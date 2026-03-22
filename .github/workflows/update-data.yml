@@ -1,1 +1,37 @@
+name: Aggiorna Dati Basket Roma
 
+on:
+  schedule:
+    # Ogni 30 minuti dalle 19:00 alle 24:00 ora italiana (18:00-23:00 UTC)
+    - cron: '0,30 18,19,20,21,22,23 * * *'
+    # Aggiornamento mattutino alle 06:00 (05:00 UTC)
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Esegui aggiornamento dati
+        run: python scripts/update_data.py
+
+      - name: Commit e push se ci sono modifiche
+        run: |
+          git config user.name "Roma Basket Bot"
+          git config user.email "bot@romabasket.app"
+          git add data.json
+          git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
