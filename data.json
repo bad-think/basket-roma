@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-03-22T20:46:36.359481",
+  "last_updated": "2026-03-23T05:19:51.792475",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -30,20 +30,6 @@
         "venue_address": "Piazza Apollodoro 10, 00196 Roma",
         "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
       }
-    }
-  },
-  "standings": {
-    "virtus": {
-      "pos": 2,
-      "pts": 48,
-      "w": 24,
-      "l": 6
-    },
-    "luiss": {
-      "pos": 5,
-      "pts": 38,
-      "w": 19,
-      "l": 10
     }
   },
   "matches": [
@@ -455,5 +441,19 @@
       "sh": null,
       "sa": null
     }
-  ]
+  ],
+  "standings": {
+    "virtus": {
+      "pos": 2,
+      "pts": 48,
+      "w": 24,
+      "l": 6
+    },
+    "luiss": {
+      "pos": 5,
+      "pts": 38,
+      "w": 19,
+      "l": 10
+    }
+  }
 }
