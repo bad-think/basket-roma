@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-03T09:35:47.465594",
+  "last_updated": "2026-04-03T13:30:47.956367",
   "standings": {
     "virtus": {
       "pos": 3,
@@ -22,7 +22,7 @@
       "home": "Virtus GVM Roma",
       "away": "Fortitudo Bologna",
       "team": "virtus",
-      "big_match": false,
+      "big_match": true,
       "ticket_url": "https://www.ticketone.it/artist/virtus-roma-1960/",
       "sh": null,
       "sa": null
@@ -35,7 +35,7 @@
       "away": "Trapani Shark",
       "team": "luiss",
       "big_match": false,
-      "ticket_url": "",
+      "ticket_url": null,
       "sh": null,
       "sa": null
     },
@@ -59,7 +59,7 @@
       "away": "Scaligera Verona",
       "team": "luiss",
       "big_match": false,
-      "ticket_url": "",
+      "ticket_url": null,
       "sh": 78,
       "sa": 72
     },
@@ -71,7 +71,7 @@
       "away": "APU Udine",
       "team": "virtus",
       "big_match": false,
-      "ticket_url": "https://www.ticketone.it/artist/virtus-roma-1960/",
+      "ticket_url": null,
       "sh": 85,
       "sa": 80
     }
