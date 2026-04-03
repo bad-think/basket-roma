@@ -148,12 +148,6 @@ a.mcvmap{flex-shrink:0;background:rgba(245,197,24,.1);border:1px solid rgba(245,
 a.srclink{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.2);color:var(--g);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0}
 a.srclink:active{background:rgba(245,197,24,.2)}
 
-/* BIG MATCH & BIGLIETTI */
-.bigmatch{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(90deg,#ff4500,#ff8c00);color:#fff;font-size:9px;font-weight:800;letter-spacing:1.5px;padding:2px 8px;border-radius:4px;margin-bottom:6px;animation:bigpulse 1.8s ease infinite}
-@keyframes bigpulse{0%,100%{opacity:1}50%{opacity:.75}}
-a.ticketbtn{display:inline-flex;align-items:center;gap:5px;background:rgba(245,197,24,.15);border:1px solid rgba(245,197,24,.4);color:var(--g);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none;margin-top:10px;white-space:nowrap}
-a.ticketbtn:active{background:rgba(245,197,24,.25)}
-
 /* EMPTY */
 .empty{text-align:center;padding:50px 20px;color:var(--mu);font-size:14px}
 
@@ -371,13 +365,10 @@ function renderHero(m) {
   const v   = VENUES[m.team];
   const ts  = m.time ? ` &middot; ore ${m.time}` : '';
   const tod = isToday(m.date) ? '<span style="background:var(--g);color:#000;font-size:9px;letter-spacing:2px;padding:2px 8px;border-radius:20px;font-weight:700;margin-left:8px">OGGI</span>' : '';
-  const bigM  = m.big_match  ? `<div class="bigmatch">🔥 BIG MATCH</div>` : '';
-  const ticket = m.ticket_url ? `<a class="ticketbtn" href="${m.ticket_url}" target="_blank">🎫 Biglietti</a>` : '';
   return `<div class="hero ${tc}">
     <div class="hlabel">PROSSIMA PARTITA IN CASA</div>
     <div class="hteam ${tc}">${tn.toUpperCase()}</div>
     <div class="hbody">
-      ${bigM}
       <div class="hmatch"><span class="hhome">${m.home}</span><span class="hvs">vs</span><span class="haway">${m.away}</span></div>
       <div class="hmeta">📅 ${fmt(m.date)}${ts} ${tod} &middot; ${phL(m.phase)}${m.round?' &middot; G'+m.round:''}</div>
       <div class="hvenue">
@@ -385,7 +376,6 @@ function renderHero(m) {
         <div class="hvinfo"><div class="hvname">${v.name}</div><div class="hvaddr">${v.addr}</div></div>
         <a class="hvmap" href="${v.maps}" target="_blank">Mappa</a>
       </div>
-      ${ticket}
       <div class="hcd" id="heroCD"></div>
     </div>
   </div>`;
@@ -429,19 +419,15 @@ function renderCard(m, idx) {
   if (m.sh!=null&&m.sa!=null) res = `<span class="mcres ${m.sh>m.sa?'win':'loss'}">${m.sh}–${m.sa}</span>`;
   else if (!isPast(m.date)) res = `<span class="mcres tbd">—</span>`;
   const venue = !isPast(m.date) ? `<div class="mcvenue"><span>📍</span><div class="mcvtxt"><b>${v.name}</b>${v.addr}</div><a class="mcvmap" href="${v.maps}" target="_blank">Mappa</a></div>` : '';
-  const bigM   = m.big_match  ? `<div class="bigmatch" style="margin:6px 0 2px">🔥 BIG MATCH</div>` : '';
-  const ticket = (!isPast(m.date) && m.ticket_url) ? `<a class="ticketbtn" href="${m.ticket_url}" target="_blank">🎫 Biglietti</a>` : '';
   const anim = `animation:fadeUp .3s ease ${Math.min(idx*.04,.3)}s both`;
   return `<div class="mcard ${tc}" style="${anim}">
     <div class="mcT">
       <span class="mcbdg">${tl}</span>
       <div style="display:flex;gap:6px;align-items:center">${te}<span class="mcdt">${tod}${fmt(m.date)}</span></div>
     </div>
-    ${bigM}
     <div class="mcmatch"><span class="mchome">${m.home}</span><span class="mcsep">vs</span><span class="mcaway">${m.away}</span></div>
     <div class="mcbot"><span class="mcrnd">${m.round?'Giornata '+m.round:phL(m.phase)}</span>${res}</div>
     ${venue}
-    ${ticket}
   </div>`;
 }
 
