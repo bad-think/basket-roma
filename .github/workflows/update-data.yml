@@ -3,8 +3,6 @@ name: Aggiorna Dati Basket Roma
 on:
   schedule:
     # Run serali ogni ora dalle 19:00 alle 23:00 ora italiana
-    # Coprono sia estate (UTC+2) che inverno (UTC+1)
-    # usando 17:00-22:00 UTC che copre entrambe le stagioni
     - cron: '0 17 * * *'
     - cron: '0 18 * * *'
     - cron: '0 19 * * *'
@@ -12,7 +10,6 @@ on:
     - cron: '0 21 * * *'
     - cron: '0 22 * * *'
     # Run notturna alle 04:00 italiane
-    # Estate (UTC+2): 02:00 UTC — Inverno (UTC+1): 03:00 UTC
     - cron: '0 2 * * *'
     - cron: '0 3 * * *'
   workflow_dispatch:
@@ -36,6 +33,10 @@ jobs:
           python-version: '3.11'
 
       - name: Esegui aggiornamento dati
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
+        # Puntiamo correttamente alla sottocartella scripts/
         run: python scripts/update_data.py
 
       - name: Commit e push se ci sono modifiche
