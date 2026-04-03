@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-03T13:30:47.956367",
+  "last_updated": "2026-04-03T15:40:00Z",
   "standings": {
     "virtus": {
       "pos": 3,
@@ -18,7 +18,7 @@
     {
       "date": "2026-04-05",
       "time": "18:00",
-      "round": 28,
+      "round": "28",
       "home": "Virtus GVM Roma",
       "away": "Fortitudo Bologna",
       "team": "virtus",
@@ -30,23 +30,23 @@
     {
       "date": "2026-04-12",
       "time": "20:30",
-      "round": 29,
+      "round": "29",
       "home": "LUISS Roma",
       "away": "Trapani Shark",
       "team": "luiss",
       "big_match": false,
-      "ticket_url": null,
+      "ticket_url": "https://www.vivaticket.com/it/tour/luiss-basket-roma/3534",
       "sh": null,
       "sa": null
     },
     {
       "date": "2026-04-19",
       "time": "18:00",
-      "round": 30,
+      "round": "30",
       "home": "Virtus GVM Roma",
       "away": "Pallacanestro Cantù",
       "team": "virtus",
-      "big_match": false,
+      "big_match": true,
       "ticket_url": "https://www.ticketone.it/artist/virtus-roma-1960/",
       "sh": null,
       "sa": null
@@ -54,7 +54,7 @@
     {
       "date": "2026-03-29",
       "time": "18:00",
-      "round": 27,
+      "round": "27",
       "home": "LUISS Roma",
       "away": "Scaligera Verona",
       "team": "luiss",
@@ -66,11 +66,11 @@
     {
       "date": "2026-03-22",
       "time": "18:00",
-      "round": 26,
+      "round": "26",
       "home": "Virtus GVM Roma",
       "away": "APU Udine",
       "team": "virtus",
-      "big_match": false,
+      "big_match": true,
       "ticket_url": null,
       "sh": 85,
       "sa": 80
