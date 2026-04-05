@@ -113,6 +113,52 @@ def google_search(query, num=5):
         return [], []
 
 
+def google_search_result(home, away):
+    """
+    Cerca il risultato di una partita direttamente negli snippet Google.
+    Non serve trovare l'URL né scaricare la pagina — il punteggio
+    e spesso gia nello snippet (es. "Virtus Roma-Latina 85-72").
+    Restituisce (sh, sa) o None.
+
+    Logica ordine home/away:
+    - pianetabasket scrive sempre "casa-ospite score-score"
+    - se home appare prima di away nello snippet -> s1=home, s2=away
+    - se away appare prima -> sh=s2, sa=s1
+    - se non determinabile -> s1=home per convenzione
+    """
+    query = f'"{home}" "{away}" risultato basket serie B 2026'
+    urls, snippets = google_search(query, num=5)
+
+    home_n = normalise(home)
+    away_n  = normalise(away)
+    pat = re.compile(r"(\d{2,3})\s*[-\u2013]\s*(\d{2,3})")
+
+    for snippet in snippets:
+        sl = snippet.lower()
+        if home_n[:8] not in sl and away_n[:8] not in sl:
+            continue
+        m = pat.search(snippet)
+        if not m:
+            continue
+        s1, s2 = int(m.group(1)), int(m.group(2))
+        if not (20 <= s1 <= 150 and 20 <= s2 <= 150 and s1 != s2):
+            continue
+        # Determina l'ordine dei nomi rispetto al punteggio
+        score_pos = sl.find(m.group(0))
+        pos_home = sl.rfind(home_n[:8], 0, score_pos)
+        pos_away = sl.rfind(away_n[:8], 0, score_pos)
+        if pos_home != -1 and pos_away != -1:
+            sh, sa = (s1, s2) if pos_home < pos_away else (s2, s1)
+        elif pos_home != -1:
+            sh, sa = s1, s2
+        elif pos_away != -1:
+            sh, sa = s2, s1
+        else:
+            sh, sa = s1, s2
+        print(f"  \u2705 Google snippet \u2192 {home} vs {away}: {sh}-{sa}")
+        return sh, sa
+    return None
+
 def find_url_via_google(rnd, season="2025-26"):
     """
     Usa Google per trovare l'URL reale della pagina risultati
@@ -708,14 +754,22 @@ def update_in_season(matches, config, standings):
         md = datetime.strptime(m["date"], "%Y-%m-%d").date()
 
         if md < today and m.get("sh") is None:
+            # Tentativo 1: pagina pianetabasket già scaricata
             found = find_match(all_scraped, m)
-            if found:
+            if found and found.get("sh") is not None:
                 m["sh"] = found["sh"]
                 m["sa"] = found["sa"]
                 if found.get("time"):
                     m["time"] = found["time"]
-                print(f"  ✅ {m['home']} vs {m['away']}: {found['sh']}-{found['sa']}")
+                print(f"  \u2705 pianetabasket \u2192 {m['home']} vs {m['away']}: {found['sh']}-{found['sa']}")
                 updated += 1
+            elif GOOGLE_API_KEY:
+                # Tentativo 2: punteggio direttamente dagli snippet Google
+                # Non serve scaricare nessuna pagina — il risultato è già nello snippet
+                result = google_search_result(m["home"], m["away"])
+                if result:
+                    m["sh"], m["sa"] = result
+                    updated += 1
 
         if md >= today:
             found = find_match(all_scraped, m)
