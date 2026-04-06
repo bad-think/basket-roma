@@ -53,13 +53,13 @@ KNOWN_URLS = {
     31: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-le-gare-di-lunedi-classifiche-31-giornata-2025-26-356237",
     32: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-32-giornata-2025-26-357140",
     33: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-33-giornata-2025-26-357782",
+    34: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-classifiche-34-giornata-2025-26-358236",
 }
 
 # ID base stimati (fallback se Google non trova nulla)
 # G33=357782, incremento reale ~642 per giornata
 ROUND_BASE_IDS = {
-    34: 358424, 35: 359066, 36: 359708,
-    37: 360350, 38: 360992,
+    35: 358696, 36: 359156, 37: 359616, 38: 360076,
 }
 
 LEAGUE_SOURCES = {
@@ -74,7 +74,7 @@ LEAGUE_SOURCES = {
 }
 
 BASE_STANDINGS = {
-    "virtus": {"pos": 3, "pts": 50, "w": 25, "l": 6},
+    "virtus": {"pos": 2, "pts": 52, "w": 26, "l": 6},
     "luiss":  {"pos": 6, "pts": 38, "w": 19, "l": 12},
 }
 
