@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-06T17:07:20.232818",
+  "last_updated": "2026-04-06T17:30:00.000000",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -224,8 +224,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma",
       "away": "Benacquista Latina",
-      "sh": 69,
-      "sa": 42
+      "sh": 87,
+      "sa": 57
     },
     {
       "id": "v35",
