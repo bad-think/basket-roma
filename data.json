@@ -1,6 +1,39 @@
 {
-  "updated": "2026-04-07T11:45:00Z",
+  "last_updated": "2026-04-07T09:39:05.794605",
   "season": "2025-26",
+  "config": {
+    "season": "2025-26",
+    "next_season": "2026-27",
+    "teams": {
+      "virtus": {
+        "name": "Virtus GVM Roma",
+        "name_aliases": [
+          "virtus gvm roma",
+          "virtus roma",
+          "virtus gvm roma 1960",
+          "pallacanestro virtus roma"
+        ],
+        "serie": "B Nazionale",
+        "girone": "B",
+        "venue_name": "PalaTiziano – Palazzetto dello Sport",
+        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
+        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      },
+      "luiss": {
+        "name": "Luiss Roma",
+        "name_aliases": [
+          "luiss roma",
+          "luiss",
+          "luiss basketball"
+        ],
+        "serie": "B Nazionale",
+        "girone": "B",
+        "venue_name": "PalaTiziano – Palazzetto dello Sport",
+        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
+        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      }
+    }
+  },
   "matches": [
     {
       "id": "v31",
