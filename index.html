@@ -15,224 +15,305 @@
 <style>
 :root{--v:#C8102E;--l:#003087;--g:#F5C518;--bg:#0a0a0f;--card:#13131a;--bd:rgba(255,255,255,.07);--tx:#f0f0f0;--mu:#777;--gr:#4ade80}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;line-height:1.5;overflow-x:hidden;-webkit-tap-highlight-color:transparent;padding-bottom:100px}
-.header{position:sticky;top:0;background:rgba(10,10,15,0.8);backdrop-filter:blur(12px);z-index:100;padding:16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
-.logo{font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:1px;display:flex;align-items:center;gap:8px}
-.header-btns{display:flex;gap:12px;align-items:center}
-.btn-icon{background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;opacity:0.8}
-.btn-notif.active{color:var(--g);opacity:1}
-.uptime{font-size:10px;color:var(--mu);font-weight:700;text-transform:uppercase}
-.filters{display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none}
-.filters::-webkit-scrollbar{display:none}
-.filter{background:var(--card);border:1px solid var(--bd);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;color:var(--mu);transition:0.2s}
-.filter.active{background:var(--tx);color:var(--bg);border-color:var(--tx)}
-.container{padding:0 16px}
-.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--bd);position:relative;animation:fadeUp 0.4s ease-out forwards}
-.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
-.tag-team{padding:2px 8px;border-radius:4px;color:#fff}
-.tag-v{background:var(--v)}.tag-l{background:var(--l)}
-.tag-live{background:var(--gr);color:var(--bg);padding:2px 6px;border-radius:4px;animation:pulse 1.5s infinite}
-.match-grid{display:grid;grid-template-columns:1fr 60px 1fr;align-items:center;gap:12px;text-align:center}
-.team-name{font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:0.5px}
-.score{font-family:'Bebas Neue',cursive;font-size:32px;display:flex;flex-direction:column;line-height:1}
-.score-final{color:var(--tx)}
-.score-time{font-size:16px;color:var(--mu)}
-.card-bottom{margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mu)}
-.venue{display:flex;align-items:center;gap:4px;color:var(--mu);text-decoration:none}
-.countdown{background:rgba(255,255,255,0.05);padding:8px;border-radius:12px;margin-bottom:20px;text-align:center;font-size:13px;border:1px dashed var(--bd)}
-.countdown b{color:var(--g)}
-.standings{margin-top:20px;background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--bd)}
-.st-row{display:grid;grid-template-columns:30px 1fr 40px 60px;padding:10px 16px;font-size:13px;align-items:center;border-bottom:1px solid var(--bd)}
-.st-row:last-child{border:0}
-.st-header{background:rgba(255,255,255,0.03);color:var(--mu);font-size:10px;font-weight:700;text-transform:uppercase}
-.st-pos{font-weight:700;color:var(--mu)}
-.st-pts{font-weight:700;color:var(--tx);text-align:right}
-.st-rec{color:var(--mu);text-align:right;font-size:11px}
-.upbadge{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--bd);padding:8px 16px;border-radius:30px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:8px;z-index:1000;box-shadow:0 10px 25px rgba(0,0,0,0.5)}
-.upbadge.ok::before{content:'';width:8px;height:8px;background:var(--gr);border-radius:50%}
-@keyframes pulse{0%{opacity:1}50%{opacity:0.5}100%{opacity:1}}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{background:rgba(10,10,15,.96);position:sticky;top:0;z-index:50;border-bottom:1px solid var(--bd);backdrop-filter:blur(12px)}
+.hrow{display:flex;align-items:center;gap:8px;padding:16px 16px 12px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;flex:1}
+.ibtn{background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--mu);border-radius:10px;padding:7px 12px;cursor:pointer;font-size:15px;line-height:1;transition:.2s}
+.ibtn:active{background:rgba(255,255,255,.15)}
+.ibtn.on{background:rgba(245,197,24,.12);border-color:rgba(245,197,24,.4);color:var(--g)}
+.ibtn.notif-off{position:relative;color:var(--mu)}
+.ibtn.notif-off::after{content:'';position:absolute;top:5px;right:6px;width:8px;height:8px;background:var(--v);border-radius:50%;border:2px solid var(--bg)}
+.spin{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.uprow{display:flex;justify-content:space-between;align-items:center;padding:0 16px 8px}
+.uptime{font-size:10px;color:var(--mu)}
+.upbadge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.upbadge.ok{background:rgba(74,222,128,.1);color:var(--gr)}
+.upbadge.err{background:rgba(200,16,46,.1);color:rgba(255,100,100,.8)}
+.upbadge.wait{background:rgba(255,255,255,.05);color:var(--mu)}
+.tabs{display:flex;gap:6px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid transparent;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;transition:.2s;white-space:nowrap}
+.tab.ta{background:rgba(255,255,255,.05);color:#666}.tab.ta.on{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.15)}
+.tab.tv{background:rgba(200,16,46,.08);color:rgba(200,16,46,.5)}.tab.tv.on{background:var(--v);color:#fff}
+.tab.tl{background:rgba(0,48,135,.12);color:rgba(80,120,220,.6)}.tab.tl.on{background:var(--l);color:#fff}
+.tab.tp{background:rgba(245,197,24,.08);color:rgba(245,197,24,.5)}.tab.tp.on{background:var(--g);color:#000}
+.stand{display:flex;gap:8px;overflow-x:auto;padding:12px 16px 0;scrollbar-width:none}
+.stand::-webkit-scrollbar{display:none}
+.schip{flex-shrink:0;padding:8px 14px;border-radius:12px;border:1px solid;font-size:12px;font-weight:500;white-space:nowrap}
+.schip.sv{background:rgba(200,16,46,.08);border-color:rgba(200,16,46,.2);color:rgba(255,110,110,.9)}
+.schip.sl{background:rgba(0,48,135,.12);border-color:rgba(0,48,135,.3);color:rgba(110,160,255,.9)}
+.schip b{font-family:'Bebas Neue',sans-serif;font-size:15px;margin-right:3px}
+.hero{margin:14px 16px 0;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+.hero.hv{background:linear-gradient(135deg,#150008,#2d0011 60%,#150008);border-color:rgba(200,16,46,.25)}
+.hero.hl{background:linear-gradient(135deg,#000918,#001848 60%,#000918);border-color:rgba(0,48,135,.35)}
+.hlabel{font-size:9px;letter-spacing:3px;text-transform:uppercase;padding:12px 16px 2px;color:var(--mu)}
+.hteam{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:2px;padding:0 16px 6px}
+.hteam.hv{color:rgba(255,90,90,.8)}.hteam.hl{color:rgba(100,160,255,.8)}
+.hbody{padding:0 16px 14px}
+.hmatch{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
+.hhome{font-size:20px;font-weight:700}
+.hvs{font-size:12px;color:var(--mu)}
+.haway{font-size:16px;color:#aaa}
+.hmeta{font-size:12px;color:var(--mu);margin-bottom:10px}
+.hvenue{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.hvinfo{flex:1}
+.hvname{font-size:13px;font-weight:600;color:rgba(255,255,255,.8)}
+.hvaddr{font-size:11px;color:var(--mu);margin-top:1px}
+a.hvmap{background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.3);color:var(--g);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}
+.hcd{display:flex;gap:14px}
+.cdu{text-align:center}
+.cdn{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1}
+.cdl{font-size:9px;letter-spacing:2px;color:var(--mu);text-transform:uppercase}
+.stats{display:flex;margin:14px 16px 0;background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.sti{flex:1;padding:10px 6px;text-align:center;border-right:1px solid var(--bd)}
+.sti:last-child{border-right:none}
+.stn{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1}
+.stl{font-size:9px;letter-spacing:1px;color:var(--mu);text-transform:uppercase;margin-top:2px}
+.stn.sv{color:rgba(255,100,100,.9)}.stn.sl{color:rgba(100,160,255,.9)}
+.slbl{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:3px;color:var(--mu);padding:18px 16px 8px}
+.mlist{padding:0 16px 100px}
+.mcard{background:var(--card);border:1px solid var(--bd);border-radius:14px;margin-bottom:9px;padding:13px 14px;position:relative;overflow:hidden}
+.mcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.mcard.cv::before{background:var(--v)}.mcard.cl::before{background:var(--l)}.mcard.cp::before{background:var(--g)}
+.mcT{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.mcbdg{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:20px;font-weight:600}
+.cv .mcbdg{background:rgba(200,16,46,.15);color:rgba(255,110,110,.9)}
+.cl .mcbdg{background:rgba(0,48,135,.25);color:rgba(110,160,255,.9)}
+.cp .mcbdg{background:rgba(245,197,24,.12);color:var(--g)}
+.mcdt{font-size:11px;color:var(--mu)}
+.mctm{font-size:11px;color:var(--g);font-weight:600}
+.mcmatch{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.mchome{font-size:16px;font-weight:600}
+.mcsep{color:var(--mu);font-size:11px}
+.mcaway{font-size:14px;color:#bbb}
+.mcbot{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
+.mcrnd{font-size:11px;color:var(--mu)}
+.mcres{font-family:'Bebas Neue',sans-serif;font-size:18px}
+.mcres.win{color:var(--gr)}.mcres.loss{color:var(--v)}.mcres.tbd{font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.2)}
+.mcvenue{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--bd)}
+.mcvtxt{font-size:11px;color:var(--mu);flex:1;line-height:1.4}
+.mcvtxt b{color:rgba(255,255,255,.55);font-weight:600;display:block}
+a.mcvmap{flex-shrink:0;background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.2);color:var(--g);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap}
+.today{width:6px;height:6px;border-radius:50%;background:var(--g);display:inline-block;margin-right:4px;animation:pulse 1s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.psblock{margin:14px 16px 0;border-radius:14px;overflow:hidden;border:1px solid var(--bd)}
+.pshead{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.pstitle{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px}
+.psdates{font-size:11px;color:var(--mu)}
+.pschev{font-size:13px;color:var(--mu);transition:.2s}
+.psblock.open .pschev{transform:rotate(180deg)}
+.psbody{display:none;padding:0 16px 14px;border-top:1px solid var(--bd)}
+.psblock.open .psbody{display:block}
+.psblock.playoff .pshead{background:rgba(255,80,80,.05)}.psblock.playoff .pstitle{color:rgba(255,130,130,.9)}
+.psblock.playin .pshead{background:rgba(245,197,24,.05)}.psblock.playin .pstitle{color:var(--g)}
+.psblock.info .pshead{background:rgba(255,255,255,.02)}.psblock.info .pstitle{color:var(--mu);font-size:12px}
+.psrow{display:flex;gap:8px;margin-top:8px;font-size:12px;color:var(--mu);line-height:1.5}
+.psrow em{color:rgba(255,255,255,.6);font-style:normal}
+.psteam{margin-top:12px}
+.pstlbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:2px 8px;border-radius:20px;font-weight:600;display:inline-block;margin-bottom:6px}
+.pstlbl.sv{background:rgba(200,16,46,.15);color:rgba(255,110,110,.9)}
+.pstlbl.sl{background:rgba(0,48,135,.25);color:rgba(110,160,255,.9)}
+.psstatus{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:6px}
+.psstatus.q{background:rgba(74,222,128,.12);color:var(--gr);border:1px solid rgba(74,222,128,.2)}
+.psstatus.r{background:rgba(245,197,24,.12);color:var(--g);border:1px solid rgba(245,197,24,.2)}
+.psbox{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-top:8px}
+.psbtitle{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:8px}
+.psbrow{display:flex;gap:8px;font-size:12px;color:var(--mu);margin-bottom:4px;line-height:1.5}
+.psbpos{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--g);flex-shrink:0;width:24px}
+.sources{margin:14px 16px 0;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:8px}
+.srctitle{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;color:var(--mu);margin-bottom:10px}
+.srcrow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)}
+.srcrow:last-child{border-bottom:none}
+.srcname{font-size:13px;font-weight:500}
+.srcmeta{font-size:11px;color:var(--mu);margin-top:2px}
+a.srclink{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.2);color:var(--g);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(22,22,32,.97);border:1px solid var(--bd);backdrop-filter:blur(20px);border-radius:12px;padding:11px 20px;font-size:13px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="logo">🏀 Roma Basket</div>
-    <div class="header-btns">
-        <div id="uptime" class="uptime">—</div>
-        <button class="btn-icon" onclick="location.reload()">↻</button>
-        <button id="notifBtn" class="btn-icon btn-notif" onclick="toggleNotif()">🔔</button>
-    </div>
-</div>
+<div class="toast" id="toast"></div>
 
-<div class="filters">
-    <div class="filter active" onclick="setFilter('all', this)">Tutte</div>
-    <div class="filter" onclick="setFilter('virtus', this)">Virtus Roma</div>
-    <div class="filter" onclick="setFilter('luiss', this)">LUISS</div>
-    <div class="filter" onclick="setFilter('post', this)">Post Season</div>
-</div>
+<header>
+  <div class="hrow">
+    <h1>🏀 Roma Basket</h1>
+    <button class="ibtn" id="refreshBtn" onclick="doRefresh(true)" title="Aggiorna">↻</button>
+    <button class="ibtn" id="notifBtn" onclick="toggleNotif()">🔔</button>
+  </div>
+  <div class="uprow">
+    <span class="uptime" id="uptime">—</span>
+    <span class="upbadge wait" id="upbadge">Caricamento</span>
+  </div>
+  <div class="tabs">
+    <button class="tab ta on"  onclick="setTab('all')">Tutte</button>
+    <button class="tab tv"     onclick="setTab('virtus')">Virtus Roma</button>
+    <button class="tab tl"     onclick="setTab('luiss')">LUISS</button>
+    <button class="tab tp"     onclick="setTab('post')">Post Season</button>
+  </div>
+</header>
 
-<div class="container" id="app"></div>
-
-<div id="upbadge" class="upbadge">📋 Caricamento...</div>
+<div id="appContent"></div>
 
 <script>
-let matches = [];
-let standings = {};
-let currentFilter = 'all';
-let notifEnabled = localStorage.getItem('notif') === '1';
+// DATI INITIAL (Fallback se data.json non carica)
+const MATCHES = [
+  {id:'v34',team:'virtus',phase:'regular',round:34,date:'2026-04-04',time:'20:00',home:'Virtus GVM Roma',away:'Benacquista Latina',sh:87,sa:57},
+  {id:'v35',team:'virtus',phase:'regular',round:35,date:'2026-04-11',time:'20:00',home:'Virtus GVM Roma',away:'Consorzio Dany Quarrata',sh:null,sa:null}
+];
+const STANDINGS = { virtus:{pos:2,pts:52,w:26,l:6}, luiss: {pos:6,pts:38,w:19,l:12} };
+const VENUES = {
+  virtus:{name:'PalaTiziano',addr:'Piazza Apollodoro 10, Roma',maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'},
+  luiss: {name:'PalaTiziano',addr:'Piazza Apollodoro 10, Roma',maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'}
+};
+const SOURCES = [
+  {name:'LNP ufficiale',meta:'Girone B 2025-26',url:'https://www.legapallacanestro.com'},
+  {name:'Virtus Roma 1960',meta:'Sito ufficiale',url:'https://www.virtusroma1960.it'}
+];
 
-async function loadData() {
-    try {
-        const res = await fetch('data.json?t=' + Date.now());
-        const data = await res.json();
-        
-        // Fix per compatibilità campi script python
-        matches = data.matches || [];
-        standings = data.standings || {};
-        const lastUpdate = data.last_updated || data.updated || '';
-        
-        if(lastUpdate) {
-            const dateObj = new Date(lastUpdate);
-            const timeStr = dateObj.toLocaleString('it-IT', {day:'2d', month:'2d', hour:'2d', minute:'2d'});
-            document.getElementById('uptime').textContent = 'Agg: ' + timeStr;
-            document.getElementById('upbadge').className = 'upbadge ok';
-            document.getElementById('upbadge').textContent = '📋 ' + timeStr;
-        }
-        
-        render();
-        if(notifEnabled) scheduleNotif();
-    } catch (e) {
-        console.error(e);
-        document.getElementById('upbadge').textContent = '⚠️ Errore dati';
-    }
-}
+let matches = JSON.parse(localStorage.getItem('brc_m')) || MATCHES;
+let standings = JSON.parse(localStorage.getItem('brc_s')) || STANDINGS;
+let lastUpdate = localStorage.getItem('brc_lu') || null;
+let currentTab = 'all';
+let notifEnabled = localStorage.getItem('brc_n') === '1';
+let cdTimer = null;
 
-function setFilter(f, el) {
-    currentFilter = f;
-    document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    render();
-}
+const today = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+const toDate = s => { if(!s) return new Date(); const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const isPast = s => toDate(s) < today();
+const isToday = s => toDate(s).getTime()===today().getTime();
+const fmt = s => {
+  const d=toDate(s);
+  const D=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const M=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return `${D[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+};
 
-function toDate(d) { return new Date(d); }
-function isPast(d) { 
-    const limit = toDate(d);
-    limit.setHours(23,59,0,0);
-    return new Date() > limit;
+function doRefresh(manual) {
+  if (manual) { setBadge('wait','⏳ ...'); document.getElementById('refreshBtn').classList.add('spin'); }
+  fetch('data.json?v=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+      // FIX TECNICO: Accetta sia .updated che .last_updated
+      matches = data.matches || matches;
+      standings = data.standings || standings;
+      const rawDate = data.last_updated || data.updated || new Date();
+      lastUpdate = new Date(rawDate).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      
+      localStorage.setItem('brc_m', JSON.stringify(matches));
+      localStorage.setItem('brc_s', JSON.stringify(standings));
+      localStorage.setItem('brc_lu', lastUpdate);
+      
+      setBadge('ok','✅ Live');
+      if (manual) showToast('✅ Dati aggiornati');
+      render();
+    })
+    .catch(e => {
+      console.error(e);
+      setBadge('err','⚠️ Errore dati');
+      if (manual) showToast('⚠️ Errore caricamento');
+    })
+    .finally(() => {
+      document.getElementById('refreshBtn').classList.remove('spin');
+      document.getElementById('uptime').textContent = 'Agg: ' + (lastUpdate || '—');
+    });
 }
 
 function render() {
-    const app = document.getElementById('app');
-    let html = '';
+  const c = document.getElementById('appContent');
+  if (currentTab === 'post') { c.innerHTML = renderPost(); return; }
 
-    // 1. Prossima Partita (Countdown)
-    const upcoming = matches.filter(m => !isPast(m.date)).sort((a,b) => toDate(a.date) - toDate(b.date))[0];
-    if(upcoming) {
-        const d = toDate(upcoming.date);
-        const diff = Math.ceil((d - new Date()) / 86400000);
-        const dayLabel = diff === 0 ? "OGGI" : diff === 1 ? "DOMANI" : `tra ${diff} giorni`;
-        html += `<div class="countdown">Prossima in casa: <b>${dayLabel}</b> (${upcoming.home} vs ${upcoming.away})</div>`;
-    }
+  const filtered = matches.filter(m => currentTab==='all' || m.team===currentTab).sort((a,b)=>a.date.localeCompare(b.date));
+  const upcoming = filtered.filter(m=>!isPast(m.date)||isToday(m.date));
+  const past = filtered.filter(m=>isPast(m.date)&&!isToday(m.date));
 
-    // 2. Partite
-    let filtered = matches;
-    if(currentFilter === 'virtus') filtered = matches.filter(m => m.team === 'virtus');
-    if(currentFilter === 'luiss') filtered = matches.filter(m => m.team === 'luiss');
-    if(currentFilter === 'post') filtered = matches.filter(m => m.phase !== 'regular');
-    
-    filtered.sort((a,b) => toDate(b.date) - toDate(a.date)).forEach(m => {
-        const past = isPast(m.date);
-        const scoreHome = m.sh !== null ? m.sh : '-';
-        const scoreAway = m.sa !== null ? m.sa : '-';
-        
-        html += `
-        <div class="card">
-            <div class="card-top">
-                <span class="tag-team tag-${m.team[0]}">${m.team.toUpperCase()}</span>
-                <span>${new Date(m.date).toLocaleDateString('it-IT', {day:'numeric', month:'short'}).toUpperCase()} • G${m.round}</span>
-            </div>
-            <div class="match-grid">
-                <div class="team-name">${m.home}</div>
-                <div class="score">
-                    ${past && m.sh !== null ? 
-                        `<span class="score-final">${scoreHome}-${scoreAway}</span>` : 
-                        `<span class="score-time">${m.time || '20:30'}</span>`
-                    }
-                </div>
-                <div class="team-name">${m.away}</div>
-            </div>
-            <div class="card-bottom">
-                <a href="https://www.google.com/maps/search/?api=1&query=PalaTiziano+Roma" class="venue" target="_blank">📍 PalaTiziano</a>
-                <span style="color:var(--mu)">${m.phase === 'regular' ? 'Regular Season' : 'Post Season'}</span>
-            </div>
-        </div>`;
-    });
-
-    // 3. Classifica
-    if(Object.keys(standings).length > 0) {
-        html += `
-        <div class="standings">
-            <div class="st-row st-header">
-                <span>POS</span><span>SQUADRA</span><span style="text-align:right">PT</span><span style="text-align:right">V-P</span>
-            </div>`;
-        
-        // Gestione sia formato array che oggetto
-        const stList = Array.isArray(standings) ? standings : Object.values(standings);
-        stList.sort((a,b) => a.pos - b.pos).forEach(s => {
-            html += `
-            <div class="st-row">
-                <span class="st-pos">${s.pos}</span>
-                <span style="font-weight:500">${s.team || (s === standings.virtus ? 'Virtus Roma' : 'LUISS')}</span>
-                <span class="st-pts">${s.pts}</span>
-                <span class="st-rec">${s.w}-${s.l}</span>
-            </div>`;
-        });
-        html += `</div>`;
-    }
-
-    app.innerHTML = html;
+  let html = renderStandings();
+  if (upcoming.length) html += renderHero(upcoming[0]);
+  if (currentTab==='all') html += renderStats();
+  
+  if (upcoming.length) {
+    html += `<div class="slbl">Prossime partite</div><div class="mlist">`;
+    upcoming.forEach((m,i) => html += renderCard(m,i));
+    html += `</div>`;
+  }
+  if (past.length) {
+    html += `<div class="slbl">Risultati</div><div class="mlist">`;
+    [...past].reverse().forEach((m,i) => html += renderCard(m,i+10));
+    html += `</div>`;
+  }
+  html += renderSources();
+  c.innerHTML = html;
+  startCD(upcoming[0]);
 }
 
-// Notifiche
-function updateNotifBtn() {
-    document.getElementById('notifBtn').classList.toggle('active', notifEnabled);
+function renderStandings() {
+  // Supporta sia array che oggetto (per stabilità)
+  const v = (Array.isArray(standings) ? standings.find(s=>s.team?.toLowerCase().includes('virtus')) : standings.virtus) || {pos:'-',pts:'-',w:'-',l:'-'};
+  const l = (Array.isArray(standings) ? standings.find(s=>s.team?.toLowerCase().includes('luiss')) : standings.luiss) || {pos:'-',pts:'-',w:'-',l:'-'};
+  return `<div class="stand">
+    <div class="schip sv"><b>${v.pos}°</b> Virtus — ${v.pts}pt (${v.w}V-${v.l}P)</div>
+    <div class="schip sl"><b>${l.pos}°</b> LUISS — ${l.pts}pt (${l.w}V-${l.l}P)</div>
+  </div>`;
 }
 
-function toggleNotif() {
-    if(!notifEnabled) {
-        Notification.requestPermission().then(p => {
-            if(p === 'granted') {
-                notifEnabled = true;
-                localStorage.setItem('notif', '1');
-                updateNotifBtn();
-                scheduleNotif();
-            }
-        });
-    } else {
-        notifEnabled = false;
-        localStorage.setItem('notif', '0');
-        updateNotifBtn();
-    }
+function renderHero(m) {
+  const tc = m.team==='virtus'?'hv':'hl';
+  const v = VENUES[m.team] || VENUES.virtus;
+  return `<div class="hero ${tc}">
+    <div class="hlabel">PROSSIMA PARTITA</div>
+    <div class="hteam ${tc}">${m.team.toUpperCase()}</div>
+    <div class="hbody">
+      <div class="hmatch"><span class="hhome">${m.home}</span><span class="hvs">vs</span><span class="haway">${m.away}</span></div>
+      <div class="hmeta">📅 ${fmt(m.date)} ore ${m.time || '20:00'}</div>
+      <div class="hvenue"><span>📍</span><div class="hvinfo"><div class="hvname">${v.name}</div></div><a class="hvmap" href="${v.maps}" target="_blank">Mappa</a></div>
+      <div class="hcd" id="heroCD"></div>
+    </div>
+  </div>`;
 }
 
-function scheduleNotif() {
-    if(!('Notification' in window)) return;
-    matches.filter(m => !isPast(m.date)).forEach(m => {
-        const d = toDate(m.date);
-        const notifyAt = d.getTime() - 86400000; // 24h prima
-        const delay = notifyAt - Date.now();
-        if(delay > 0) {
-            setTimeout(() => {
-                if(notifEnabled) new Notification('🏀 Partita domani!', { body: `${m.home} vs ${m.away}` });
-            }, delay);
-        }
-    });
+function renderCard(m, idx) {
+  const tc = m.team==='virtus'?'cv':'cl';
+  let res = m.sh!==null ? `<span class="mcres ${m.sh>m.sa?'win':'loss'}">${m.sh}–${m.sa}</span>` : `<span class="mcres tbd">${m.time || 'TBD'}</span>`;
+  return `<div class="mcard ${tc}" style="animation:fadeUp .3s ease ${idx*0.05}s both">
+    <div class="mcT"><span class="mcbdg">${m.team}</span><span class="mcdt">${fmt(m.date)}</span></div>
+    <div class="mcmatch"><span class="mchome">${m.home}</span><span class="mcsep">vs</span><span class="mcaway">${m.away}</span></div>
+    <div class="mcbot"><span class="mcrnd">Giornata ${m.round || '-'}</span>${res}</div>
+  </div>`;
 }
 
-// Avvio
-window.addEventListener('load', loadData);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+function renderStats() { return ''; }
+function renderSources() { return ''; }
+function renderPost() { return '<div class="empty">Dettagli Post Season disponibili a breve</div>'; }
+
+function setTab(t) {
+  currentTab = t;
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
+  const map = {all:'ta',virtus:'tv',luiss:'tl',post:'tp'};
+  document.querySelector('.tab.'+map[t]).classList.add('on');
+  render();
+}
+
+function setBadge(type, text) { const el = document.getElementById('upbadge'); el.className = 'upbadge ' + type; el.textContent = text; }
+function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); }
+
+function startCD(m) {
+  if (cdTimer) clearInterval(cdTimer);
+  if (!m) return;
+  const tick = () => {
+    const el = document.getElementById('heroCD');
+    if (!el) return;
+    const target = toDate(m.date); target.setHours(20,0,0,0);
+    const diff = target - new Date();
+    if (diff <= 0) { el.innerHTML = 'LIVE 🏀'; return; }
+    const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), mn=Math.floor((diff%3600000)/60000);
+    el.innerHTML = `<div class="cdu"><div class="cdn">${d}</div><div class="cdl">giorni</div></div><div class="cdu"><div class="cdn">${h}</div><div class="cdl">ore</div></div><div class="cdu"><div class="cdn">${mn}</div><div class="cdl">min</div></div>`;
+  };
+  tick(); cdTimer = setInterval(tick, 60000);
+}
+
+window.onload = () => { doRefresh(false); };
 </script>
-
 </body>
 </html>
