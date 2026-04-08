@@ -2,18 +2,15 @@ name: Aggiorna Dati Basket Roma
 
 on:
   schedule:
-    # Run serali ogni ora dalle 19:00 alle 23:00 ora italiana
-    # Coprono sia estate (UTC+2) che inverno (UTC+1)
+    # Run serali ogni ora dalle 18:00 alle 23:00 ora italiana
+    - cron: '0 16 * * *'
     - cron: '0 17 * * *'
     - cron: '0 18 * * *'
     - cron: '0 19 * * *'
     - cron: '0 20 * * *'
     - cron: '0 21 * * *'
-    - cron: '0 22 * * *'
     # Run notturna alle 04:00 italiane
-    # Estate (UTC+2): 02:00 UTC — Inverno (UTC+1): 03:00 UTC
     - cron: '0 2 * * *'
-    - cron: '0 3 * * *'
   workflow_dispatch:
 
 env:
@@ -40,9 +37,11 @@ jobs:
           GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
         run: python scripts/update_data.py
 
-      - name: Commit e push se ci sono modifiche
+      - name: Commit e Push dei cambiamenti
         run: |
-          git config user.name "Roma Basket Bot"
-          git config user.email "bot@romabasket.app"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           git add data.json
-          git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
+          # Il comando commit non fallisce se non ci sono modifiche
+          git commit -m "Auto-update: classifica e orari basket [skip ci]" || echo "Nessuna modifica rilevata"
+          git push
