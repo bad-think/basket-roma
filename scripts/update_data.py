@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — Aggiornamento automatico v5
-Usa Google Custom Search API per trovare gli URL reali di pianetabasket
-senza dover stimare gli ID.
+update_data.py — Roma Basket Casa — Versione Corretta v5.2
+- Ricalcolo totale classifica da zero ad ogni avvio (Auto-correzione)
+- Gestione alias per avversari (es. Faenza/Tema Sinergie)
 """
 
 import json
@@ -11,7 +11,7 @@ import re
 import sys
 import urllib.request
 import urllib.parse
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from pathlib import Path
 
 # ================================================================
@@ -19,200 +19,137 @@ from pathlib import Path
 # ================================================================
 CONFIG = {
     "season": "2025-26",
-    "next_season": "2026-27",
     "teams": {
         "virtus": {
             "name": "Virtus GVM Roma",
-            "name_aliases": [
-                "virtus gvm roma", "virtus roma", "virtus gvm roma 1960",
-                "pallacanestro virtus roma"
-            ],
+            "name_aliases": ["virtus gvm roma", "virtus roma", "virtus gvm roma 1960"],
             "serie": "B Nazionale",
-            "girone": "B",
-            "venue_name": "PalaTiziano – Palazzetto dello Sport",
-            "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+            "girone": "B"
         },
         "luiss": {
             "name": "Luiss Roma",
-            "name_aliases": ["luiss roma", "luiss", "luiss basketball"],
+            "name_aliases": ["luiss roma", "luiss", "luiss basket"],
             "serie": "B Nazionale",
-            "girone": "B",
-            "venue_name": "PalaTiziano – Palazzetto dello Sport",
-            "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+            "girone": "B"
         }
     }
 }
 
+# Punti di partenza (situazione a inizio girone di ritorno o data fissa)
+# Se Virtus ha 52 punti prima di G34, inserisci qui i dati corretti
 BASE_STANDINGS = {
-    "virtus": {"pos": 1, "pts": 52, "w": 26, "l": 6},
+    "virtus": {"pos": 1, "pts": 52, "w": 26, "l": 6}, 
     "luiss": {"pos": 6, "pts": 38, "w": 19, "l": 13}
 }
 
-# Mapping ID reali per evitare errori di stima (Pianetabasket)
+# Mapping ID Pianetabasket
 KNOWN_URLS = {
-    31: "356237",
-    32: "357140",
-    33: "357782",
-    34: "358236", # Virtus vs Latina ID REALE
+    34: "358236", # Virtus vs Latina
 }
 
-# Ricalcolo stime per le ultime giornate basato su G34
 ROUND_BASE_IDS = {
-    35: 358878, 
-    36: 359520, 
-    37: 360162, 
-    38: 360804
+    35: 358878, # Possibile ID per Luiss vs Faenza / Virtus vs Fabriano
+    36: 359520
+}
+
+# Alias per avversari che cambiano nome (Sponsor)
+OPPONENT_ALIASES = {
+    "raggisolaris faenza": ["tema sinergie faenza", "faenza", "raggisolaris"],
+    "janus fabriano": ["ristopro fabriano", "fabriano"],
+    "benacquista latina": ["latina basket", "latina"]
 }
 
 # ================================================================
-# UTILITIES
+# FUNZIONI DI AGGIORNAMENTO
 # ================================================================
 
 def get_url(url):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=15) as response:
+        with urllib.request.urlopen(req, timeout=10) as response:
             return response.read().decode('utf-8', errors='ignore')
-    except Exception as e:
-        print(f"  ⚠️  {url}: {e}")
-        return None
+    except: return None
 
-def google_search_result(query):
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    cse_id  = os.environ.get("GOOGLE_CSE_ID")
-    if not api_key or not cse_id:
-        return None
-
-    encoded_query = urllib.parse.quote(query)
-    url = f"https://www.googleapis.com/customsearch/v1?key={api_key}&cx={cse_id}&q={encoded_query}"
-    
-    # Debug opzionale per i log di GitHub Actions
-    # print(f"  🔍 Google Search: {query}") 
-
-    try:
-        res_json = json.loads(get_url(url))
-        if "items" in res_json:
-            for item in res_json["items"]:
-                snippet = item.get("snippet", "")
-                # Cerca pattern punteggio (es. 87-57 o 87 - 57)
-                match = re.search(r'(\d{2,3})\s*-\s*(\d{2,3})', snippet)
-                if match:
-                    return int(match.group(1)), int(match.group(2))
-    except Exception as e:
-        print(f"  ⚠️  Google Search error: {e}")
-    return None
-
-def parse_score(html, team_name, opponent_name):
+def parse_score(html, home_name, away_name):
     if not html: return None
+    text = re.sub('<[^<]+?>', ' ', html).lower()
     
-    # Cerca il blocco del punteggio nel testo
-    clean_text = re.sub('<[^<]+?>', ' ', html).lower()
-    
-    # Pattern: NomeTeam 87 - 57 NomeAvversario
-    pattern = rf'{team_name.lower()}.*?(\d{{2,3}})\s*-\s*(\d{{2,3}}).*?{opponent_name.lower()}'
-    match = re.search(pattern, clean_text, re.DOTALL)
-    if match:
-        return int(match.group(1)), int(match.group(2))
-    
-    # Pattern inverso: NomeAvversario 57 - 87 NomeTeam
-    pattern_rev = rf'{opponent_name.lower()}.*?(\d{{2,3}})\s*-\s*(\d{{2,3}}).*?{team_name.lower()}'
-    match_rev = re.search(pattern_rev, clean_text, re.DOTALL)
-    if match_rev:
-        return int(match_rev.group(2)), int(match_rev.group(1))
-        
+    # Crea liste di nomi possibili includendo alias
+    home_list = [home_name.lower()] + OPPONENT_ALIASES.get(home_name.lower(), [])
+    away_list = [away_name.lower()] + OPPONENT_ALIASES.get(away_name.lower(), [])
+
+    for h in home_list:
+        for a in away_list:
+            pattern = rf'{re.escape(h)}.*?(\d{{2,3}})\s*-\s*(\d{{2,3}}).*?{re.escape(a)}'
+            match = re.search(pattern, text, re.DOTALL)
+            if match: return int(match.group(1)), int(match.group(2))
+            
+            pattern_rev = rf'{re.escape(a)}.*?(\d{{2,3}})\s*-\s*(\d{{2,3}}).*?{re.escape(h)}'
+            match_rev = re.search(pattern_rev, text, re.DOTALL)
+            if match_rev: return int(match_rev.group(2)), int(match_rev.group(1))
     return None
 
-def update_in_season(matches, config, standings):
-    updated_count = 0
-    today = date.today()
-
+def recalculate_all_standings(matches):
+    """Ricalcola la classifica da zero basandosi sui match nel JSON"""
+    new_standings = {k: dict(v) for k, v in BASE_STANDINGS.items()}
+    
     for m in matches:
-        # Aggiorna solo se la partita è passata e non ha ancora un punteggio
-        match_date = datetime.strptime(m["date"], "%Y-%m-%d").date()
-        if match_date <= today and m.get("sh") is None:
-            
-            round_num = m["round"]
-            team_key  = m["team"]
-            t_config  = config["teams"][team_key]
-            
-            print(f"  ✅ G{round_num}: cerco risultato per {m['home']} vs {m['away']}")
-
-            score = None
-
-            # 1. Prova con URL Conosciuto o Stimato su Pianetabasket
-            pb_id = KNOWN_URLS.get(round_num) or ROUND_BASE_IDS.get(round_num)
-            if pb_id:
-                pb_url = f"https://www.pianetabasket.com/serie-b/live-{pb_id}"
-                html = get_url(pb_url)
-                score = parse_score(html, m["home"], m["away"])
-                if score:
-                    print(f"  ✅ pianetabasket → {m['home']} vs {m['away']}: {score[0]}-{score[1]}")
-
-            # 2. Fallback: Google Search Snippet
-            if not score:
-                query = f"{m['home']} {m['away']} risultato basket {m['date']}"
-                score = google_search_result(query)
-                if score:
-                    print(f"  ✅ google → {m['home']} vs {m['away']}: {score[0]}-{score[1]}")
-
-            if score:
-                m["sh"], m["sa"] = score[0], score[1]
-                updated_count += 1
+        if m.get("sh") is not None and m.get("sa") is not None:
+            tk = m["team"]
+            if tk in new_standings:
+                # Se la squadra del file (Virtus o Luiss) è in casa
+                is_home = (m["home"].lower() in CONFIG["teams"][tk]["name_aliases"])
                 
-                # Aggiorna Standings (Semplificato: +2pt se vince casa, +0 se perde)
-                if m["sh"] > m["sa"]:
-                    standings[team_key]["pts"] += 2
-                    standings[team_key]["w"] += 1
+                win = False
+                if is_home and m["sh"] > m["sa"]: win = True
+                elif not is_home and m["sa"] > m["sh"]: win = True
+                
+                if win:
+                    new_standings[tk]["pts"] += 2
+                    new_standings[tk]["w"] += 1
                 else:
-                    standings[team_key]["l"] += 1
-
-    return updated_count, standings
+                    new_standings[tk]["l"] += 1
+    return new_standings
 
 # ================================================================
 # MAIN
 # ================================================================
 
 def main():
-    print(f"🏀 Roma Basket Updater v5.1 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    print("=======================================================")
-    
     data_file = Path("data.json")
-    if data_file.exists():
-        with open(data_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        matches   = data.get("matches", [])
-        standings = data.get("standings", dict(BASE_STANDINGS))
-        config    = data.get("config", CONFIG)
-        print(f"📂 Caricato — {len(matches)} partite")
-    else:
-        matches   = []
-        standings = dict(BASE_STANDINGS)
-        config    = CONFIG
-        print("📂 Primo avvio — generazione file")
-
+    if not data_file.exists(): return
+    
+    with open(data_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    
+    matches = data.get("matches", [])
     today = date.today()
-    
-    # Esegui aggiornamento
-    total_updated, updated_standings = update_in_season(matches, config, standings)
-    
-    # Salva i risultati
-    output = {
-        "last_updated": datetime.now().isoformat(),
-        "season": config.get("season", "2025-26"),
-        "config": config,
-        "matches": matches,
-        "standings": updated_standings
-    }
+    updated_any = False
 
+    print(f"🔍 Controllo aggiornamenti per il {today}...")
+
+    for m in matches:
+        m_date = datetime.strptime(m["date"], "%Y-%m-%d").date()
+        if m_date <= today and m.get("sh") is None:
+            pb_id = KNOWN_URLS.get(m["round"]) or ROUND_BASE_IDS.get(m["round"])
+            if pb_id:
+                url = f"https://www.pianetabasket.com/serie-b/live-{pb_id}"
+                html = get_url(url)
+                score = parse_score(html, m["home"], m["away"])
+                if score:
+                    m["sh"], m["sa"] = score[0], score[1]
+                    print(f"✅ G{m['round']}: {m['home']} {score[0]}-{score[1]} {m['away']}")
+                    updated_any = True
+
+    # RICALCOLO TOTALE SEMPRE (Risolve il problema della classifica bloccata)
+    data["standings"] = recalculate_all_standings(matches)
+    data["last_updated"] = datetime.now().isoformat()
+    
     with open(data_file, "w", encoding="utf-8") as f:
-        json.dump(output, f, indent=2, ensure_ascii=False)
-
-    print(f"\n📝 Aggiornamenti effettuati: {total_updated}")
-    print("💾 Salvato — data.json aggiornato.")
-    print("✅ Completato!")
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    
+    print("✅ Classifica ricalcolata e file data.json salvato.")
 
 if __name__ == "__main__":
     main()
