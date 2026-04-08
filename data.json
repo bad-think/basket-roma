@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-08T07:00:28.202169",
+  "last_updated": "2026-04-08T07:41:04.648880",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -132,22 +132,18 @@
       "sa": null
     }
   ],
-  "standings": [
-    {
-      "team": "Virtus GVM Roma",
+  "standings": {
+    "virtus": {
       "pos": 1,
-      "pts": 52,
-      "w": 26,
-      "l": 6,
-      "color": "var(--v)"
+      "pts": 58,
+      "w": 29,
+      "l": 6
     },
-    {
-      "team": "LUISS Roma",
+    "luiss": {
       "pos": 6,
       "pts": 38,
       "w": 19,
-      "l": 13,
-      "color": "var(--l)"
+      "l": 14
     }
-  ]
+  }
 }
