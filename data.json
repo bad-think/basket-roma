@@ -1,5 +1,5 @@
 {
-  "last_updated": "08/04/2026 11:13",
+  "last_updated": "08/04/2026 11:39",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -135,9 +135,9 @@
   "standings": {
     "virtus": {
       "pos": 1,
-      "pts": 52,
-      "w": 26,
-      "l": 6
+      "pts": 50,
+      "w": 25,
+      "l": 7
     },
     "luiss": {
       "pos": 6,
