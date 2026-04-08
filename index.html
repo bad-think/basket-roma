@@ -182,7 +182,7 @@ a.srclink:active{background:rgba(245,197,24,.2)}
 
 <script>
 // ============================================================
-// DATI — aggiornati al 14/03/2026
+// DATI
 // ============================================================
 const MATCHES = [
   {id:'v02',team:'virtus',phase:'regular',round:2, date:'2025-09-28',time:'18:00',home:'Virtus GVM Roma',away:'Loreto Pesaro',sh:84,sa:63},
@@ -240,9 +240,24 @@ const SOURCES = [
 ];
 
 // ============================================================
-// STATE
+// STATE - SISTEMA ANTI-CANCELLAZIONE PARTITE
 // ============================================================
-let matches   = JSON.parse(localStorage.getItem('brc_m') || 'null') || MATCHES.map(m=>({...m}));
+let matches = MATCHES.map(m=>({...m}));
+let savedMatches = JSON.parse(localStorage.getItem('brc_m') || 'null');
+
+// Se avevamo salvato delle partite, uniamole al calendario completo, così non perdiamo mai nulla.
+if (savedMatches && Array.isArray(savedMatches)) {
+  savedMatches.forEach(sm => {
+    const t = matches.find(m => m.id === sm.id || (m.team === sm.team && m.round === sm.round));
+    if (t) {
+      if (sm.sh !== undefined && sm.sh !== null) t.sh = sm.sh;
+      if (sm.sa !== undefined && sm.sa !== null) t.sa = sm.sa;
+      if (sm.date) t.date = sm.date;
+      if (sm.time) t.time = sm.time;
+    }
+  });
+}
+
 let standings = JSON.parse(localStorage.getItem('brc_s') || 'null') || {...STANDINGS};
 let lastUpdate = localStorage.getItem('brc_lu') || null;
 let currentTab = 'all';
@@ -254,7 +269,12 @@ let refreshing = false;
 // UTILS
 // ============================================================
 const today = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
-const toDate = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+// Funzione date robusta: accetta formati YYYY-MM-DD e GG/MM/AAAA (evita che diventino partite "future")
+const toDate = s => {
+  if (!s) return new Date(0);
+  if (s.includes('/')) { const [d,m,y]=s.split('/'); return new Date(y,m-1,d); }
+  const [y,m,d] = s.split('T')[0].split('-').map(Number); return new Date(y,m-1,d);
+};
 const isPast = s => toDate(s) < today();
 const isToday = s => toDate(s).getTime()===today().getTime();
 const fmt = s => {
@@ -265,16 +285,28 @@ const fmt = s => {
 };
 const phL = p => ({regular:'Regular Season',playin:'Play-In',playoff:'Playoff',playout:'Playout'}[p]||p);
 
+// Funzione classifica robusta: cerca il dato anche se si chiama "posizione", "punti", ecc.
 function getTeamStats(teamKey) {
-  if (!standings) return {pos:'-',pts:'-',w:'-',l:'-'};
-  if (Array.isArray(standings)) {
-    return standings.find(s => s.team === teamKey) || {pos:'-',pts:'-',w:'-',l:'-'};
-  }
-  return standings[teamKey] || {pos:'-',pts:'-',w:'-',l:'-'};
+  let s = null;
+  if (Array.isArray(standings)) s = standings.find(x => x.team === teamKey || x.nome === teamKey);
+  else if (standings) s = standings[teamKey];
+  
+  if (!s) return {pos:'-',pts:'-',w:'-',l:'-'};
+  
+  const getV = (...keys) => {
+    for(let k of keys) if(s[k] !== undefined && s[k] !== null) return s[k];
+    return '-';
+  };
+  return {
+    pos: getV('pos','posizione','position'),
+    pts: getV('pts','punti','points'),
+    w: getV('w','vittorie','wins'),
+    l: getV('l','sconfitte','losses')
+  };
 }
 
 // ============================================================
-// FETCH data.json (aggiornato da GitHub Actions ogni lunedì)
+// FETCH data.json
 // ============================================================
 function doRefresh(manual) {
   if (refreshing) return;
@@ -287,7 +319,16 @@ function doRefresh(manual) {
     .then(r => r.ok ? r.json() : Promise.reject('404'))
     .then(data => {
       if (data.matches && data.matches.length) {
-        matches = data.matches;
+        // UNISCE i dati al posto di SOVRASCRIVERLI, così non scompare mezza stagione
+        data.matches.forEach(dm => {
+          const t = matches.find(m => m.id === dm.id || (m.team === dm.team && m.round === dm.round));
+          if (t) {
+            if (dm.sh !== undefined && dm.sh !== null) t.sh = dm.sh;
+            if (dm.sa !== undefined && dm.sa !== null) t.sa = dm.sa;
+            if (dm.date) t.date = dm.date;
+            if (dm.time) t.time = dm.time;
+          }
+        });
         localStorage.setItem('brc_m', JSON.stringify(matches));
       }
       if (data.standings) {
@@ -356,7 +397,7 @@ function render() {
   html += renderSources();
 
   c.innerHTML = html;
-  startCD(upcoming[0]);
+  if (upcoming.length) startCD(upcoming[0]);
 }
 
 function renderStandings() {
@@ -454,9 +495,12 @@ function renderSources() {
 function renderPost() {
   const vStats = getTeamStats('virtus');
   const lStats = getTeamStats('luiss');
-  const vs = vStats.pos, ls = lStats.pos;
+  
+  // Conversione stringa in numero per far funzionare i calcoli
+  const vs = parseInt(vStats.pos) || 99;
+  const ls = parseInt(lStats.pos) || 99;
 
-  const status = pos => pos<=6?{lbl:'✅ Playoff diretto',cls:'q'}:{lbl:'⚠️ Play-In',cls:'r'};
+  const status = pos => pos<=6?{lbl:'✅ Playoff diretto',cls:'q'}:(pos<=12?{lbl:'⚠️ Play-In',cls:'r'}:{lbl:'❌ Fuori Post-Season',cls:'r'});
   const bracket = pos => {
     const b={1:'vs 8ª Gir.A',2:'vs 7ª Gir.A',3:'vs 6ª Gir.A',4:'vs 5ª Gir.A',5:'vs 4ª Gir.A (fuori)',6:'vs 3ª Gir.A (fuori)'};
     return b[pos]||'Da definire';
@@ -472,9 +516,9 @@ function renderPost() {
       <div class="psrow">📊 <em>${st.pos}° posto</em> — ${st.pts}pt (${st.w}V-${st.l}P)</div>
       <div class="psbox">
         <div class="psbtitle">Percorso Playoff atteso</div>
-        <div class="psbrow"><span class="psbpos">🏆</span>Tabellone ${pos<=4?'2 — testa di serie':'1'}</div>
+        <div class="psbrow"><span class="psbpos">🏆</span>Tabellone ${pos<=4?'2 — testa di serie':(pos<=6?'1':'Da definire')}</div>
         <div class="psbrow"><span class="psbpos">🤝</span>Quarti: ${bracket(pos)}</div>
-        <div class="psbrow"><span class="psbpos">🏠</span>${pos<=4?'Casa gare 1,2,5 · PalaTiziano, Roma':'Fuori gare 1,2,5'}</div>
+        <div class="psbrow"><span class="psbpos">🏠</span>${pos<=4?'Casa gare 1,2,5 · PalaTiziano, Roma':(pos<=6?'Fuori gare 1,2,5':'Da definire')}</div>
       </div>
     </div>`;
   };
@@ -510,7 +554,7 @@ function renderPost() {
       <div class="psbody">
         <div class="psrow">📅 <em>Primo turno 30 apr · Secondo turno 3 mag</em></div>
         <div class="psrow">🏀 <em>Gara unica in casa della meglio classificata</em></div>
-        <div class="psrow">⚠️ <em>Virtus (3ª) e LUISS (5ª) accedono direttamente ai Playoff — il Play-In non le riguarda</em></div>
+        <div class="psrow">⚠️ <em>Virtus (${vStats.pos}ª) e LUISS (${lStats.pos}ª) ${vs<=6 && ls<=6 ? 'accedono direttamente ai Playoff — il Play-In non le riguarda' : 'devono mantenere questa posizione'}</em></div>
       </div>
     </div>
 
