@@ -1,5 +1,5 @@
 {
-  "last_updated": "08/04/2026 11:54",
+  "last_updated": "08/04/2026 14:40",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -30,8 +30,22 @@
         "girone": "B",
         "venue_name": "PalaTiziano – Palazzetto dello Sport",
         "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+        "venue_maps": "https://maps.google.com/"
       }
+    }
+  },
+  "standings": {
+    "virtus": {
+      "pos": 1,
+      "pts": 52,
+      "w": 26,
+      "l": 6
+    },
+    "luiss": {
+      "pos": 6,
+      "pts": 38,
+      "w": 19,
+      "l": 12
     }
   },
   "matches": [
@@ -40,33 +54,45 @@
       "team": "virtus",
       "phase": "regular",
       "round": 31,
-      "date": "2026-03-15",
+      "date": "2026-03-22",
       "time": "18:00",
       "home": "Virtus GVM Roma",
-      "away": "Solbat Golfo Piombino",
-      "sh": 72,
-      "sa": 65
+      "away": "Fabo Herons Montecatini",
+      "sh": 80,
+      "sa": 61
+    },
+    {
+      "id": "l31",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 31,
+      "date": "2026-03-22",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "BPC Virtus Cassino",
+      "sh": 80,
+      "sa": 72
     },
     {
       "id": "l32",
       "team": "luiss",
       "phase": "regular",
       "round": 32,
-      "date": "2026-03-22",
-      "time": "18:00",
-      "home": "Luiss Roma",
-      "away": "Fabo Herons Montecatini",
-      "sh": 68,
-      "sa": 74
+      "date": "2026-03-25",
+      "time": "20:45",
+      "home": "NPC Rieti",
+      "away": "Luiss Roma",
+      "sh": 80,
+      "sa": 71
     },
     {
       "id": "v33",
       "team": "virtus",
       "phase": "regular",
       "round": 33,
-      "date": "2026-03-28",
-      "time": "20:30",
-      "home": "Luiss Roma",
+      "date": "2026-03-29",
+      "time": "18:00",
+      "home": "Gema Montecatini",
       "away": "Virtus GVM Roma",
       "sh": 45,
       "sa": 80
@@ -101,49 +127,11 @@
       "phase": "regular",
       "round": 36,
       "date": "2026-04-15",
-      "time": "15:00",
+      "time": "21:00",
       "home": "Luiss Roma",
       "away": "Raggisolaris Faenza",
       "sh": null,
       "sa": null
-    },
-    {
-      "id": "l37",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 37,
-      "date": "2026-04-19",
-      "time": "18:00",
-      "home": "Luiss Roma",
-      "away": "Pielle Livorno",
-      "sh": null,
-      "sa": null
-    },
-    {
-      "id": "v38",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 38,
-      "date": "2026-04-26",
-      "time": "18:00",
-      "home": "Virtus GVM Roma",
-      "away": "Umana San Giobbe Chiusi",
-      "sh": null,
-      "sa": null
     }
-  ],
-  "standings": {
-    "virtus": {
-      "pos": 1,
-      "pts": 50,
-      "w": 25,
-      "l": 7
-    },
-    "luiss": {
-      "pos": 6,
-      "pts": 38,
-      "w": 19,
-      "l": 12
-    }
-  }
+  ]
 }
