@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — Aggiornamento automatico v6.7
-Ricalcola la classifica ad ogni esecuzione per evitare errori di punteggio.
+update_data.py — Roma Basket Casa — Aggiornamento automatico v6.8
+Ricalcola la classifica partendo dai punti base corretti per evitare discrepanze.
 """
 
 import json
@@ -21,7 +21,7 @@ CONFIG = {
     "teams": {
         "virtus": {
             "name": "Virtus GVM Roma",
-            "name_aliases": ["virtus gvm roma", "virtus roma", "virtus gvm roma 1960"],
+            "name_aliases": ["virtus gvm roma", "virtus roma", "virtus gvm roma 1960", "pallacanestro virtus roma"],
             "serie": "B Nazionale",
             "girone": "B",
             "venue_name": "PalaTiziano – Palazzetto dello Sport",
@@ -30,7 +30,7 @@ CONFIG = {
         },
         "luiss": {
             "name": "Luiss Roma",
-            "name_aliases": ["luiss roma", "luiss"],
+            "name_aliases": ["luiss roma", "luiss", "luiss basketball"],
             "serie": "B Nazionale",
             "girone": "B",
             "venue_name": "PalaTiziano – Palazzetto dello Sport",
@@ -40,18 +40,16 @@ CONFIG = {
     }
 }
 
-# Classifica PRIMA dei risultati presenti nel JSON (G31 per Virtus, G32 per Luiss)
-# Questi valori + i risultati nel file porteranno a Virtus 52 e Luiss 38.
+# BASE_STANDINGS TARATA SUI MATCH NEL JSON:
+# Virtus: 46 base + (3 vittorie nel JSON: v31, v33, v34) = 52 punti totali.
+# Luiss: 36 base + (1 vittoria v31 nel JSON) = 38 punti totali.
 BASE_STANDINGS = {
     "virtus": {"pos": 1, "pts": 46, "w": 23, "l": 6},
-    "luiss": {"pos": 6, "pts": 38, "w": 19, "l": 11}
+    "luiss": {"pos": 6, "pts": 36, "w": 18, "l": 11}
 }
 
 KNOWN_URLS = {
-    31: "356237",
-    32: "357140",
-    33: "357782",
-    34: "358236"
+    31: "356237", 32: "357140", 33: "357782", 34: "358236"
 }
 
 ROUND_BASE_IDS = {
@@ -83,11 +81,22 @@ def google_search_result(query):
         html = get_url(url)
         if not html: return None
         res = json.loads(html)
+        
+        # Cerca punteggio o orario nello snippet
         if "items" in res:
             for item in res["items"]:
                 snippet = item.get("snippet", "")
-                match = re.search(r'(\d{2,3})\s*-\s*(\d{2,3})', snippet)
-                if match: return int(match.group(1)), int(match.group(2))
+                
+                # Cerca punteggio (es. 87-57)
+                score_match = re.search(r'(\d{2,3})\s*-\s*(\d{2,3})', snippet)
+                
+                # Cerca orario (es. 21:00)
+                time_match = re.search(r'(\d{2}:\d{2})', snippet)
+                
+                return {
+                    "score": (int(score_match.group(1)), int(score_match.group(2))) if score_match else None,
+                    "time": time_match.group(1) if time_match else None
+                }
     except Exception: pass
     return None
 
@@ -101,68 +110,27 @@ def parse_score(html, home, away):
     for i, p in enumerate(patterns):
         match = re.search(p, clean_text, re.DOTALL)
         if match:
-            # Se match[0] è home, ritorna (h, a), altrimenti inverte
             return (int(match.group(1)), int(match.group(2))) if i == 0 else (int(match.group(2)), int(match.group(1)))
     return None
 
 def update_logic(matches):
     today = date.today()
-    # Ripartiamo SEMPRE dai punti base per evitare accumuli errati
     new_standings = {k: v.copy() for k, v in BASE_STANDINGS.items()}
     
     for m in matches:
         match_date = datetime.strptime(m["date"], "%Y-%m-%d").date()
         team_key = m["team"]
 
-        # 1. Se manca il punteggio ed è passata, cercalo
-        if m.get("sh") is None and match_date <= today:
-            print(f"🔍 Ricerca risultato: {m['home']} vs {m['away']}...")
-            score = None
-            pb_id = KNOWN_URLS.get(m["round"]) or ROUND_BASE_IDS.get(m["round"])
-            if pb_id:
-                html = get_url(f"https://www.pianetabasket.com/serie-b/live-{pb_id}")
-                score = parse_score(html, m["home"], m["away"])
+        # Se manca il punteggio o l'orario è sospetto, cerca aggiornamenti
+        if m.get("sh") is None or (m.get("time") == "15:00" and match_date >= today):
+            print(f"🔍 Controllo {m['id']} - {m['home']} vs {m['away']}...")
             
-            if not score: # Fallback Google
-                score = google_search_result(f"{m['home']} {m['away']} risultato basket {m['date']}")
+            search_res = google_search_result(f"{m['home']} {m['away']} basket {m['date']}")
             
-            if score:
-                m["sh"], m["sa"] = score[0], score[1]
-                print(f"✅ Trovato: {score[0]}-{score[1]}")
-
-        # 2. Ricalcolo punti classifica se c'è un punteggio (vecchio o nuovo)
-        if m.get("sh") is not None:
-            if m["sh"] > m["sa"]:
-                new_standings[team_key]["pts"] += 2
-                new_standings[team_key]["w"] += 1
-            else:
-                new_standings[team_key]["l"] += 1
-    
-    return new_standings
-
-# ================================================================
-# MAIN
-# ================================================================
-
-def main():
-    data_file = Path("data.json")
-    if not data_file.exists():
-        print("❌ Errore: data.json non trovato.")
-        return
-
-    with open(data_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    print(f"🏀 Roma Basket Updater v6.7 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    
-    # Aggiorna i dati e ricalcola
-    data["standings"] = update_logic(data["matches"])
-    data["last_updated"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    with open(data_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    
-    print("💾 data.json aggiornato con successo.")
-
-if __name__ == "__main__":
-    main()
+            if search_res:
+                # Aggiorna orario se trovato
+                if search_res.get("time") and m["time"] != search_res["time"]:
+                    print(f"  ⏰ Nuovo orario trovato: {search_res['time']}")
+                    m["time"] = search_res["time"]
+                
+                # Aggiorna punteggio se la
