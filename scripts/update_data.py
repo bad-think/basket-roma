@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — Versione 6.5
-- Interrogazione Proattiva Google Search per orari (prossimi 14gg)
+update_data.py — Roma Basket Casa — Versione 6.6
+- Interrogazione Proattiva Google Search mirata a calendari LNP
 - Ricalcolo Totale Classifica (Auto-correzione punti)
 - Gestione Alias Sponsor e Team
 """
@@ -54,13 +54,13 @@ OPPONENT_ALIASES = {
 # ================================================================
 
 def google_search_time(home, away, match_date):
-    """Interroga direttamente Google per trovare l'orario ufficiale"""
+    """Ricerca potenziata per trovare l'orario esatto nei comunicati LNP"""
     if not API_KEY or not CSE_ID:
         print("⚠️ API Key o CSE_ID mancanti negli environment.")
         return None
 
-    # Query specifica per massimizzare la precisione
-    query = f"{home} vs {away} basket {match_date} orario ufficiale"
+    # Query ottimizzata per i comunicati ufficiali o tabelle LNP
+    query = f"LNP basket calendario {home} {away} {match_date}"
     encoded_query = urllib.parse.quote(query)
     url = f"https://www.googleapis.com/customsearch/v1?key={API_KEY}&cx={CSE_ID}&q={encoded_query}"
 
@@ -69,12 +69,15 @@ def google_search_time(home, away, match_date):
         with urllib.request.urlopen(req, timeout=10) as response:
             res = json.loads(response.read().decode())
             for item in res.get("items", []):
-                # Analizziamo sia il titolo che lo snippet per trovare HH:MM
-                content = (item.get("snippet", "") + " " + item.get("title", "")).lower()
-                times = re.findall(r'(?:[01]\d|2[0-3]):[0-5]\d', content)
-                for t in times:
-                    if t != "00:00": # Escludiamo orari segnaposto
-                        return t
+                snippet = item.get("snippet", "")
+                title = item.get("title", "")
+                text = (title + " " + snippet).lower()
+                
+                # Cerca orari plausibili (esclude 00:00 e orari mattutini strani)
+                # Match formato HH:MM tra le 15:00 e le 22:55 che finiscono per 0 o 5
+                times = re.findall(r'(?:1[5-9]|2[0-2]):[0-5][05]', text)
+                if times:
+                    return times[0]
     except Exception as e:
         print(f"⚠️ Errore API Google: {e}")
     return None
@@ -102,6 +105,10 @@ def parse_score(html, home, away):
             p1 = rf'{re.escape(h)}.*?(\d{{2,3}})\s*-\s*(\d{{2,3}}).*?{re.escape(a)}'
             m1 = re.search(p1, text, re.DOTALL)
             if m1: return int(m1.group(1)), int(m1.group(2))
+            
+            p2 = rf'{re.escape(a)}.*?(\d{{2,3}})\s*-\s*(\d{{2,3}}).*?{re.escape(h)}'
+            m2 = re.search(p2, text, re.DOTALL)
+            if m2: return int(m2.group(2)), int(m2.group(1))
     return None
 
 def recalculate_standings(matches):
@@ -146,7 +153,7 @@ def main():
         
         # 1. RECUPERO RISULTATI (Partite passate)
         if m_date <= today and m.get("sh") is None:
-            # Fallback su ID pianetabasket noto o generico
+            # Fallback su ID generico o noto per cercare i punteggi
             url = f"https://www.pianetabasket.com/serie-b/live-358236"
             score = parse_score(get_html(url), m["home"], m["away"])
             if score:
@@ -155,7 +162,6 @@ def main():
                 updated = True
 
         # 2. AGGIORNAMENTO ORARI (Interrogazione diretta per partite imminenti)
-        # Controlliamo tutte le partite nei prossimi 14 giorni per rilevare cambi dell'ultimo minuto
         if today <= m_date <= horizon:
             print(f"🕒 Verifica orario Google per: {m['home']} vs {m['away']} ({m['date']})...")
             new_time = google_search_time(m["home"], m["away"], m["date"])
