@@ -1,120 +1,98 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#C8102E">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<title>Roma Basket Casa</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-:root{--v:#C8102E;--l:#003087;--g:#F5C518;--bg:#0a0a0f;--card:#13131a;--bd:rgba(255,255,255,.07);--tx:#f0f0f0;--mu:#777;--gr:#4ade80}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;padding-bottom:40px}
-.header{padding:20px;display:flex;justify-content:space-between;align-items:center}
-.logo-area h1{font-family:'Bebas Neue',cursive;font-size:2.2rem;line-height:1}
-.logo-area p{font-size:0.75rem;color:var(--mu);text-transform:uppercase;letter-spacing:2px}
-.upbadge{padding:6px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;background:var(--card);border:1px solid var(--bd)}
-.container{padding:0 16px}
-.section-title{font-family:'Bebas Neue',cursive;font-size:1.5rem;margin:24px 0 12px;display:flex;align-items:center;gap:10px}
-.section-title::after{content:'';flex:1;height:1px;background:var(--bd)}
-.next-card{background:var(--card);border-radius:24px;padding:24px;border:1px solid var(--bd);margin-bottom:20px;position:relative;overflow:hidden}
-.next-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--v)}
-.next-card.luiss::before{background:var(--l)}
-.team-row{display:flex;justify-content:space-between;align-items:center;margin:10px 0}
-.team-name{font-family:'Bebas Neue',cursive;font-size:1.8rem;line-height:1}
-.standings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.std-card{background:var(--card);padding:15px;border-radius:20px;border:1px solid var(--bd);text-align:center}
-.std-pos{font-family:'Bebas Neue',cursive;font-size:2.2rem;color:var(--v)}
-.match-list{display:flex;flex-direction:column;gap:8px}
-.m-item{background:var(--card);padding:12px 16px;border-radius:15px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--bd);font-size:0.85rem}
-.m-score{font-family:'Bebas Neue',cursive;font-size:1.1rem;color:var(--g)}
-#update-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--g);color:#000;padding:12px 20px;border-radius:30px;font-weight:700;display:none;z-index:99;box-shadow:0 8px 20px rgba(0,0,0,0.5);cursor:pointer}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Roma Basket Casa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #C8102E; --secondary: #003087; --bg: #0a0a0f; --card: #16161e; --text: #ffffff; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid #2d2d3d; }
+        .next-match { border-left: 5px solid var(--primary); }
+        .match-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
+        .team-name { font-weight: bold; font-size: 1.1em; }
+        .score { font-size: 1.2em; color: #ffcc00; font-weight: bold; }
+        .date { font-size: 0.9em; color: #aaa; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 5px; font-size: 0.7em; text-transform: uppercase; margin-bottom: 5px; }
+        .badge-virtus { background: var(--primary); }
+        .badge-luiss { background: var(--secondary); }
+        .standings { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .standings td { padding: 10px; border-bottom: 1px solid #2d2d3d; }
+        .footer { text-align: center; font-size: 0.7em; color: #666; margin-top: 40px; }
+    </style>
 </head>
 <body>
 
-<div id="update-toast">✨ Nuovi dati! Clicca per aggiornare</div>
-
 <div class="header">
-  <div class="logo-area"><h1>Roma Basket</h1><p>Casa 2025-26</p></div>
-  <div id="upbadge" class="upbadge">📋 Caricamento...</div>
+    <h1>Roma Basket Casa</h1>
+    <div id="last-update" style="font-size: 0.8em; color: #888;">Caricamento dati...</div>
 </div>
 
-<div class="container">
-  <div id="next-match-area"></div>
-  <div class="section-title">Classifica</div>
-  <div class="standings-grid" id="standings-area"></div>
-  <div class="section-title">Calendario</div>
-  <div class="match-list" id="match-list-area"></div>
-</div>
+<div id="app">
+    </div>
 
-<div style="text-align:center;margin-top:40px;opacity:0.3;font-size:0.6rem">
-  ULTIMO AGGIORNAMENTO: <span id="uptime">—</span>
+<div class="footer">
+    Aggiornato automaticamente via GitHub Actions
 </div>
 
 <script>
-let data = null;
-
-async function init() {
-  try {
-    const res = await fetch('data.json');
-    data = await res.json();
-    render();
-  } catch (e) { console.error("Errore caricamento dati"); }
-}
-
-function render() {
-  if(!data) return;
-  document.getElementById('uptime').textContent = data.last_updated || '—';
-  document.getElementById('upbadge').textContent = '📋 ' + (data.last_updated || 'Cache');
-
-  const today = new Date(); today.setHours(0,0,0,0);
-  const matches = data.matches || [];
-  const nextMatch = matches.find(m => new Date(m.date) >= today);
-  
-  if(nextMatch) {
-    const isV = nextMatch.team === 'virtus';
-    document.getElementById('next-match-area').innerHTML = `
-      <div class="section-title">Prossima Partita</div>
-      <div class="next-card ${isV?'virtus':'luiss'}">
-        <div class="team-row">
-          <div class="team-name">${nextMatch.home}</div>
-          <div style="color:var(--mu)">VS</div>
-          <div class="team-name">${nextMatch.away}</div>
-        </div>
-        <div style="font-size:0.85rem;color:var(--mu)">📅 <b>${fmtDate(nextMatch.date)}</b> ⏰ <b>${nextMatch.time||'TBD'}</b></div>
-      </div>`;
-  }
-
-  if(data.standings) {
-    document.getElementById('standings-area').innerHTML = `
-      <div class="std-card"><div class="std-pos">${data.standings.virtus.pos}°</div><div style="font-size:0.7rem">Virtus Roma</div><div>${data.standings.virtus.pts} PT</div></div>
-      <div class="std-card" style="border-color:var(--l)"><div class="std-pos" style="color:var(--l)">${data.standings.luiss.pos}°</div><div style="font-size:0.7rem">Luiss Roma</div><div>${data.standings.luiss.pts} PT</div></div>`;
-  }
-
-  document.getElementById('match-list-area').innerHTML = matches.map(m => `
-    <div class="m-item">
-      <div style="width:50px;color:var(--mu)">${m.date.split('-').slice(1).reverse().join('/')}</div>
-      <div style="flex:1;padding:0 10px;font-weight:500">${m.home} vs ${m.away}</div>
-      <div class="m-score">${m.sh !== null ? m.sh+'-'+m.sa : m.time || 'TBD'}</div>
-    </div>`).join('');
-}
-
-function fmtDate(s) { return new Date(s).toLocaleDateString('it-IT', {day:'2-digit', month:'long'}); }
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-  navigator.serviceWorker.addEventListener('message', e => {
-    if (e.data.type === 'DATA_UPDATED' && e.data.lastUpdate !== document.getElementById('uptime').textContent) {
-      document.getElementById('update-toast').style.display = 'block';
-      document.getElementById('update-toast').onclick = () => window.location.reload();
+    async function loadData() {
+        try {
+            const response = await fetch('data.json');
+            const data = await response.json();
+            document.getElementById('last-update').innerText = "Ultimo aggiornamento: " + data.last_updated;
+            renderApp(data);
+        } catch (e) {
+            document.getElementById('app').innerHTML = "<p>Errore nel caricamento dei dati.</p>";
+        }
     }
-  });
-}
-init();
+
+    function renderApp(data) {
+        const app = document.getElementById('app');
+        let html = "";
+
+        // Prossima partita
+        const now = new Date();
+        const next = data.matches.find(m => new Date(m.date) >= now.setHours(0,0,0,0));
+
+        if (next) {
+            html += `<div class="card next-match">
+                <div class="badge ${next.team === 'virtus' ? 'badge-virtus' : 'badge-luiss'}">${next.team}</div>
+                <div class="match-row">
+                    <span class="team-name">${next.home}</span>
+                    <span>vs</span>
+                    <span class="team-name">${next.away}</span>
+                </div>
+                <div class="date">📅 ${next.date} ore ${next.time || 'TBD'}</div>
+            </div>`;
+        }
+
+        // Calendario
+        html += "<h3>Calendario Casa</h3>";
+        data.matches.forEach(m => {
+            html += `<div class="card">
+                <div class="match-row">
+                    <span style="font-size: 0.8em; color: #888;">${m.date}</span>
+                    <span class="team-name">${m.away}</span>
+                    <span class="score">${m.sh !== null ? m.sh + '-' + m.sa : m.time}</span>
+                </div>
+            </div>`;
+        });
+
+        app.innerHTML = html;
+    }
+
+    loadData();
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
 </script>
 </body>
 </html>
