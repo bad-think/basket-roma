@@ -1,28 +1,104 @@
 #!/usr/bin/env python3
+"""
+update_data.py — Roma Basket Casa — Aggiornamento automatico v6.8
+Ricalcola la classifica partendo dai punti base corretti per evitare discrepanze.
+"""
+
 import json
 import os
 import re
-import sys
 import urllib.request
 import urllib.parse
 from datetime import datetime, date
 from pathlib import Path
 
-# Configurazione per ricalcolo classifica se necessario
-BASE_STANDINGS = {
-    "virtus": {"pts": 52, "w": 26, "l": 6, "pos": 1},
-    "luiss": {"pts": 38, "w": 19, "l": 12, "pos": 6}
+# ================================================================
+# CONFIGURAZIONE
+# ================================================================
+CONFIG = {
+    "season": "2025-26",
+    "next_season": "2026-27",
+    "teams": {
+        "virtus": {
+            "name": "Virtus GVM Roma",
+            "name_aliases": ["virtus gvm roma", "virtus roma", "virtus gvm roma 1960", "pallacanestro virtus roma"],
+            "serie": "B Nazionale",
+            "girone": "B",
+            "venue_name": "PalaTiziano – Palazzetto dello Sport",
+            "venue_address": "Piazza Apollodoro 10, 00196 Roma",
+            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+        },
+        "luiss": {
+            "name": "Luiss Roma",
+            "name_aliases": ["luiss roma", "luiss", "luiss basketball"],
+            "serie": "B Nazionale",
+            "girone": "B",
+            "venue_name": "PalaTiziano – Palazzetto dello Sport",
+            "venue_address": "Piazza Apollodoro 10, 00196 Roma",
+            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+        }
+    }
 }
 
-def get_search_results(query):
-    api_key = os.getenv("GOOGLE_API_KEY")
-    cse_id = os.getenv("GOOGLE_CSE_ID")
-    if not api_key or not cse_id: return None
-    url = f"https://www.googleapis.com/customsearch/v1?key={api_key}&cx={cse_id}&q={urllib.parse.quote(query)}"
+# BASE_STANDINGS TARATA SUI MATCH NEL JSON:
+# Virtus: 46 base + (3 vittorie nel JSON: v31, v33, v34) = 52 punti totali.
+# Luiss: 36 base + (1 vittoria v31 nel JSON) = 38 punti totali.
+BASE_STANDINGS = {
+    "virtus": {"pos": 1, "pts": 46, "w": 23, "l": 6},
+    "luiss": {"pos": 6, "pts": 36, "w": 18, "l": 11}
+}
+
+KNOWN_URLS = {
+    31: "356237", 32: "357140", 33: "357782", 34: "358236"
+}
+
+ROUND_BASE_IDS = {
+    35: 358878, 36: 359520, 37: 360162, 38: 360804
+}
+
+# ================================================================
+# UTILITIES
+# ================================================================
+
+def get_url(url):
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     try:
-        with urllib.request.urlopen(url) as response:
-            return json.loads(response.read().decode())
-    except: return None
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as response:
+            return response.read().decode('utf-8', errors='ignore')
+    except Exception as e:
+        print(f"  ⚠️ Errore URL {url}: {e}")
+        return None
+
+def google_search_result(query):
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    cse_id = os.environ.get("GOOGLE_CSE_ID")
+    if not api_key or not cse_id: return None
+
+    try:
+        encoded_query = urllib.parse.quote(query)
+        url = f"https://www.googleapis.com/customsearch/v1?key={api_key}&cx={cse_id}&q={encoded_query}"
+        html = get_url(url)
+        if not html: return None
+        res = json.loads(html)
+        
+        # Cerca punteggio o orario nello snippet
+        if "items" in res:
+            for item in res["items"]:
+                snippet = item.get("snippet", "")
+                
+                # Cerca punteggio (es. 87-57)
+                score_match = re.search(r'(\d{2,3})\s*-\s*(\d{2,3})', snippet)
+                
+                # Cerca orario (es. 21:00)
+                time_match = re.search(r'(\d{2}:\d{2})', snippet)
+                
+                return {
+                    "score": (int(score_match.group(1)), int(score_match.group(2))) if score_match else None,
+                    "time": time_match.group(1) if time_match else None
+                }
+    except Exception: pass
+    return None
 
 def parse_score(html, home, away):
     if not html: return None
@@ -34,56 +110,27 @@ def parse_score(html, home, away):
     for i, p in enumerate(patterns):
         match = re.search(p, clean_text, re.DOTALL)
         if match:
-            s1, s2 = int(match.group(1)), int(match.group(2))
-            return (s1, s2) if i == 0 else (s2, s1)
+            return (int(match.group(1)), int(match.group(2))) if i == 0 else (int(match.group(2)), int(match.group(1)))
     return None
 
-def validate_data(old_matches, new_matches):
-    """Protezione: non salva se il numero di partite diminuisce drasticamente."""
-    if len(new_matches) < len(old_matches) - 1: return False
-    return True
-
-def main():
-    # Cerca il file data.json nella root partendo dalla cartella scripts/
-    data_path = Path(__file__).parent.parent / "data.json"
-    
-    with open(data_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
+def update_logic(matches):
     today = date.today()
-    old_matches = data.get("matches", [])
-    new_matches = []
-
-    for m in old_matches:
-        nm = m.copy()
-        m_date = datetime.strptime(nm["date"], "%Y-%m-%d").date()
-        
-        # Aggiorna solo match passati o odierni senza punteggio
-        if nm.get("sh") is None and m_date <= today:
-            query = f"risultato {nm['home']} {nm['away']} basket {nm['date']}"
-            res = get_search_results(query)
-            if res and "items" in res:
-                for item in res["items"]:
-                    score = parse_score(item.get("snippet", ""), nm["home"], nm["away"])
-                    if score:
-                        nm["sh"], nm["sa"] = score
-                        break
-        new_matches.append(nm)
-
-    if not validate_data(old_matches, new_matches):
-        print("🚨 Errore validazione dati. Salvataggio annullato.")
-        sys.exit(1)
-
-    data["matches"] = new_matches
-    data["last_updated"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    new_standings = {k: v.copy() for k, v in BASE_STANDINGS.items()}
     
-    # Se non esiste la chiave standings, la crea per evitare errori nel frontend
-    if "standings" not in data:
-        data["standings"] = BASE_STANDINGS
+    for m in matches:
+        match_date = datetime.strptime(m["date"], "%Y-%m-%d").date()
+        team_key = m["team"]
 
-    with open(data_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"✅ Database aggiornato: {data['last_updated']}")
-
-if __name__ == "__main__":
-    main()
+        # Se manca il punteggio o l'orario è sospetto, cerca aggiornamenti
+        if m.get("sh") is None or (m.get("time") == "15:00" and match_date >= today):
+            print(f"🔍 Controllo {m['id']} - {m['home']} vs {m['away']}...")
+            
+            search_res = google_search_result(f"{m['home']} {m['away']} basket {m['date']}")
+            
+            if search_res:
+                # Aggiorna orario se trovato
+                if search_res.get("time") and m["time"] != search_res["time"]:
+                    print(f"  ⏰ Nuovo orario trovato: {search_res['time']}")
+                    m["time"] = search_res["time"]
+                
+                # Aggiorna punteggio se la
