@@ -1,5 +1,5 @@
 {
-  "last_updated": "08/04/2026 15:10",
+  "last_updated": "09/04/2026 08:30",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -138,8 +138,8 @@
       "team": "virtus",
       "phase": "info",
       "round": 99,
-      "date": "2026-12-31",
-      "time": "00:00",
+      "date": "2026-04-27",
+      "time": "12:00",
       "home": "Virtus GVM Roma",
       "away": "--- IN ATTESA CALENDARIO PLAYOFF ---",
       "sh": null,
@@ -150,8 +150,8 @@
       "team": "luiss",
       "phase": "info",
       "round": 99,
-      "date": "2026-12-31",
-      "time": "00:00",
+      "date": "2026-04-27",
+      "time": "12:00",
       "home": "Luiss Roma",
       "away": "--- IN ATTESA CALENDARIO PLAYOFF ---",
       "sh": null,
