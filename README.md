@@ -1,15 +1,16 @@
-# 🏀 Roma Basket Casa 
+# 🏀 Roma Basket Casa
 
-PWA ad alte prestazioni per seguire Virtus Roma e LUISS (Serie B Nazionale).
+Web App PWA per monitorare le partite in casa di Virtus Roma e LUISS Roma (Serie B Nazionale).
 
-## 🚀 Caratteristiche Tecniche
-- **Validazione Dati**: Lo script Python impedisce la corruzione del database se i siti sorgente cambiano struttura.
-- **Offline First**: Grazie alla strategia *Stale-While-Revalidate*, l'app si carica istantaneamente anche senza connessione.
-- **Smart Updates**: Un banner discreto avvisa l'utente quando i risultati vengono aggiornati, senza ricaricare forzatamente la pagina.
+## 🌐 Link all'App
+Apri l'app qui: **[https://bad-think.github.io/basket-roma/](https://bad-think.github.io/basket-roma/)**
 
-## 🛠️ Manutenzione
-- Per aggiungere i playoff, modifica `data.json`. 
-- Se ricevi un'email di errore da GitHub, controlla i log delle Actions: la validazione senior ti avviserà esattamente di cosa manca.
+## 📱 Installazione su Android
+1. Apri il link sopra in Chrome.
+2. Tocca i tre puntini (⋮) e seleziona **"Aggiungi a schermata Home"**.
+3. L'app apparirà tra le tue applicazioni e funzionerà anche offline.
 
-## 📱 Installazione
-Aggiungi alla schermata Home da Chrome (Android) per un'esperienza a tutto schermo.
+## 🛠️ Note Tecniche
+- **Sincronizzazione**: Lo script in `scripts/update_data.py` gira ogni sera per aggiornare i risultati.
+- **Cache**: Utilizza un Service Worker per caricare i dati istantaneamente.
+- **Validazione**: Se lo scraping fallisce, il sistema protegge i dati esistenti e invia un'email di alert tramite GitHub Actions.
