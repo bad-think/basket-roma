@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Roma Basket">
 <meta name="theme-color" content="#C8102E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -14,65 +12,47 @@
 <style>
 :root{--v:#C8102E;--l:#003087;--g:#F5C518;--bg:#0a0a0f;--card:#13131a;--bd:rgba(255,255,255,.07);--tx:#f0f0f0;--mu:#777;--gr:#4ade80}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;line-height:1.5;padding-bottom:40px;overflow-x:hidden}
-.header{padding:20px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to bottom,rgba(200,16,46,0.1),transparent)}
-.logo-area h1{font-family:'Bebas Neue',cursive;font-size:2.2rem;letter-spacing:1px;line-height:1;color:var(--tx)}
-.logo-area p{font-size:0.85rem;color:var(--mu);text-transform:uppercase;letter-spacing:2px}
-.upbadge{padding:6px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--bd)}
-.upbadge.ok{color:var(--gr)}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;padding-bottom:40px}
+.header{padding:20px;display:flex;justify-content:space-between;align-items:center}
+.logo-area h1{font-family:'Bebas Neue',cursive;font-size:2.2rem;line-height:1}
+.logo-area p{font-size:0.75rem;color:var(--mu);text-transform:uppercase;letter-spacing:2px}
+.upbadge{padding:6px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;background:var(--card);border:1px solid var(--bd)}
 .container{padding:0 16px}
-.section-title{font-family:'Bebas Neue',cursive;font-size:1.5rem;margin:24px 0 16px;display:flex;align-items:center;gap:10px;color:var(--tx)}
+.section-title{font-family:'Bebas Neue',cursive;font-size:1.5rem;margin:24px 0 12px;display:flex;align-items:center;gap:10px}
 .section-title::after{content:'';flex:1;height:1px;background:var(--bd)}
-.next-card{background:var(--card);border-radius:24px;padding:24px;position:relative;overflow:hidden;border:1px solid var(--bd);margin-bottom:24px;animation:fadeUp 0.5s ease-out}
+.next-card{background:var(--card);border-radius:24px;padding:24px;border:1px solid var(--bd);margin-bottom:20px;position:relative;overflow:hidden}
 .next-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--v)}
 .next-card.luiss::before{background:var(--l)}
-.next-card.info::before{background:var(--g)}
-.team-row{display:flex;justify-content:space-between;align-items:center;margin:15px 0}
-.team-name{font-family:'Bebas Neue',cursive;font-size:1.8rem;max-width:130px;line-height:1}
-.vs{color:var(--mu);font-weight:900;font-style:italic}
-.match-meta{display:flex;gap:15px;margin-top:20px;font-size:0.9rem;font-weight:500}
-.meta-item{display:flex;align-items:center;gap:6px;color:var(--mu)}
-.meta-item b{color:var(--tx)}
-.standings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:30px}
-.std-card{background:var(--card);padding:16px;border-radius:20px;border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;text-align:center}
-.std-pos{font-family:'Bebas Neue',cursive;font-size:2.5rem;color:var(--v);line-height:1}
-.std-card.luiss .std-pos{color:var(--l)}
-.std-name{font-size:0.75rem;font-weight:700;text-transform:uppercase;margin:4px 0 8px;color:var(--mu)}
-.std-pts{background:rgba(255,255,255,0.05);padding:4px 12px;border-radius:12px;font-weight:700;font-size:0.9rem}
-.match-list{display:flex;flex-direction:column;gap:10px}
-.m-item{background:var(--card);padding:14px 18px;border-radius:18px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--bd);font-size:0.9rem}
-.m-date{color:var(--mu);font-size:0.8rem;font-weight:700;min-width:65px}
-.m-teams{flex:1;padding:0 15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m-score{font-family:'Bebas Neue',cursive;font-size:1.2rem;letter-spacing:1px;color:var(--g)}
-.m-info{color:var(--g);font-weight:700;font-size:0.75rem}
-#update-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--g);color:#000;padding:12px 24px;border-radius:30px;font-weight:bold;display:none;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);cursor:pointer;animation:fadeUp 0.3s ease-out}
-@keyframes fadeUp{from{opacity:0;transform:translate(7px)}to{opacity:1;transform:translate(0)}}
+.team-row{display:flex;justify-content:space-between;align-items:center;margin:10px 0}
+.team-name{font-family:'Bebas Neue',cursive;font-size:1.8rem;line-height:1}
+.standings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.std-card{background:var(--card);padding:15px;border-radius:20px;border:1px solid var(--bd);text-align:center}
+.std-pos{font-family:'Bebas Neue',cursive;font-size:2.2rem;color:var(--v)}
+.match-list{display:flex;flex-direction:column;gap:8px}
+.m-item{background:var(--card);padding:12px 16px;border-radius:15px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--bd);font-size:0.85rem}
+.m-score{font-family:'Bebas Neue',cursive;font-size:1.1rem;color:var(--g)}
+#update-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--g);color:#000;padding:12px 20px;border-radius:30px;font-weight:700;display:none;z-index:99;box-shadow:0 8px 20px rgba(0,0,0,0.5);cursor:pointer}
 </style>
 </head>
 <body>
 
-<div id="update-toast">✨ Nuovi risultati! Clicca per aggiornare</div>
+<div id="update-toast">✨ Nuovi dati! Clicca per aggiornare</div>
 
 <div class="header">
-  <div class="logo-area">
-    <h1>Roma Basket</h1>
-    <p>In Casa 2025-26</p>
-  </div>
+  <div class="logo-area"><h1>Roma Basket</h1><p>Casa 2025-26</p></div>
   <div id="upbadge" class="upbadge">📋 Caricamento...</div>
 </div>
 
 <div class="container">
   <div id="next-match-area"></div>
-  
   <div class="section-title">Classifica</div>
   <div class="standings-grid" id="standings-area"></div>
-
   <div class="section-title">Calendario</div>
   <div class="match-list" id="match-list-area"></div>
 </div>
 
-<div style="text-align:center;margin-top:40px;padding:20px;opacity:0.3;font-size:0.7rem;letter-spacing:1px">
-  DATI AGGIORNATI AL: <span id="uptime">—</span>
+<div style="text-align:center;margin-top:40px;opacity:0.3;font-size:0.6rem">
+  ULTIMO AGGIORNAMENTO: <span id="uptime">—</span>
 </div>
 
 <script>
@@ -80,112 +60,60 @@ let data = null;
 
 async function init() {
   try {
-    // Carica dati (il Service Worker gestirà la cache)
     const res = await fetch('data.json');
     data = await res.json();
     render();
-  } catch (e) {
-    console.error("Errore caricamento dati");
-  }
+  } catch (e) { console.error("Errore caricamento dati"); }
 }
 
 function render() {
   if(!data) return;
-  
-  document.getElementById('uptime').textContent = data.last_updated;
-  document.getElementById('upbadge').textContent = '📋 ' + data.last_updated;
-  document.getElementById('upbadge').className = 'upbadge ok';
+  document.getElementById('uptime').textContent = data.last_updated || '—';
+  document.getElementById('upbadge').textContent = '📋 ' + (data.last_updated || 'Cache');
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  const isPast = d => {
-    const dt = new Date(d);
-    dt.setHours(0,0,0,0);
-    return dt < today;
-  };
-
-  // 1. PROSSIMA PARTITA (La prima non passata)
-  const nextMatch = data.matches.find(m => !isPast(m.date));
-  const nextArea = document.getElementById('next-match-area');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const matches = data.matches || [];
+  const nextMatch = matches.find(m => new Date(m.date) >= today);
   
   if(nextMatch) {
-    const isVirtus = nextMatch.team === 'virtus';
-    const isInfo = nextMatch.phase === 'info';
-    nextArea.innerHTML = `
+    const isV = nextMatch.team === 'virtus';
+    document.getElementById('next-match-area').innerHTML = `
       <div class="section-title">Prossima Partita</div>
-      <div class="next-card ${isInfo ? 'info' : (isVirtus ? 'virtus' : 'luiss')}">
-        <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;color:var(--mu);margin-bottom:5px">
-          ${nextMatch.phase === 'regular' ? 'Regular Season — Round '+nextMatch.round : 'Playoff 2026'}
-        </div>
+      <div class="next-card ${isV?'virtus':'luiss'}">
         <div class="team-row">
           <div class="team-name">${nextMatch.home}</div>
-          <div class="vs">VS</div>
-          <div class="team-name" style="text-align:right">${nextMatch.away}</div>
+          <div style="color:var(--mu)">VS</div>
+          <div class="team-name">${nextMatch.away}</div>
         </div>
-        <div class="match-meta">
-          <div class="meta-item">📅 <b>${fmtDate(nextMatch.date)}</b></div>
-          <div class="meta-item">⏰ <b>${nextMatch.time || 'TBD'}</b></div>
-        </div>
-      </div>
-    `;
+        <div style="font-size:0.85rem;color:var(--mu)">📅 <b>${fmtDate(nextMatch.date)}</b> ⏰ <b>${nextMatch.time||'TBD'}</b></div>
+      </div>`;
   }
 
-  // 2. CLASSIFICA
-  const stdArea = document.getElementById('standings-area');
-  stdArea.innerHTML = `
-    <div class="std-card">
-      <div class="std-pos">${data.standings.virtus.pos}°</div>
-      <div class="std-name">Virtus Roma</div>
-      <div class="std-pts">${data.standings.virtus.pts} PT</div>
-    </div>
-    <div class="std-card luiss">
-      <div class="std-pos">${data.standings.luiss.pos}°</div>
-      <div class="std-name">Luiss Roma</div>
-      <div class="std-pts">${data.standings.luiss.pts} PT</div>
-    </div>
-  `;
+  if(data.standings) {
+    document.getElementById('standings-area').innerHTML = `
+      <div class="std-card"><div class="std-pos">${data.standings.virtus.pos}°</div><div style="font-size:0.7rem">Virtus Roma</div><div>${data.standings.virtus.pts} PT</div></div>
+      <div class="std-card" style="border-color:var(--l)"><div class="std-pos" style="color:var(--l)">${data.standings.luiss.pos}°</div><div style="font-size:0.7rem">Luiss Roma</div><div>${data.standings.luiss.pts} PT</div></div>`;
+  }
 
-  // 3. LISTA MATCH
-  const listArea = document.getElementById('match-list-area');
-  listArea.innerHTML = data.matches.map(m => `
+  document.getElementById('match-list-area').innerHTML = matches.map(m => `
     <div class="m-item">
-      <div class="m-date">${fmtDateShort(m.date)}</div>
-      <div class="m-teams" style="color:${m.team==='virtus'?'#fff':'#99baff'}">
-        ${m.away.includes('---') ? '<b>PLAYOFF</b>' : m.away}
-      </div>
-      <div class="m-score">
-        ${m.sh !== null ? `${m.sh}-${m.sa}` : (m.phase==='info' ? 'INFO' : m.time)}
-      </div>
-    </div>
-  `).join('');
+      <div style="width:50px;color:var(--mu)">${m.date.split('-').slice(1).reverse().join('/')}</div>
+      <div style="flex:1;padding:0 10px;font-weight:500">${m.home} vs ${m.away}</div>
+      <div class="m-score">${m.sh !== null ? m.sh+'-'+m.sa : m.time || 'TBD'}</div>
+    </div>`).join('');
 }
 
-function fmtDate(s) {
-  const d = new Date(s);
-  return d.toLocaleDateString('it-IT', {day:'2-digit', month:'long'});
-}
-function fmtDateShort(s) {
-  const d = new Date(s);
-  return d.toLocaleDateString('it-IT', {day:'2-digit', month:'02'});
-}
+function fmtDate(s) { return new Date(s).toLocaleDateString('it-IT', {day:'2-digit', month:'long'}); }
 
-// Service Worker & Updates
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
-  
-  navigator.serviceWorker.addEventListener('message', event => {
-    if (event.data.type === 'DATA_UPDATED') {
-      const toast = document.getElementById('update-toast');
-      const currentUptime = document.getElementById('uptime').textContent;
-      if (event.data.lastUpdate !== currentUptime && currentUptime !== "—") {
-        toast.style.display = 'block';
-        toast.onclick = () => window.location.reload();
-      }
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data.type === 'DATA_UPDATED' && e.data.lastUpdate !== document.getElementById('uptime').textContent) {
+      document.getElementById('update-toast').style.display = 'block';
+      document.getElementById('update-toast').onclick = () => window.location.reload();
     }
   });
 }
-
 init();
 </script>
 </body>
