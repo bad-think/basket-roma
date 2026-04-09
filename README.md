@@ -1,14 +1,26 @@
+[README.md](https://github.com/user-attachments/files/26606555/README.md)
 # 🏀 Roma Basket Casa
 
-Web App PWA per seguire Virtus Roma e LUISS Roma (Serie B Nazionale).
+Web app PWA per seguire le partite **in casa** di Virtus GVM Roma e LUISS Roma — Serie B Nazionale LNP 2025-26.
 
-## 🌐 Link all'App
-Apri il sito qui: **[https://bad-think.github.io/basket-roma/](https://bad-think.github.io/basket-roma/)**
+## Come installare su Android
 
-## 📲 Installazione su Smartphone
-1. Apri il link su **Chrome** (Android) o **Safari** (iOS).
-2. Seleziona **"Aggiungi a schermata Home"**.
-3. L'icona apparirà sul tuo telefono come una vera app.
+1. Apri Chrome sul telefono
+2. Vai su **https://bad-think.github.io/basket-roma**
+3. Tocca i tre puntini (⋮) in alto a destra
+4. Seleziona **"Aggiungi a schermata Home"**
+5. Conferma → appare l'icona come un'app!
 
-## ⚙️ Automazione
-Il sito si aggiorna automaticamente ogni sera alle 21:00 tramite GitHub Actions.
+## Funzionalità
+
+- Calendario completo partite in casa (Regular Season + Playoff)
+- Aggiornamento automatico risultati e orari ad ogni apertura
+- Countdown alla prossima partita
+- Classifica aggiornata
+- Notifiche 24h prima della partita
+- Funziona offline (ultima versione in cache)
+
+## Fonte dati
+
+Calendario ufficiale: [LNP PDF Girone B](https://static.legapallacanestro.com/sites/default/files/editor/calendario_b_nazionale_gir._b_2025-26.pdf)  
+Risultati: pianetabasket.com
