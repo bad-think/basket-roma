@@ -1,28 +1,161 @@
-import json
-import os
-import re
-from datetime import datetime
-from pathlib import Path
-
-def main():
-    # Percorso del file data.json
-    data_path = Path("data.json")
-    
-    if not data_path.exists():
-        print("File data.json non trovato.")
-        return
-
-    with open(data_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    # Aggiorna la data dell'ultimo controllo
-    data["last_updated"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    # Salva il file
-    with open(data_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    
-    print(f"Aggiornamento completato alle {data['last_updated']}")
-
-if __name__ == "__main__":
-    main()
+{
+  "last_updated": "09/04/2026 08:30",
+  "season": "2025-26",
+  "config": {
+    "season": "2025-26",
+    "next_season": "2026-27",
+    "teams": {
+      "virtus": {
+        "name": "Virtus GVM Roma",
+        "name_aliases": [
+          "virtus gvm roma",
+          "virtus roma",
+          "virtus gvm roma 1960",
+          "pallacanestro virtus roma"
+        ],
+        "serie": "B Nazionale",
+        "girone": "B",
+        "venue_name": "PalaTiziano – Palazzetto dello Sport",
+        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
+        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      },
+      "luiss": {
+        "name": "Luiss Roma",
+        "name_aliases": [
+          "luiss roma",
+          "luiss",
+          "luiss basketball"
+        ],
+        "serie": "B Nazionale",
+        "girone": "B",
+        "venue_name": "PalaTiziano – Palazzetto dello Sport",
+        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
+        "venue_maps": "https://maps.google.com/"
+      }
+    }
+  },
+  "standings": {
+    "virtus": {
+      "pos": 1,
+      "pts": 52,
+      "w": 26,
+      "l": 6
+    },
+    "luiss": {
+      "pos": 6,
+      "pts": 38,
+      "w": 19,
+      "l": 12
+    }
+  },
+  "matches": [
+    {
+      "id": "v31",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 31,
+      "date": "2026-03-22",
+      "time": "18:00",
+      "home": "Virtus GVM Roma",
+      "away": "Fabo Herons Montecatini",
+      "sh": 80,
+      "sa": 61
+    },
+    {
+      "id": "l31",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 31,
+      "date": "2026-03-22",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "BPC Virtus Cassino",
+      "sh": 80,
+      "sa": 72
+    },
+    {
+      "id": "l32",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 32,
+      "date": "2026-03-25",
+      "time": "20:45",
+      "home": "NPC Rieti",
+      "away": "Luiss Roma",
+      "sh": 80,
+      "sa": 71
+    },
+    {
+      "id": "v33",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 33,
+      "date": "2026-03-29",
+      "time": "18:00",
+      "home": "Gema Montecatini",
+      "away": "Virtus GVM Roma",
+      "sh": 45,
+      "sa": 80
+    },
+    {
+      "id": "v34",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 34,
+      "date": "2026-04-04",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "Benacquista Latina",
+      "sh": 87,
+      "sa": 57
+    },
+    {
+      "id": "v35",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 35,
+      "date": "2026-04-11",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "Consorzio Dany Quarrata",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "l36",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 36,
+      "date": "2026-04-15",
+      "time": "21:00",
+      "home": "Luiss Roma",
+      "away": "Raggisolaris Faenza",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "v-info",
+      "team": "virtus",
+      "phase": "info",
+      "round": 99,
+      "date": "2026-04-27",
+      "time": "12:00",
+      "home": "Virtus GVM Roma",
+      "away": "--- IN ATTESA CALENDARIO PLAYOFF ---",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "l-info",
+      "team": "luiss",
+      "phase": "info",
+      "round": 99,
+      "date": "2026-04-27",
+      "time": "12:00",
+      "home": "Luiss Roma",
+      "away": "--- IN ATTESA CALENDARIO PLAYOFF ---",
+      "sh": null,
+      "sa": null
+    }
+  ]
+}
