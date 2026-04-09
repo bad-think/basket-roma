@@ -1,22 +1,27 @@
-const CACHE_NAME = 'basket-roma-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json'
-];
+// Service Worker — Roma Basket Casa PWA
+const CACHE = 'basket-roma-v1';
+const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  // Per le API Anthropic: sempre rete, mai cache
+  if (e.request.url.includes('api.anthropic.com')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+  // Per tutto il resto: prima cache, poi rete
+  e.respondWith(
+    caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
