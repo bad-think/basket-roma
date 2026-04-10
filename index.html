@@ -842,8 +842,89 @@ setTimeout(()=>doRefresh(false), 1000);
 if(notifEnabled) scheduleNotif();
 </script>
 <script>
-if('serviceWorker' in navigator)
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
+// ============================================================
+// SERVICE WORKER — registrazione con gestione aggiornamenti
+// ============================================================
+if ('serviceWorker' in navigator) {
+
+  // Registra il SW
+  navigator.serviceWorker.register('sw.js').then(reg => {
+
+    // Controlla periodicamente aggiornamenti (ogni 30 min)
+    setInterval(() => reg.update(), 30 * 60 * 1000);
+
+    // Nuovo SW in attesa (versione aggiornata scaricata ma non attiva)
+    const onWaiting = () => showUpdateBanner();
+    if (reg.waiting) onWaiting();
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (newWorker) {
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            onWaiting();
+          }
+        });
+      }
+    });
+
+  }).catch(() => {});
+
+  // Quando il SW si attiva (dopo skipWaiting) → ricarica la pagina
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) { refreshing = true; window.location.reload(); }
+  });
+
+  // Messaggio DATA_UPDATED dal SW → aggiorna silenziosamente i dati
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'DATA_UPDATED') {
+      // Ricarica data.json in background senza mostrare il badge "aggiornamento"
+      doRefresh(false);
+    }
+  });
+}
+
+// Mostra banner "nuova versione disponibile"
+function showUpdateBanner() {
+  const existing = document.getElementById('updateBanner');
+  if (existing) return;
+  const banner = document.createElement('div');
+  banner.id = 'updateBanner';
+  banner.style.cssText = [
+    'position:fixed','bottom:24px','left:50%',
+    'transform:translateX(-50%)',
+    'background:rgba(22,22,32,.97)',
+    'border:1px solid rgba(245,197,24,.4)',
+    'backdrop-filter:blur(20px)',
+    'border-radius:12px','padding:11px 16px',
+    'font-size:13px','z-index:9999',
+    'display:flex','align-items:center','gap:12px',
+    'white-space:nowrap','max-width:90vw',
+    'color:#f0f0f0','font-family:'DM Sans',sans-serif'
+  ].join(';');
+  banner.innerHTML = `
+    <span>🔄 Nuova versione disponibile</span>
+    <button onclick="applyUpdate()" style="
+      background:rgba(245,197,24,.15);border:1px solid rgba(245,197,24,.4);
+      color:#F5C518;border-radius:8px;padding:5px 12px;
+      font-size:12px;font-weight:700;cursor:pointer;font-family:inherit
+    ">Aggiorna</button>
+    <button onclick="this.parentElement.remove()" style="
+      background:none;border:none;color:#777;cursor:pointer;
+      font-size:16px;line-height:1;padding:0 4px
+    ">✕</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+// Forza attivazione nuovo SW
+function applyUpdate() {
+  navigator.serviceWorker.getRegistration().then(reg => {
+    if (reg && reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  });
+}
 </script>
 </body>
 </html>
