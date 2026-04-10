@@ -66,16 +66,22 @@ LEAGUE_SOURCES = {
     "B Nazionale": {
         "pb_home":      "https://www.pianetabasket.com/serie-b/",
         "pb_section":   "/serie-b/",
-        "pb_rss":       "https://www.pianetabasket.com/feed/serie-b/",
+        # RSS rimosso: restituisce 404 dal 2026
         "pb_class":     "https://www.pianetabasket.com/serie-b/classifica-serie-b-nazionale-girone-b-2025-26",
         "lnp":          "https://www.legapallacanestro.com/serie/4/classifica",
         "girone_check": "girone b",
+        # URL fallback stagione 2025-26: pagine giornata note con ID verificati
+        # Usati se homepage non trova nulla. Aggiornare a inizio stagione 2026-27.
+        "fallback_urls": [
+            "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultato-posticipo-classifiche-34-giornata-2025-26-358236",
+            "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-33-giornata-2025-26-357782",
+        ],
     },
 }
 
 BASE_STANDINGS = {
-    "virtus": {"pos": 2, "pts": 52, "w": 26, "l": 6},
-    "luiss":  {"pos": 6, "pts": 38, "w": 19, "l": 12},
+    "virtus": {"pos": 1, "pts": 52, "w": 26, "l": 6},
+    "luiss":  {"pos": 6, "pts": 38, "w": 19, "l": 13},
 }
 
 # ================================================================
@@ -85,14 +91,21 @@ BASE_STANDINGS = {
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 GOOGLE_CSE_ID  = os.getenv("GOOGLE_CSE_ID",  "e57483d3719974bc0")
 
+# Flag globale: True se Google ha restituito 403 in questo run
+# Evita di sprecare quota su chiamate successive condannate a fallire
+_GOOGLE_BLOCKED = False
+
 def google_search(query, num=5):
     """
     Cerca su Google tramite Custom Search API.
-    Restituisce lista di URL trovati nei risultati.
+    Restituisce sempre (urls: list, snippets: list).
+    Se Google restituisce 403 setta _GOOGLE_BLOCKED e non fa altre chiamate.
     """
+    global _GOOGLE_BLOCKED
+    if _GOOGLE_BLOCKED:
+        return [], []
     if not GOOGLE_API_KEY:
-        print("  ⚠️  GOOGLE_API_KEY non impostata", file=sys.stderr)
-        return []
+        return [], []
     url = (
         "https://www.googleapis.com/customsearch/v1"
         f"?key={GOOGLE_API_KEY}"
@@ -107,6 +120,14 @@ def google_search(query, num=5):
             urls = [item["link"] for item in items if "link" in item]
             snippets = [item.get("snippet", "") for item in items]
             return urls, snippets
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            _GOOGLE_BLOCKED = True
+            print(f"  ⚠️  Google Search: 403 — quota esaurita o chiave non valida. "
+                  f"Salto tutte le chiamate Google di questo run.", file=sys.stderr)
+        else:
+            print(f"  ⚠️  Google Search error: {e}", file=sys.stderr)
+        return [], []
     except Exception as e:
         print(f"  ⚠️  Google Search error: {e}", file=sys.stderr)
         return [], []
@@ -267,14 +288,17 @@ def normalise(s):
 
 
 def parse_results(html):
-    """Estrae risultati e orari futuri da HTML pianetabasket."""
+    """Estrae risultati e orari futuri da HTML pianetabasket.
+    Resiliente a variazioni di formato: prova prima il pattern stretto,
+    poi un pattern più permissivo se non trova nulla.
+    """
     results = []
     plain = html.replace("&#x27;", "'").replace("&amp;", "&")
     plain = re.sub(r"<[^>]+>", " ", plain)
     plain = re.sub(r"\s+", " ", plain)
     seen = set()
 
-    # Con risultato
+    # Con risultato — pattern stretto (data + orario + squadre + score)
     pat_score = re.compile(
         r"(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2})\s+"
         r"([A-Za-zÀ-ÿ0-9 '\.\-]+?)\s*-\s*([A-Za-zÀ-ÿ0-9 '\.\-]+?)\s+"
@@ -318,6 +342,31 @@ def parse_results(html):
                 seen.add(key)
         except Exception:
             continue
+
+    # Pattern alternativo — più permissivo: cerca "NomeSquadra NomeSquadra NN-NN"
+    # vicino a una data. Utile se pianetabasket rimuove colonne orario.
+    if not results:
+        pat_loose = re.compile(
+            r"(\d{2}/\d{2}/\d{4})\s*"
+            r"([A-Za-zÀ-ÿ0-9 '\.\-]{5,50}?)\s*-\s*([A-Za-zÀ-ÿ0-9 '\.\-]{5,50}?)\s+"
+            r"(\d{2,3})\s*-\s*(\d{2,3})(?:\s|$)"
+        )
+        for m in pat_loose.finditer(plain):
+            dr, h, a, sh, sa = m.groups()
+            h, a = h.strip(), a.strip()
+            if len(h) < 4 or len(a) < 4:
+                continue
+            try:
+                dd, mm, yyyy = dr.split("/")
+                key = f"{yyyy}-{mm}-{dd}|{normalise(h)}"
+                if key not in seen:
+                    results.append({
+                        "date": f"{yyyy}-{mm}-{dd}", "time": "20:00",
+                        "home": h, "away": a, "sh": int(sh), "sa": int(sa)
+                    })
+                    seen.add(key)
+            except Exception:
+                continue
 
     return results
 
@@ -427,6 +476,14 @@ def find_urls_from_rss_and_homepage(serie, last_round):
         url = find_url_via_google(next_rnd)
         if url:
             found.append(url)
+
+    # 4. Fallback stagionale: se ancora nulla, usa URL noti recenti per estrarre
+    #    almeno la classifica aggiornata e capire l'ultima giornata disputata
+    if not found:
+        fallback = sources.get("fallback_urls", [])
+        if fallback:
+            print(f"  🔁 Fallback stagionale: {len(fallback)} URL noti")
+            found.extend(fallback)
 
     return found
 
