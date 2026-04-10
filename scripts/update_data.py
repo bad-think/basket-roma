@@ -101,8 +101,7 @@ def google_search(query, num=5):
         f"&num={num}"
     )
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=8) as r:
+        with urllib.request.urlopen(url, timeout=8) as r:
             data = json.loads(r.read().decode())
             items = data.get("items", [])
             urls = [item["link"] for item in items if "link" in item]
