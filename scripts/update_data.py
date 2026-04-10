@@ -399,26 +399,11 @@ def find_urls_from_rss_and_homepage(serie, last_round):
     pb_rss = sources.get("pb_rss", "https://www.pianetabasket.com/feed/serie-b/")
     found = []
 
-    # 1. RSS feed
-    rss_html = fetch(pb_rss)
-    if rss_html:
-        pat = re.compile(
-            r"<link[^>]*>(https://www[.]pianetabasket[.]com"
-            + re.escape(pb_section)
-            + r"[^<]*(risultati|calendario)[^<]*2025-26[^<]*)</link>"
-        )
-        for m in pat.finditer(rss_html):
-            url = m.group(1).strip()
-            rnd_m = re.search(r"-([0-9]+)-giornata-", url)
-            rnd = int(rnd_m.group(1)) if rnd_m else None
-            if rnd and rnd <= last_round:
-                continue
-            if url not in found:
-                found.append(url)
-        print(f"  🔍 RSS: {len(found)} URL trovati")
+    # 1. RSS rimosso (pianetabasket /feed/serie-b/ restituisce 404 dal 2026)
+    # Partiamo direttamente dalla homepage
 
-    # 2. Homepage fallback
-    if not found:
+    # 2. Homepage
+    if True:
         pb_home = sources["pb_home"]
         html = fetch(pb_home)
         if html:
@@ -427,7 +412,7 @@ def find_urls_from_rss_and_homepage(serie, last_round):
             )
             for m in pat2.finditer(html):
                 path = m.group(1)
-                if "risultati" in path.lower() or "calendario" in path.lower():
+                if any(k in path.lower() for k in ["risultati","risultato","calendario","classifiche"]):
                     url = "https://www.pianetabasket.com" + path
                     rnd_m = re.search(r"-([0-9]+)-giornata-", url)
                     rnd = int(rnd_m.group(1)) if rnd_m else None
@@ -580,16 +565,7 @@ def fetch_calendar_changes(config):
     keywords = ["modif", "anticip", "posticip", "spostata", "rinviata", "recupero"]
     candidate_urls = []
 
-    # 1. RSS feed
-    rss_html = fetch("https://www.pianetabasket.com/feed/serie-b/")
-    if rss_html:
-        for m in re.finditer(
-            r"<link[^>]*>(https://www[.]pianetabasket[.]com/serie-b/[^<]+)</link>",
-            rss_html
-        ):
-            url = m.group(1).strip()
-            if any(k in url.lower() for k in keywords):
-                candidate_urls.append(url)
+    # 1. RSS rimosso (restituisce 404)
 
     # 2. Google Search per variazioni calendario
     if GOOGLE_API_KEY:
@@ -883,8 +859,20 @@ def main():
         "matches": matches,
         "standings": standings,
     }
+    # Scrivi solo se qualcosa è cambiato (evita commit inutili sul timestamp)
+    new_json = json.dumps(output, ensure_ascii=False, indent=2)
+    if data_path.exists():
+        old_content = data_path.read_text(encoding="utf-8")
+        # Confronta ignorando last_updated
+        import re as _re
+        def strip_ts(s): return _re.sub(r'"last_updated":\s*"[^"]*"', '"last_updated":""', s)  # noqa
+        if strip_ts(old_content) == strip_ts(new_json) and total_updated == 0:
+            print("ℹ️  Nessuna modifica reale — salto scrittura")
+            print("\n💾 Invariato — nessun commit necessario")
+            print("✅ Completato!\n")
+            return 0
     with open(data_path, "w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
+        f.write(new_json)
 
     print(f"\n💾 Salvato — {len(matches)} partite")
     print("✅ Completato!\n")
