@@ -520,6 +520,15 @@ def update_standings_multi(standings, config, scraped_htmls):
         print("  ⚠️  Nessuna classifica trovata")
         return standings
 
+    # TODO — Tiebreaker classifica LNP (parità di punti):
+    # La classifica ufficiale LNP risolve i pareggi in quest'ordine:
+    # 1. Scontro diretto (risultato della/e partita/e tra le squadre pari)
+    # 2. Quoziente canestri negli scontri diretti (punti fatti / punti subiti)
+    # 3. Quoziente canestri generale (in tutta la stagione)
+    # Il parser attuale usa solo i punti — corretto per uso informativo,
+    # ma può divergere dalla classifica ufficiale in caso di parità.
+    # Per implementare i tiebreaker servirebbero tutti i risultati di
+    # tutti gli incontri tra le squadre pari, non solo quelli casalinghi.
     best_label, best = max(
         candidates,
         key=lambda x: x[1]["virtus"]["pts"] + x[1]["luiss"]["pts"]
