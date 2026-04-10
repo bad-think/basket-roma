@@ -151,6 +151,31 @@ a.srclink:active{background:rgba(245,197,24,.2)}
 /* EMPTY */
 .empty{text-align:center;padding:50px 20px;color:var(--mu);font-size:14px}
 
+
+/* BANNER STAGIONE — hero-style prominente */
+.sbnr{margin:14px 16px 0;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06);padding:20px 18px 18px}
+.sbnr.sb-action{background:linear-gradient(135deg,#1a1000,#2d1f00 60%,#1a1000);border-color:rgba(245,197,24,.3)}
+.sbnr.sb-warning{background:linear-gradient(135deg,#0a0f1a,#0d1f2d 60%,#0a0f1a);border-color:rgba(100,160,255,.25)}
+.sbnr.sb-done{background:linear-gradient(135deg,#001a0a,#002d12 60%,#001a0a);border-color:rgba(74,222,128,.25)}
+.sbnr.sb-new{background:linear-gradient(135deg,#000918,#001848 60%,#000918);border-color:rgba(0,48,135,.35)}
+.sb-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:6px}
+.sb-icon-title{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sb-icon{font-size:26px;line-height:1}
+.sb-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;line-height:1}
+.sb-action .sb-title{color:var(--g)}
+.sb-warning .sb-title{color:rgba(110,160,255,.9)}
+.sb-done .sb-title{color:var(--gr)}
+.sb-new .sb-title{color:rgba(110,160,255,.8)}
+.sb-text{font-size:12px;color:var(--mu);line-height:1.6;margin-bottom:14px}
+.sb-text em{color:rgba(255,255,255,.65);font-style:normal;font-weight:600}
+.sb-text code{font-family:monospace;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;font-size:11px}
+.sb-actions{display:flex;gap:8px;flex-wrap:wrap}
+.sb-btn{display:inline-block;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}
+.sb-action .sb-btn{background:rgba(245,197,24,.15);border:1px solid rgba(245,197,24,.4);color:var(--g)}
+.sb-warning .sb-btn{background:rgba(100,160,255,.1);border:1px solid rgba(100,160,255,.3);color:rgba(110,160,255,.9)}
+.sb-done .sb-btn{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--gr)}
+.sb-new .sb-btn{background:rgba(0,48,135,.25);border:1px solid rgba(0,48,135,.5);color:rgba(110,160,255,.9)}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(22,22,32,.97);border:1px solid var(--bd);backdrop-filter:blur(20px);border-radius:12px;padding:11px 20px;font-size:13px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
@@ -368,12 +393,17 @@ function render() {
   const upcoming = filtered.filter(m=>!isPast(m.date)||isToday(m.date));
   const past     = filtered.filter(m=>isPast(m.date)&&!isToday(m.date));
 
+  const seasonBanners = renderSeasonBanners();
   let html = renderStandings();
 
-  // Hero — prossima partita
-  if (upcoming.length) {
-    const m = upcoming[0];
-    html += renderHero(m);
+  // Se non ci sono partite future, i banner prendono il posto dell'hero
+  if (!upcoming.length && seasonBanners) {
+    html += seasonBanners;
+  } else {
+    // Hero — prossima partita
+    if (upcoming.length) html += renderHero(upcoming[0]);
+    // Banner stagione dopo l'hero (solo quelli non critici come risultati mancanti)
+    if (seasonBanners) html += seasonBanners;
   }
 
   // Stats
@@ -481,6 +511,146 @@ function renderCard(m, idx) {
   </div>`;
 }
 
+
+// ============================================================
+// BANNER STAGIONE — sistema automatico multi-scenario
+// Tutte le date derivate da data.json, nessuna data hardcodata.
+// Funziona per ogni stagione futura senza modifiche.
+// ============================================================
+
+function getSeasonWindows() {
+  // Escludi partite "info" (segnaposto playoff da aggiungere)
+  const reg = matches.filter(m => m.phase === 'regular');
+  const post = matches.filter(m => ['playoff','playin','playout'].includes(m.phase));
+  const all = [...reg, ...post];
+  if (!reg.length) return null;
+
+  const toT = m => toDate(m.date).getTime();
+  const regularEnd   = new Date(Math.max(...reg.map(toT)));
+  const lastMatch    = new Date(Math.max(...all.map(toT)));
+  const hasPostseason = post.length > 0;
+
+  // Stima fine stagione: se playoff in json usa l'ultima data reale,
+  // altrimenti +8 settimane dalla fine regular (LNP: ~8 sett di playoff)
+  const seasonEnd = hasPostseason ? lastMatch
+    : new Date(regularEnd.getTime() + 56 * 86400000);
+
+  // Nuova stagione: 1 settembre dell'anno in cui termina la stagione corrente
+  const yr = seasonEnd.getFullYear();
+  const newSeasonStart = new Date(yr, 8, 1);
+
+  const now = today().getTime();
+  const futureCasa = all.filter(m => toDate(m.date).getTime() >= now);
+  const pastNoScore = reg.filter(m => toDate(m.date) < today() && m.sh === null && m.id !== 'v-info' && m.id !== 'l-info');
+  const postNoScore = post.filter(m => toDate(m.date) < today() && m.sh === null);
+
+  return { regularEnd, seasonEnd, newSeasonStart, hasPostseason,
+           futureCasa, pastNoScore, postNoScore, lastMatch };
+}
+
+function makeBanner(type, icon, label, title, text, links) {
+  const btns = links.map(l =>
+    `<a class="sb-btn" href="${l.url}" target="_blank">${l.label}</a>`
+  ).join('');
+  return `<div class="sbnr sb-${type}">
+    <div class="sb-label">${label}</div>
+    <div class="sb-icon-title"><span class="sb-icon">${icon}</span><span class="sb-title">${title}</span></div>
+    <div class="sb-text">${text}</div>
+    ${btns ? `<div class="sb-actions">${btns}</div>` : ''}
+  </div>`;
+}
+
+function fmtShort(d) {
+  const D=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const M=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return `${D[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function renderSeasonBanners() {
+  const w = getSeasonWindows();
+  if (!w) return '';
+  const now = today().getTime();
+  const banners = [];
+
+  // ── SCENARIO A ──────────────────────────────────────────────────────────────
+  // Partite passate di regular season senza punteggio
+  // (durante la stagione, script non ha aggiornato)
+  if (w.pastNoScore.length > 0 && now <= w.regularEnd.getTime() + 3 * 86400000) {
+    const nomi = w.pastNoScore.map(m =>
+      `<em>${m.home} vs ${m.away} (G${m.round})</em>`).join(', ');
+    banners.push(makeBanner('warning', '⏱️',
+      'Risultati da aggiornare',
+      `${w.pastNoScore.length} risultat${w.pastNoScore.length>1?'i':'o'} mancant${w.pastNoScore.length>1?'i':'e'}`,
+      `${nomi} — lo script dovrebbe aggiornarli automaticamente al prossimo run. Se non avviene, aggiorna <em>data.json</em> manualmente.`,
+      [{label: 'pianetabasket.com', url: 'https://www.pianetabasket.com/serie-b/'}]
+    ));
+  }
+
+  // ── SCENARIO B ──────────────────────────────────────────────────────────────
+  // Regular season finita, nessuna partita playoff in data.json
+  // Finestra: dal giorno dopo fine regular season fino a stima fine stagione
+  if (now > w.regularEnd.getTime() && !w.hasPostseason && now <= w.seasonEnd.getTime()) {
+    banners.push(makeBanner('action', '⚠️',
+      'Azione richiesta',
+      'Playoff e Play-In da aggiungere',
+      `La regular season è terminata il <em>${fmtShort(w.regularEnd)}</em>. Se Virtus o LUISS sono qualificate, aggiungi le loro partite casalinghe in <em>data.json</em> con <code>phase: "playoff"</code> o <code>phase: "playin"</code> o <code>phase: "playout"</code>.`,
+      [
+        {label: 'Date LNP ufficiali', url: 'https://www.legapallacanestro.com/serie-b-nazionale-old-wild-west-202526-le-date-della-stagione'},
+        {label: 'Risultati pianetabasket', url: 'https://www.pianetabasket.com/serie-b/'}
+      ]
+    ));
+  }
+
+  // ── SCENARIO C ──────────────────────────────────────────────────────────────
+  // Playoff in corso ma risultati mancanti
+  if (w.hasPostseason && w.postNoScore.length > 0) {
+    const nomi = w.postNoScore.map(m =>
+      `<em>${m.home} vs ${m.away}</em>`).join(', ');
+    banners.push(makeBanner('warning', '🏀',
+      'Playoff — risultati da aggiornare',
+      `${w.postNoScore.length} partita${w.postNoScore.length>1?'e':''} senza punteggio`,
+      `${nomi} — aggiorna <em>data.json</em> con i risultati e/o le date delle prossime gare.`,
+      [{label: 'pianetabasket.com', url: 'https://www.pianetabasket.com/serie-b/'}]
+    ));
+  }
+
+  // ── SCENARIO D ──────────────────────────────────────────────────────────────
+  // Stagione completamente conclusa (dopo fine stagione, prima del 1 set)
+  if (now > w.seasonEnd.getTime() && now < w.newSeasonStart.getTime()) {
+    const nextSeasonLabel = `${w.newSeasonStart.getFullYear()}-${String(w.newSeasonStart.getFullYear()+1).slice(2)}`;
+    banners.push(makeBanner('done', '✅',
+      'Stagione conclusa',
+      `Stagione ${w.seasonEnd.getFullYear()-1}-${String(w.seasonEnd.getFullYear()).slice(2)} terminata`,
+      `Tutti i risultati sono definitivi. Quando LNP pubblicherà il calendario <em>${nextSeasonLabel}</em> (atteso luglio-agosto), aggiorna <em>data.json</em> con le nuove partite casalinghe e verifica i gironi.`,
+      [{label: 'legapallacanestro.com', url: 'https://www.legapallacanestro.com'}]
+    ));
+  }
+
+  // ── SCENARIO E ──────────────────────────────────────────────────────────────
+  // Dal 1 settembre: nuova stagione attesa ma nessun calendario caricato
+  if (now >= w.newSeasonStart.getTime()) {
+    const yr = w.newSeasonStart.getFullYear();
+    const nextYr = yr + 1;
+    const hasNewSeason = matches.some(m =>
+      m.phase === 'regular' && toDate(m.date).getFullYear() >= yr &&
+      toDate(m.date).getTime() >= w.newSeasonStart.getTime()
+    );
+    if (!hasNewSeason) {
+      banners.push(makeBanner('new', '🆕',
+        'Nuova stagione',
+        `Calendario ${yr}-${String(nextYr).slice(2)} non caricato`,
+        `Il PDF LNP per la stagione <em>${yr}-${String(nextYr).slice(2)}</em> dovrebbe essere disponibile. Aggiorna <em>data.json</em> con le partite casalinghe e verifica che le due squadre siano ancora nello stesso girone (o in leghe diverse).`,
+        [
+          {label: 'Cerca calendario LNP', url: 'https://www.legapallacanestro.com'},
+          {label: 'pianetabasket.com', url: 'https://www.pianetabasket.com/serie-b/'}
+        ]
+      ));
+    }
+  }
+
+  return banners.join('');
+}
+
 function renderSources() {
   const rows = SOURCES.map(s => `<div class="srcrow">
     <div><div class="srcname">${s.name}</div><div class="srcmeta">${s.meta}</div></div>
@@ -580,6 +750,7 @@ function renderPost() {
       </div>
     </div>
 
+    ${renderSeasonBanners()}
     ${renderSources()}
   </div>`;
 }
