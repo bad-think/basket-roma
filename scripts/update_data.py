@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — Aggiornamento automatico v5
-Usa Google Custom Search API per trovare gli URL reali di pianetabasket
-senza dover stimare gli ID.
-
-Google API Key: letta da variabile d'ambiente GOOGLE_API_KEY
-Google CSE ID:  letta da variabile d'ambiente GOOGLE_CSE_ID
+update_data.py — Roma Basket Casa — Aggiornamento automatico v6
+Fonti dati:
+  1. LNP (legapallacanestro.com) — date, orari e risultati ufficiali
+  2. pianetabasket.com — risultati e classifica (KNOWN_URLS + stima ID)
 """
 
 import json
-import os
 import re
 import sys
 import urllib.request
@@ -56,7 +53,7 @@ KNOWN_URLS = {
     34: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-classifiche-34-giornata-2025-26-358236",
 }
 
-# ID base stimati (fallback se Google non trova nulla)
+# ID base stimati (fallback se non si trova la pagina)
 # G33=357782, incremento reale ~642 per giornata
 ROUND_BASE_IDS = {
     35: 358696, 36: 359156, 37: 359616, 38: 360076,
@@ -66,12 +63,10 @@ LEAGUE_SOURCES = {
     "B Nazionale": {
         "pb_home":      "https://www.pianetabasket.com/serie-b/",
         "pb_section":   "/serie-b/",
-        # RSS rimosso: restituisce 404 dal 2026
         "pb_class":     "https://www.pianetabasket.com/serie-b/classifica-serie-b-nazionale-girone-b-2025-26",
         "lnp":          "https://www.legapallacanestro.com/serie/4/classifica",
         "girone_check": "girone b",
         # URL fallback stagione 2025-26: pagine giornata note con ID verificati
-        # Usati se homepage non trova nulla. Aggiornare a inizio stagione 2026-27.
         "fallback_urls": [
             "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultato-posticipo-classifiche-34-giornata-2025-26-358236",
             "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-33-giornata-2025-26-357782",
@@ -84,156 +79,19 @@ BASE_STANDINGS = {
     "luiss":  {"pos": 6, "pts": 38, "w": 19, "l": 13},
 }
 
-# ================================================================
-# GOOGLE CUSTOM SEARCH API
-# ================================================================
-
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-GOOGLE_CSE_ID  = os.getenv("GOOGLE_CSE_ID",  "e57483d3719974bc0")
-
-# Flag globale: True se Google ha restituito 403 in questo run
-# Evita di sprecare quota su chiamate successive condannate a fallire
-_GOOGLE_BLOCKED = False
-
-def google_search(query, num=5):
-    """
-    Cerca su Google tramite Custom Search API.
-    Restituisce sempre (urls: list, snippets: list).
-    Se Google restituisce 403 setta _GOOGLE_BLOCKED e non fa altre chiamate.
-    """
-    global _GOOGLE_BLOCKED
-    if _GOOGLE_BLOCKED:
-        return [], []
-    if not GOOGLE_API_KEY:
-        return [], []
-    url = (
-        "https://www.googleapis.com/customsearch/v1"
-        f"?key={GOOGLE_API_KEY}"
-        f"&cx={GOOGLE_CSE_ID}"
-        f"&q={urllib.parse.quote(query)}"
-        f"&num={num}"
-    )
-    try:
-        with urllib.request.urlopen(url, timeout=8) as r:
-            data = json.loads(r.read().decode())
-            items = data.get("items", [])
-            urls = [item["link"] for item in items if "link" in item]
-            snippets = [item.get("snippet", "") for item in items]
-            return urls, snippets
-    except urllib.error.HTTPError as e:
-        if e.code == 403:
-            _GOOGLE_BLOCKED = True
-            print(f"  ⚠️  Google Search: 403 — quota esaurita o chiave non valida. "
-                  f"Salto tutte le chiamate Google di questo run.", file=sys.stderr)
-        else:
-            print(f"  ⚠️  Google Search error: {e}", file=sys.stderr)
-        return [], []
-    except Exception as e:
-        print(f"  ⚠️  Google Search error: {e}", file=sys.stderr)
-        return [], []
-
-
-def google_search_result(home, away):
-    """
-    Cerca il risultato di una partita direttamente negli snippet Google.
-    Non serve trovare l'URL né scaricare la pagina — il punteggio
-    e spesso gia nello snippet (es. "Virtus Roma-Latina 85-72").
-    Restituisce (sh, sa) o None.
-
-    Logica ordine home/away:
-    - pianetabasket scrive sempre "casa-ospite score-score"
-    - se home appare prima di away nello snippet -> s1=home, s2=away
-    - se away appare prima -> sh=s2, sa=s1
-    - se non determinabile -> s1=home per convenzione
-    """
-    query = f'"{home}" "{away}" risultato basket serie B 2026'
-    urls, snippets = google_search(query, num=5)
-
-    home_n = normalise(home)
-    away_n  = normalise(away)
-    pat = re.compile(r"(\d{2,3})\s*[-\u2013]\s*(\d{2,3})")
-
-    for snippet in snippets:
-        sl = snippet.lower()
-        if home_n[:8] not in sl and away_n[:8] not in sl:
-            continue
-        m = pat.search(snippet)
-        if not m:
-            continue
-        s1, s2 = int(m.group(1)), int(m.group(2))
-        if not (20 <= s1 <= 150 and 20 <= s2 <= 150 and s1 != s2):
-            continue
-        # Determina l'ordine dei nomi rispetto al punteggio
-        score_pos = sl.find(m.group(0))
-        pos_home = sl.rfind(home_n[:8], 0, score_pos)
-        pos_away = sl.rfind(away_n[:8], 0, score_pos)
-        if pos_home != -1 and pos_away != -1:
-            sh, sa = (s1, s2) if pos_home < pos_away else (s2, s1)
-        elif pos_home != -1:
-            sh, sa = s1, s2
-        elif pos_away != -1:
-            sh, sa = s2, s1
-        else:
-            sh, sa = s1, s2
-        print(f"  \u2705 Google snippet \u2192 {home} vs {away}: {sh}-{sa}")
-        return sh, sa
-    return None
-
-def find_url_via_google(rnd, season="2025-26"):
-    """
-    Usa Google per trovare l'URL reale della pagina risultati
-    di pianetabasket per la giornata indicata.
-    """
-    query = f"site:pianetabasket.com serie B nazionale risultati classifiche {rnd} giornata {season}"
-    urls, _ = google_search(query, num=5)
-    pat = re.compile(
-        r"https://www\.pianetabasket\.com/serie-b/[^\s]*"
-        + str(rnd) + r"-giornata-" + re.escape(season) + r"-\d+"
-    )
-    for url in urls:
-        if pat.search(url):
-            print(f"  🔍 Google → G{rnd}: {url[-45:]}")
-            return url
-    return None
-
-
-def find_calendar_change_via_google(team_name, opponent, rnd):
-    """
-    Usa Google per trovare variazioni di calendario (anticipi, posticipi).
-    Cerca articoli su pianetabasket, legapallacanestro, siti squadre.
-    """
-    query = f'"{team_name}" "{opponent}" giornata {rnd} data orario basket 2026 spostata anticipo'
-    urls, snippets = google_search(query, num=5)
-
-    months_it = {
-        "gennaio":1,"febbraio":2,"marzo":3,"aprile":4,
-        "maggio":5,"giugno":6,"luglio":7,"agosto":8,
-        "settembre":9,"ottobre":10,"novembre":11,"dicembre":12
-    }
-
-    all_text = " ".join(snippets).lower()
-
-    # Cerca pattern data negli snippet: "11 aprile ore 20" o "04/04/2026 20:00"
-    m1 = re.search(r"(\d{2})/(\d{2})/(\d{4})\s+(\d{2}:\d{2})", all_text)
-    if m1:
-        dd, mm, yyyy, t = m1.groups()
-        print(f"  📅 Google calendario: {yyyy}-{mm}-{dd} ore {t}")
-        return {"date": f"{yyyy}-{mm}-{dd}", "time": t}
-
-    m2 = re.search(
-        r"(\d{1,2})\s+(\w+)(?:\s+2026)?\s+(?:ore|alle)\s+(\d{1,2}(?::\d{2})?)",
-        all_text, re.IGNORECASE
-    )
-    if m2:
-        day, mon_str, t = m2.groups()
-        mon = months_it.get(mon_str.lower())
-        if mon:
-            if ":" not in t:
-                t += ":00"
-            print(f"  📅 Google calendario: 2026-{mon:02d}-{int(day):02d} ore {t}")
-            return {"date": f"2026-{mon:02d}-{int(day):02d}", "time": t}
-
-    return None
+# URL pagine squadra LNP e pianetabasket — aggiornare se cambiano lega
+TEAM_CONFIG = {
+    "B Nazionale": {
+        # Pagine squadra su LNP (fonte primaria per calendario e risultati)
+        "lnp_virtus": "https://www.legapallacanestro.com/serie-b/virtus-gvm-roma-1960",
+        "lnp_luiss":  "https://www.legapallacanestro.com/serie-b/luiss-roma",
+        # Prefisso URL risultati pianetabasket (usato in get_urls_for_round)
+        "pb_round_url_prefix": "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-",
+        # Template PDF calendario LNP — {season} viene sostituito con es. "2026-27"
+        "lnp_pdf_b":  "https://static.legapallacanestro.com/sites/default/files/editor/calendario_b_nazionale_gir._b_{season}.pdf",
+        "lnp_pdf_a2": "https://static.legapallacanestro.com/sites/default/files/editor/calendario_a2_{season}.pdf",
+    },
+}
 
 
 # ================================================================
@@ -242,7 +100,7 @@ def find_calendar_change_via_google(team_name, opponent, rnd):
 
 def fetch(url, timeout=5):
     req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (compatible; RomaBasketUpdater/5.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; RomaBasketUpdater/6.0)",
         "Accept": "text/html,application/xhtml+xml,application/json",
         "Accept-Language": "it-IT,it;q=0.9",
     })
@@ -343,8 +201,7 @@ def parse_results(html):
         except Exception:
             continue
 
-    # Pattern alternativo — più permissivo: cerca "NomeSquadra NomeSquadra NN-NN"
-    # vicino a una data. Utile se pianetabasket rimuove colonne orario.
+    # Pattern alternativo — più permissivo
     if not results:
         pat_loose = re.compile(
             r"(\d{2}/\d{2}/\d{4})\s*"
@@ -367,6 +224,62 @@ def parse_results(html):
                     seen.add(key)
             except Exception:
                 continue
+
+    return results
+
+
+def parse_lnp_calendar(html, home_aliases):
+    """
+    Estrae il calendario dalla pagina squadra LNP.
+    Restituisce lista di {date, time, home, away, sh, sa}.
+    Il punteggio 0-0 viene trattato come partita non ancora giocata.
+    """
+    results = []
+
+    # Estrai celle <td> dalla tabella calendario
+    td_list = re.findall(r'<td[^>]*>(.*?)</td>', html, re.DOTALL | re.IGNORECASE)
+    td_list = [re.sub(r'<[^>]+>', ' ', td) for td in td_list]
+    td_list = [re.sub(r'\s+', ' ', td).strip() for td in td_list]
+
+    i = 0
+    while i < len(td_list) - 3:
+        dt = td_list[i]
+        m = re.match(r'(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2})', dt)
+        if not m:
+            i += 1
+            continue
+
+        date_str, time_str = m.groups()
+        # Campi successivi: home, away, result, [venue]
+        home_raw = td_list[i + 1].strip()
+        away_raw = td_list[i + 2].strip()
+        result_raw = td_list[i + 3].strip() if i + 3 < len(td_list) else ""
+
+        # Salta se il nome squadra è troppo corto (intestazione o cella vuota)
+        if len(home_raw) < 3 or len(away_raw) < 3:
+            i += 1
+            continue
+
+        # Risultato: "NN - NN" oppure "0 - 0" (non giocata) oppure "—"
+        rm = re.match(r'(\d+)\s*[-–]\s*(\d+)', result_raw)
+        if rm:
+            sh_raw, sa_raw = int(rm.group(1)), int(rm.group(2))
+            # 0-0 = non giocata
+            sh = sh_raw if not (sh_raw == 0 and sa_raw == 0) else None
+            sa = sa_raw if sh is not None else None
+        else:
+            sh, sa = None, None
+
+        dd, mm, yyyy = date_str.split('/')
+        results.append({
+            "date": f"{yyyy}-{mm}-{dd}",
+            "time": time_str,
+            "home": home_raw,
+            "away": away_raw,
+            "sh": sh,
+            "sa": sa,
+        })
+        i += 5  # avanza di un'intera riga (5 celle: data, casa, ospite, risultato, impianto)
 
     return results
 
@@ -434,51 +347,130 @@ def find_match(scraped, match):
 
 
 # ================================================================
-# RICERCA URL — Google prima, poi RSS, poi fallback stima
+# LNP — FONTE PRIMARIA PER CALENDARIO E RISULTATI
+# ================================================================
+
+def update_from_lnp(matches, config):
+    """
+    STEP 0 — Aggiorna date, orari e risultati dalle pagine ufficiali LNP.
+    Fonte più affidabile: dati ufficiali, nessuna dipendenza da API esterne.
+
+    Per ogni squadra:
+    - Partite future: aggiorna date/orario se LNP mostra valori diversi
+    - Partite passate senza risultato: aggiorna sh/sa se LNP ha il punteggio
+    """
+    serie = config["teams"]["virtus"].get("serie", "B Nazionale")
+    tc = TEAM_CONFIG.get(serie, TEAM_CONFIG["B Nazionale"])
+    updated = 0
+
+    team_urls = {
+        "virtus": tc.get("lnp_virtus"),
+        "luiss":  tc.get("lnp_luiss"),
+    }
+
+    for team_key, lnp_url in team_urls.items():
+        if not lnp_url:
+            continue
+
+        html = fetch(lnp_url, timeout=8)
+        if not html or len(html) < 1000:
+            continue
+
+        aliases = config["teams"][team_key].get("name_aliases", [team_key])
+        lnp_matches = parse_lnp_calendar(html, aliases)
+
+        if not lnp_matches:
+            print(f"  ⚠️  LNP [{team_key}]: nessuna partita estratta")
+            continue
+
+        # Costruisci indice LNP per ricerca rapida per data+casa
+        lnp_index = {}
+        for lm in lnp_matches:
+            key = f"{lm['date']}|{normalise(lm['home'])}"
+            lnp_index[key] = lm
+
+        for m in matches:
+            if m.get("team") != team_key:
+                continue
+
+            # Cerca la partita nell'indice LNP
+            m_key = f"{m['date']}|{normalise(m['home'])}"
+            lm = lnp_index.get(m_key)
+
+            # Se non trovata per data esatta, prova a trovare per away team
+            if not lm:
+                m_away_n = normalise(m.get("away", ""))
+                for lnp_m in lnp_matches:
+                    if normalise(lnp_m["home"]) in normalise(m["home"]) or \
+                       normalise(m["home"]) in normalise(lnp_m["home"]):
+                        lnp_away_n = normalise(lnp_m.get("away", ""))
+                        if (m_away_n and lnp_away_n and
+                                (m_away_n in lnp_away_n or lnp_away_n in m_away_n)):
+                            lm = lnp_m
+                            break
+
+            if not lm:
+                continue
+
+            # Aggiorna data e orario per partite future
+            if m.get("sh") is None:
+                changed = False
+                if lm["date"] != m["date"]:
+                    print(f"  📅 LNP [{team_key}] {m['home']} vs {m['away']}: "
+                          f"data {m['date']} → {lm['date']}")
+                    m["date"] = lm["date"]
+                    changed = True
+                if lm["time"] and lm["time"] != m.get("time"):
+                    print(f"  🕐 LNP [{team_key}] {m['home']} vs {m['away']}: "
+                          f"orario → {lm['time']}")
+                    m["time"] = lm["time"]
+                    changed = True
+                if changed:
+                    updated += 1
+
+            # Aggiorna risultato per partite senza punteggio
+            if m.get("sh") is None and lm.get("sh") is not None:
+                m["sh"] = lm["sh"]
+                m["sa"] = lm["sa"]
+                print(f"  ✅ LNP [{team_key}] {m['home']} vs {m['away']}: "
+                      f"{lm['sh']}-{lm['sa']}")
+                updated += 1
+
+    print(f"  📡 LNP: {updated} aggiornamenti")
+    return updated
+
+
+# ================================================================
+# RICERCA URL — Homepage pianetabasket + fallback stima
 # ================================================================
 
 def find_urls_from_rss_and_homepage(serie, last_round):
     """
     Cerca URL reali delle giornate successive all'ultima con risultati.
-    Priorità: 1) RSS pianetabasket  2) Homepage  3) Google Search
+    Priorità: 1) Homepage pianetabasket  2) Fallback URL noti
     """
     sources = LEAGUE_SOURCES.get(serie, LEAGUE_SOURCES["B Nazionale"])
     pb_section = sources["pb_section"]
-    pb_rss = sources.get("pb_rss", "https://www.pianetabasket.com/feed/serie-b/")
     found = []
 
-    # 1. RSS rimosso (pianetabasket /feed/serie-b/ restituisce 404 dal 2026)
-    # Partiamo direttamente dalla homepage
+    # 1. Homepage pianetabasket
+    pb_home = sources["pb_home"]
+    html = fetch(pb_home)
+    if html:
+        pat2 = re.compile(r"(/serie-b/[^<>]{5,80})")
+        for m in pat2.finditer(html):
+            path = m.group(1)
+            if any(k in path.lower() for k in ["risultati", "risultato", "calendario", "classifiche"]):
+                url = "https://www.pianetabasket.com" + path
+                rnd_m = re.search(r"-([0-9]+)-giornata-", url)
+                rnd = int(rnd_m.group(1)) if rnd_m else None
+                if rnd and rnd <= last_round:
+                    continue
+                if url not in found:
+                    found.append(url)
+        print(f"  🔍 Homepage: {len(found)} URL trovati")
 
-    # 2. Homepage
-    if True:
-        pb_home = sources["pb_home"]
-        html = fetch(pb_home)
-        if html:
-            pat2 = re.compile(
-                r"(/serie-b/[^<>]{5,80})"
-            )
-            for m in pat2.finditer(html):
-                path = m.group(1)
-                if any(k in path.lower() for k in ["risultati","risultato","calendario","classifiche"]):
-                    url = "https://www.pianetabasket.com" + path
-                    rnd_m = re.search(r"-([0-9]+)-giornata-", url)
-                    rnd = int(rnd_m.group(1)) if rnd_m else None
-                    if rnd and rnd <= last_round:
-                        continue
-                    if url not in found:
-                        found.append(url)
-            print(f"  🔍 Homepage: {len(found)} URL trovati")
-
-    # 3. Google Search per la prossima giornata non trovata
-    if not found:
-        next_rnd = last_round + 1
-        url = find_url_via_google(next_rnd)
-        if url:
-            found.append(url)
-
-    # 4. Fallback stagionale: se ancora nulla, usa URL noti recenti per estrarre
-    #    almeno la classifica aggiornata e capire l'ultima giornata disputata
+    # 2. Fallback stagionale: URL noti recenti per classifica aggiornata
     if not found:
         fallback = sources.get("fallback_urls", [])
         if fallback:
@@ -491,18 +483,13 @@ def find_urls_from_rss_and_homepage(serie, last_round):
 def get_urls_for_round(rnd):
     """
     Restituisce URL da provare per una giornata specifica.
-    1) URL noto verificato  2) Google Search  3) Stima ID
+    1) URL noto verificato  2) Stima ID
     """
     # 1. URL noto
     if rnd in KNOWN_URLS:
         return [KNOWN_URLS[rnd]]
 
-    # 2. Google Search
-    url = find_url_via_google(rnd)
-    if url:
-        return [url]
-
-    # 3. Stima ID (fallback finale)
+    # 2. Stima ID (fallback finale)
     base_id = ROUND_BASE_IDS.get(rnd, 357782 + (rnd - 33) * 642)
     urls = []
     for suf, delta in [
@@ -560,32 +547,15 @@ def update_standings_multi(standings, config, scraped_htmls):
             if st:
                 candidates.append(("lnp", st))
 
-    # Google Search per classifica
-    if GOOGLE_API_KEY:
-        q = "classifica serie B nazionale girone B 2025-26 pianetabasket"
-        urls, _ = google_search(q, num=3)
-        for url in urls:
-            if "pianetabasket" in url:
-                html = fetch(url)
-                if html:
-                    st = parse_standings_from_html(html, aliases_v, aliases_l)
-                    if st:
-                        candidates.append(("google-class", st))
-                        break
-
     if not candidates:
         print("  ⚠️  Nessuna classifica trovata")
         return standings
 
     # TODO — Tiebreaker classifica LNP (parità di punti):
     # La classifica ufficiale LNP risolve i pareggi in quest'ordine:
-    # 1. Scontro diretto (risultato della/e partita/e tra le squadre pari)
-    # 2. Quoziente canestri negli scontri diretti (punti fatti / punti subiti)
-    # 3. Quoziente canestri generale (in tutta la stagione)
-    # Il parser attuale usa solo i punti — corretto per uso informativo,
-    # ma può divergere dalla classifica ufficiale in caso di parità.
-    # Per implementare i tiebreaker servirebbero tutti i risultati di
-    # tutti gli incontri tra le squadre pari, non solo quelli casalinghi.
+    # 1. Scontro diretto  2. Quoziente canestri scontri diretti  3. Quoziente generale
+    # Il parser usa solo i punti — corretto per uso informativo, ma può divergere
+    # dalla classifica ufficiale in caso di parità esatta.
     best_label, best = max(
         candidates,
         key=lambda x: x[1]["virtus"]["pts"] + x[1]["luiss"]["pts"]
@@ -611,45 +581,24 @@ def update_standings_multi(standings, config, scraped_htmls):
 
 
 # ================================================================
-# AGGIORNAMENTO CALENDARIO (variazioni LNP)
+# AGGIORNAMENTO CALENDARIO (variazioni)
 # ================================================================
 
 def fetch_calendar_changes(config):
     """
-    Cerca variazioni di calendario su pianetabasket e tramite Google.
+    Cerca variazioni di calendario su pianetabasket.
     Rileva anticipi, posticipi, recuperi per le squadre seguite.
     """
     changes = []
     aliases_v = config["teams"]["virtus"].get("name_aliases", ["virtus roma"])
     aliases_l = config["teams"]["luiss"].get("name_aliases", ["luiss roma", "luiss"])
     months_it = {
-        "gennaio":1,"febbraio":2,"marzo":3,"aprile":4,
-        "maggio":5,"giugno":6,"luglio":7,"agosto":8,
-        "settembre":9,"ottobre":10,"novembre":11,"dicembre":12
+        "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4,
+        "maggio": 5, "giugno": 6, "luglio": 7, "agosto": 8,
+        "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12
     }
     keywords = ["modif", "anticip", "posticip", "spostata", "rinviata", "recupero"]
     candidate_urls = []
-
-    # 1. RSS rimosso (restituisce 404)
-
-    # 2. Google Search per variazioni calendario
-    if GOOGLE_API_KEY:
-        for team_name in ["Virtus Roma", "Luiss Roma"]:
-            q = f"{team_name} basket serie B variazione calendario anticipo posticipo 2026"
-            urls, snippets = google_search(q, num=3)
-            all_text = " ".join(snippets).lower()
-            # Cerca pattern data negli snippet
-            m1 = re.search(r"(\d{2})/(\d{2})/(\d{4})\s+(\d{2}:\d{2})", all_text)
-            if m1:
-                dd, mm, yyyy, t = m1.groups()
-                team = "virtus" if "virtus" in team_name.lower() else "luiss"
-                changes.append({"team": team, "date": f"{yyyy}-{mm}-{dd}", "time": t, "source": "google"})
-                print(f"  📅 Google variazione [{team}]: {yyyy}-{mm}-{dd} ore {t}")
-            # Aggiungi URL trovati da Google per analisi più approfondita
-            for url in urls:
-                if "pianetabasket" in url and any(k in url.lower() for k in keywords):
-                    if url not in candidate_urls:
-                        candidate_urls.append(url)
 
     print(f"  🔍 Articoli modifica calendario: {len(candidate_urls)}")
 
@@ -667,7 +616,6 @@ def fetch_calendar_changes(config):
             continue
         team = "virtus" if is_virtus else "luiss"
 
-        # Cerca DD/MM/YYYY HH:MM
         m1 = re.search(r"(\d{2})/(\d{2})/(\d{4})\s+(\d{2}:\d{2})", plain)
         if m1:
             dd, mm, yyyy, t = m1.groups()
@@ -715,7 +663,11 @@ def update_in_season(matches, config, standings):
     all_scraped = []
     scraped_htmls = []
 
-    # STEP 1: URL dalla RSS/homepage
+    # STEP 0: Aggiornamento da LNP (fonte primaria)
+    print("\n  📡 STEP 0 — LNP ufficiale...")
+    lnp_updated = update_from_lnp(matches, config)
+
+    # STEP 1: URL dalla homepage pianetabasket
     home_urls = find_urls_from_rss_and_homepage(serie, last_round)
     for url in home_urls:
         html = fetch(url)
@@ -789,28 +741,20 @@ def update_in_season(matches, config, standings):
             except Exception:
                 continue
 
-    # Applica risultati e orari
-    updated = 0
+    # STEP 4: Applica risultati e orari da pianetabasket
+    updated = lnp_updated
     for m in matches:
         md = datetime.strptime(m["date"], "%Y-%m-%d").date()
 
         if md < today and m.get("sh") is None:
-            # Tentativo 1: pagina pianetabasket già scaricata
             found = find_match(all_scraped, m)
             if found and found.get("sh") is not None:
                 m["sh"] = found["sh"]
                 m["sa"] = found["sa"]
                 if found.get("time"):
                     m["time"] = found["time"]
-                print(f"  \u2705 pianetabasket \u2192 {m['home']} vs {m['away']}: {found['sh']}-{found['sa']}")
+                print(f"  ✅ pianetabasket → {m['home']} vs {m['away']}: {found['sh']}-{found['sa']}")
                 updated += 1
-            elif GOOGLE_API_KEY:
-                # Tentativo 2: punteggio direttamente dagli snippet Google
-                # Non serve scaricare nessuna pagina — il risultato è già nello snippet
-                result = google_search_result(m["home"], m["away"])
-                if result:
-                    m["sh"], m["sa"] = result
-                    updated += 1
 
         if md >= today:
             found = find_match(all_scraped, m)
@@ -819,7 +763,7 @@ def update_in_season(matches, config, standings):
                 m["time"] = found["time"]
                 updated += 1
 
-    # STEP 4: Classifica
+    # STEP 5: Classifica
     print("\n  🏆 Aggiornamento classifica...")
     standings = update_standings_multi(standings, config, scraped_htmls)
 
@@ -832,31 +776,23 @@ def update_in_season(matches, config, standings):
 
 def search_new_calendar(next_season, config):
     print(f"\n🔍 Ricerca calendario {next_season}...")
+    serie = config["teams"]["virtus"].get("serie", "B Nazionale")
+    tc = TEAM_CONFIG.get(serie, TEAM_CONFIG["B Nazionale"])
+
     pdf_urls = [
-        f"https://static.legapallacanestro.com/sites/default/files/editor/calendario_b_nazionale_gir._b_{next_season}.pdf",
-        f"https://static.legapallacanestro.com/sites/default/files/editor/calendario_a2_{next_season}.pdf",
+        tc["lnp_pdf_b"].format(season=next_season),
+        tc["lnp_pdf_a2"].format(season=next_season),
     ]
     serie_map = ["B Nazionale", "A2"]
 
-    for pdf_url, serie in zip(pdf_urls, serie_map):
+    for pdf_url, serie_name in zip(pdf_urls, serie_map):
         html = fetch(pdf_url, timeout=8)
         if not html or len(html) < 500:
             continue
         for team_key, team_cfg in config["teams"].items():
             for alias in team_cfg.get("name_aliases", []):
                 if alias in html.lower():
-                    print(f"  📄 {team_cfg['name']} trovato in {serie}")
-                    return None, next_season
-
-    # Cerca anche tramite Google
-    if GOOGLE_API_KEY:
-        q = f"serie B nazionale basket calendario {next_season} girone B pianetabasket"
-        urls, snippets = google_search(q, num=3)
-        all_text = " ".join(snippets).lower()
-        for team_cfg in config["teams"].values():
-            for alias in team_cfg.get("name_aliases", []):
-                if alias in all_text:
-                    print(f"  🌐 Nuova stagione {next_season} rilevata via Google")
+                    print(f"  📄 {team_cfg['name']} trovato in {serie_name}")
                     return None, next_season
 
     print(f"  ℹ️  Calendario {next_season} non ancora disponibile")
@@ -868,13 +804,8 @@ def search_new_calendar(next_season, config):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v5+Google — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v6 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
-
-    if GOOGLE_API_KEY:
-        print(f"🔍 Google Custom Search: attiva (CSE: {GOOGLE_CSE_ID[:8]}...)")
-    else:
-        print("⚠️  Google Custom Search: non configurata (usa RSS/stima)")
 
     data_path = Path("data.json")
     if data_path.exists():
@@ -898,7 +829,7 @@ def main():
         config    = CONFIG
         print("📂 Primo avvio — dati base")
 
-    today      = date.today()
+    today       = date.today()
     next_season = config.get("next_season", "2026-27")
     all_dates   = [datetime.strptime(m["date"], "%Y-%m-%d").date() for m in matches] if matches else []
     season_end  = max(all_dates) if all_dates else date(2026, 6, 30)
@@ -928,9 +859,8 @@ def main():
     new_json = json.dumps(output, ensure_ascii=False, indent=2)
     if data_path.exists():
         old_content = data_path.read_text(encoding="utf-8")
-        # Confronta ignorando last_updated
         import re as _re
-        def strip_ts(s): return _re.sub(r'"last_updated":\s*"[^"]*"', '"last_updated":""', s)  # noqa
+        def strip_ts(s): return _re.sub(r'"last_updated":\s*"[^"]*"', '"last_updated":""', s)
         if strip_ts(old_content) == strip_ts(new_json) and total_updated == 0:
             print("ℹ️  Nessuna modifica reale — salto scrittura")
             print("\n💾 Invariato — nessun commit necessario")
