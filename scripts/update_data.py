@@ -1,23 +1,60 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — Aggiornamento automatico v6
-Fonti dati:
-  1. LNP (legapallacanestro.com) — date, orari e risultati ufficiali
-  2. pianetabasket.com — risultati e classifica (KNOWN_URLS + stima ID)
+update_data.py — Roma Basket Casa — v7
+Architettura LNP-only con auto-discovery completa.
+
+Fonte unica: legapallacanestro.com (HTML statico)
+- Calendario, date, orari, risultati: pagine squadra LNP
+- Classifica completa con pos: derivata da tutte le squadre del girone
+- Cambio lega: cascade discovery serie-b → serie-a2 → serie-a
+- Zero hardcoded round URLs, zero pianetabasket, zero intervento manuale
+
+Il workflow gira ogni ora circa; ~22 fetch a LNP per run.
 """
 
 import json
 import re
 import sys
 import urllib.request
-import urllib.parse
+import urllib.error
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
 # ================================================================
 # CONFIGURAZIONE
 # ================================================================
-CONFIG = {
+
+# Squadre seguite — basta lo SLUG LNP (parte finale dell'URL pagina squadra).
+# Lo slug è stabile attraverso le stagioni, anche in caso di cambio lega.
+# Per aggiungere/togliere squadre, modificare solo questo dict.
+TRACKED_TEAMS = {
+    "virtus": {
+        "slug": "virtus-gvm-roma-1960",
+        "display_name": "Virtus GVM Roma",
+        "name_aliases": [
+            "virtus gvm roma 1960", "virtus gvm roma", "virtus roma",
+            "pallacanestro virtus roma",
+        ],
+    },
+    "luiss": {
+        "slug": "luiss-roma",
+        "display_name": "Luiss Roma",
+        "name_aliases": ["luiss roma", "luiss", "luiss basketball"],
+    },
+}
+
+# Cascade leghe LNP — ordine di tentativo per discovery automatica
+LEAGUE_PATHS = ["serie-b", "serie-a2", "serie-a"]
+
+# Mapping leghe → label per data.json (compat con index.html)
+LEAGUE_LABELS = {
+    "serie-b": "B Nazionale",
+    "serie-a2": "A2",
+    "serie-a": "A",
+}
+
+# Default config (compat con data.json esistente)
+CONFIG_DEFAULT = {
     "season": "2025-26",
     "next_season": "2026-27",
     "teams": {
@@ -25,13 +62,13 @@ CONFIG = {
             "name": "Virtus GVM Roma",
             "name_aliases": [
                 "virtus gvm roma", "virtus roma", "virtus gvm roma 1960",
-                "pallacanestro virtus roma"
+                "pallacanestro virtus roma",
             ],
             "serie": "B Nazionale",
             "girone": "B",
             "venue_name": "PalaTiziano – Palazzetto dello Sport",
             "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma",
         },
         "luiss": {
             "name": "Luiss Roma",
@@ -40,58 +77,14 @@ CONFIG = {
             "girone": "B",
             "venue_name": "PalaTiziano – Palazzetto dello Sport",
             "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
-        }
-    }
-}
-
-# URL verificati per giornate già disputate
-KNOWN_URLS = {
-    31: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-le-gare-di-lunedi-classifiche-31-giornata-2025-26-356237",
-    32: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-32-giornata-2025-26-357140",
-    33: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-33-giornata-2025-26-357782",
-    34: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-classifiche-34-giornata-2025-26-358236",
-    35: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-35-giornata-2025-26-358804",
-}
-
-# ID base stimati (fallback se non si trova la pagina)
-# G34=358236, G35=358804 (+568), incremento stimato ~570/giornata
-ROUND_BASE_IDS = {
-    36: 359374, 37: 359944, 38: 360514,
-}
-
-LEAGUE_SOURCES = {
-    "B Nazionale": {
-        "pb_home":      "https://www.pianetabasket.com/serie-b/",
-        "pb_section":   "/serie-b/",
-        "pb_class":     "https://www.pianetabasket.com/serie-b/classifica-serie-b-nazionale-girone-b-2025-26",
-        "lnp":          "https://www.legapallacanestro.com/serie/4/classifica",
-        "girone_check": "girone b",
-        # URL fallback stagione 2025-26: pagine giornata note con ID verificati
-        "fallback_urls": [
-            "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultato-posticipo-classifiche-34-giornata-2025-26-358236",
-            "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-33-giornata-2025-26-357782",
-        ],
+            "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma",
+        },
     },
 }
 
 BASE_STANDINGS = {
-    "virtus": {"pos": 1, "pts": 52, "w": 26, "l": 6},
+    "virtus": {"pos": 1, "pts": 54, "w": 27, "l": 6},
     "luiss":  {"pos": 6, "pts": 38, "w": 19, "l": 13},
-}
-
-# URL pagine squadra LNP e pianetabasket — aggiornare se cambiano lega
-TEAM_CONFIG = {
-    "B Nazionale": {
-        # Pagine squadra su LNP (fonte primaria per calendario e risultati)
-        "lnp_virtus": "https://www.legapallacanestro.com/serie-b/virtus-gvm-roma-1960",
-        "lnp_luiss":  "https://www.legapallacanestro.com/serie-b/luiss-roma",
-        # Prefisso URL risultati pianetabasket (usato in get_urls_for_round)
-        "pb_round_url_prefix": "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-",
-        # Template PDF calendario LNP — {season} viene sostituito con es. "2026-27"
-        "lnp_pdf_b":  "https://static.legapallacanestro.com/sites/default/files/editor/calendario_b_nazionale_gir._b_{season}.pdf",
-        "lnp_pdf_a2": "https://static.legapallacanestro.com/sites/default/files/editor/calendario_a2_{season}.pdf",
-    },
 }
 
 
@@ -99,145 +92,99 @@ TEAM_CONFIG = {
 # UTILITY
 # ================================================================
 
-def fetch(url, timeout=5):
+def fetch(url, timeout=8):
+    """Fetch HTTP con UA realistico. Ritorna stringa vuota su errore."""
     req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (compatible; RomaBasketUpdater/6.0)",
-        "Accept": "text/html,application/xhtml+xml,application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; RomaBasketUpdater/7.0)",
+        "Accept": "text/html,application/xhtml+xml",
         "Accept-Language": "it-IT,it;q=0.9",
     })
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        # 404 silenzioso (atteso durante discovery cascade)
+        if e.code != 404:
+            print(f"  ⚠️  {url[:80]}: HTTP {e.code}", file=sys.stderr)
+        return ""
     except Exception as e:
-        print(f"  ⚠️  {url[:60]}: {e}", file=sys.stderr)
+        print(f"  ⚠️  {url[:80]}: {e}", file=sys.stderr)
         return ""
 
 
+# Sostituzioni per ridurre nomi squadra a token canonici confrontabili.
+# L'ordine importa: regole più specifiche prima di quelle generiche.
+_NAME_REPLACEMENTS = [
+    ("virtus gvm roma 1960", "virtus roma"),
+    ("virtus gvm roma", "virtus roma"),
+    ("luiss basketball", "luiss"),
+    ("luiss roma", "luiss"),
+    ("consorzio leonardo dany quarrata", "quarrata"),
+    ("consorzio dany quarrata", "quarrata"),
+    ("paperdi juvecaserta 2021", "juvecaserta"),
+    ("paperdi juvecaserta", "juvecaserta"),
+    ("malvin psa basket casoria", "casoria"),
+    ("psa basket casoria", "casoria"),
+    ("verodol cbd pielle livorno", "pielle livorno"),
+    ("up andrea costa imola", "andrea costa"),
+    ("andrea costa imola", "andrea costa"),
+    ("benacquista assicurazioni latina", "latina"),
+    ("benacquista latina", "latina"),
+    ("allianz pazienza san severo", "san severo"),
+    ("umana san giobbe chiusi", "chiusi"),
+    ("general contractor jesi", "jesi"),
+    ("solbat golfo piombino", "piombino"),
+    ("orasì ravenna", "ravenna"),
+    ("orasi ravenna", "ravenna"),
+    ("power basket nocera", "nocera"),
+    ("adamant ferrara basket 2018", "ferrara"),
+    ("adamant ferrara", "ferrara"),
+    ("virtus pallacanestro imola", "v.imola"),
+    ("virtus imola", "v.imola"),
+    ("ristopro janus fabriano", "fabriano"),
+    ("ristopro fabriano", "fabriano"),
+    ("tema sinergie faenza", "faenza"),
+    ("raggisolaris faenza", "faenza"),
+    ("consultinvest loreto pesaro", "loreto"),
+    ("loreto pesaro", "loreto"),
+]
+
+
 def normalise(s):
-    s = s.lower()
-    for old, new in [
-        ("virtus gvm roma 1960", "virtus roma"),
-        ("virtus gvm roma", "virtus roma"),
-        ("luiss roma", "luiss"), ("luiss basketball", "luiss"),
-        ("consorzio leonardo dany quarrata", "quarrata"),
-        ("consorzio dany quarrata", "quarrata"),
-        ("paperdi juvecaserta 2021", "juvecaserta"),
-        ("malvin psa basket casoria", "casoria"),
-        ("psa basket casoria", "casoria"),
-        ("verodol cbd pielle livorno", "pielle livorno"),
-        ("up andrea costa imola", "andrea costa"),
-        ("benacquista assicurazioni latina", "latina"),
-        ("allianz pazienza san severo", "san severo"),
-        ("umana san giobbe chiusi", "chiusi"),
-        ("general contractor jesi", "jesi"),
-        ("solbat golfo piombino", "piombino"),
-        ("orasì ravenna", "ravenna"), ("orasi ravenna", "ravenna"),
-        ("power basket nocera", "nocera"),
-        ("adamant ferrara basket 2018", "ferrara"),
-        ("adamant ferrara", "ferrara"),
-        ("virtus pallacanestro imola", "v.imola"),
-        ("virtus imola", "v.imola"),
-        ("ristopro janus fabriano", "fabriano"),
-        ("ristopro fabriano", "fabriano"),
-        ("raggisolaris faenza", "faenza"),
-        ("consultinvest loreto pesaro", "loreto pesaro"),
-    ]:
+    """Riduce un nome squadra a forma canonica per confronti."""
+    if not s:
+        return ""
+    s = s.lower().strip()
+    s = re.sub(r"\s+", " ", s)
+    for old, new in _NAME_REPLACEMENTS:
         s = s.replace(old, new)
-    return re.sub(r"\s+", " ", s).strip()
+    return s
 
 
-def parse_results(html):
-    """Estrae risultati e orari futuri da HTML pianetabasket.
-    Resiliente a variazioni di formato: prova prima il pattern stretto,
-    poi un pattern più permissivo se non trova nulla.
+def slug_to_normalised(slug):
+    """Slug LNP → stringa normalizzata confrontabile coi nomi nelle pagine."""
+    s = slug.replace("-", " ")
+    # Decode caratteri italiani URL-encoded
+    s = (s.replace("%c3%ac", "ì").replace("%C3%AC", "ì")
+           .replace("%c3%a8", "è").replace("%C3%A8", "è")
+           .replace("%c3%a9", "é").replace("%C3%A9", "é")
+           .replace("%c3%b9", "ù").replace("%C3%B9", "ù")
+           .replace("%c3%b2", "ò").replace("%C3%B2", "ò")
+           .replace("%c3%a0", "à").replace("%C3%A0", "à"))
+    return normalise(s)
+
+
+# ================================================================
+# PARSING PAGINE LNP
+# ================================================================
+
+def parse_lnp_calendar(html):
+    """
+    Estrae il calendario completo (casa + trasferta) dalla pagina squadra LNP.
+    Restituisce lista [{date, time, home, away, sh, sa}].
+    Risultato 0-0 = partita non ancora giocata.
     """
     results = []
-    plain = html.replace("&#x27;", "'").replace("&amp;", "&")
-    plain = re.sub(r"<[^>]+>", " ", plain)
-    plain = re.sub(r"\s+", " ", plain)
-    seen = set()
-
-    # Con risultato — pattern stretto (data + orario + squadre + score)
-    pat_score = re.compile(
-        r"(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2})\s+"
-        r"([A-Za-zÀ-ÿ0-9 '\.\-]+?)\s*-\s*([A-Za-zÀ-ÿ0-9 '\.\-]+?)\s+"
-        r"(\d{2,3})-(\d{2,3})(?:\s|$)"
-    )
-    for m in pat_score.finditer(plain):
-        dr, t, h, a, sh, sa = m.groups()
-        h = h.strip(); a = a.strip()
-        if len(h) < 4 or len(a) < 4:
-            continue
-        try:
-            dd, mm, yyyy = dr.split("/")
-            key = f"{yyyy}-{mm}-{dd}|{normalise(h)}"
-            results.append({
-                "date": f"{yyyy}-{mm}-{dd}", "time": t,
-                "home": h, "away": a, "sh": int(sh), "sa": int(sa)
-            })
-            seen.add(key)
-        except Exception:
-            continue
-
-    # Solo orario (partite future)
-    pat_time = re.compile(
-        r"(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2})\s+"
-        r"([A-Za-zÀ-ÿ0-9 '\.\-]{5,50}?)\s*-\s*([A-Za-zÀ-ÿ0-9 '\.\-]{5,50}?)"
-        r"(?=\s+\d{2}/\d{2}/|\s*$)"
-    )
-    for m in pat_time.finditer(plain):
-        dr, t, h, a = m.groups()
-        h = h.strip(); a = a.strip()
-        if len(h) < 4 or len(a) < 4:
-            continue
-        try:
-            dd, mm, yyyy = dr.split("/")
-            key = f"{yyyy}-{mm}-{dd}|{normalise(h)}"
-            if key not in seen:
-                results.append({
-                    "date": f"{yyyy}-{mm}-{dd}", "time": t,
-                    "home": h, "away": a, "sh": None, "sa": None
-                })
-                seen.add(key)
-        except Exception:
-            continue
-
-    # Pattern alternativo — più permissivo
-    if not results:
-        pat_loose = re.compile(
-            r"(\d{2}/\d{2}/\d{4})\s*"
-            r"([A-Za-zÀ-ÿ0-9 '\.\-]{5,50}?)\s*-\s*([A-Za-zÀ-ÿ0-9 '\.\-]{5,50}?)\s+"
-            r"(\d{2,3})\s*-\s*(\d{2,3})(?:\s|$)"
-        )
-        for m in pat_loose.finditer(plain):
-            dr, h, a, sh, sa = m.groups()
-            h, a = h.strip(), a.strip()
-            if len(h) < 4 or len(a) < 4:
-                continue
-            try:
-                dd, mm, yyyy = dr.split("/")
-                key = f"{yyyy}-{mm}-{dd}|{normalise(h)}"
-                if key not in seen:
-                    results.append({
-                        "date": f"{yyyy}-{mm}-{dd}", "time": "20:00",
-                        "home": h, "away": a, "sh": int(sh), "sa": int(sa)
-                    })
-                    seen.add(key)
-            except Exception:
-                continue
-
-    return results
-
-
-def parse_lnp_calendar(html, home_aliases):
-    """
-    Estrae il calendario dalla pagina squadra LNP.
-    Restituisce lista di {date, time, home, away, sh, sa}.
-    Il punteggio 0-0 viene trattato come partita non ancora giocata.
-    """
-    results = []
-
-    # Estrai celle <td> dalla tabella calendario
     td_list = re.findall(r'<td[^>]*>(.*?)</td>', html, re.DOTALL | re.IGNORECASE)
     td_list = [re.sub(r'<[^>]+>', ' ', td) for td in td_list]
     td_list = [re.sub(r'\s+', ' ', td).strip() for td in td_list]
@@ -251,21 +198,17 @@ def parse_lnp_calendar(html, home_aliases):
             continue
 
         date_str, time_str = m.groups()
-        # Campi successivi: home, away, result, [venue]
         home_raw = td_list[i + 1].strip()
         away_raw = td_list[i + 2].strip()
         result_raw = td_list[i + 3].strip() if i + 3 < len(td_list) else ""
 
-        # Salta se il nome squadra è troppo corto (intestazione o cella vuota)
         if len(home_raw) < 3 or len(away_raw) < 3:
             i += 1
             continue
 
-        # Risultato: "NN - NN" oppure "0 - 0" (non giocata) oppure "—"
         rm = re.match(r'(\d+)\s*[-–]\s*(\d+)', result_raw)
         if rm:
             sh_raw, sa_raw = int(rm.group(1)), int(rm.group(2))
-            # 0-0 = non giocata
             sh = sh_raw if not (sh_raw == 0 and sa_raw == 0) else None
             sa = sa_raw if sh is not None else None
         else:
@@ -285,575 +228,384 @@ def parse_lnp_calendar(html, home_aliases):
     return results
 
 
-def parse_standings_from_html(html, aliases_v, aliases_l):
-    """Estrae la classifica Girone B più aggiornata dalla pagina."""
-    plain = html.replace("&#x27;", "'").replace("&amp;", "&")
-    plain = re.sub(r"<[^>]+>", " ", plain)
-    plain = re.sub(r" {2,}", " ", plain)
-
-    best = None
-    best_total = 0
-
-    for idx in [m.start() for m in re.finditer(r"[Cc]lassifica\s+girone\s+[Bb]", plain)]:
-        block = plain[idx:idx + 2500]
-        for stop in ["classifica girone a", "nota -"]:
-            cut = block.lower().find(stop, 20)
-            if cut != -1:
-                block = block[:cut]
-                break
-
-        candidate = {}
-        pos = 1
-        pat = re.compile(
-            r"([A-Za-zÀ-ÿ0-9 '\.\-]{4,50}?)\s+(\d{1,3})\s+(\d{1,2})-(\d{1,2})(?:\s|$)"
-        )
-        for m in pat.finditer(block):
-            name = m.group(1).strip()
-            pts, w, l = int(m.group(2)), int(m.group(3)), int(m.group(4))
-            nl = name.lower()
-            if any(a in nl for a in aliases_v) and "virtus" not in candidate:
-                candidate["virtus"] = {"pos": pos, "pts": pts, "w": w, "l": l}
-            elif any(a in nl for a in aliases_l) and "luiss" not in candidate:
-                candidate["luiss"] = {"pos": pos, "pts": pts, "w": w, "l": l}
-            pos += 1
-            if len(candidate) == 2:
-                break
-
-        if len(candidate) == 2:
-            total = candidate["virtus"]["pts"] + candidate["luiss"]["pts"]
-            if total > best_total:
-                best_total = total
-                best = candidate
-
-    return best
-
-
-def find_match(scraped, match):
-    mh = normalise(match["home"])
-    for s in scraped:
-        if s.get("date") and match.get("date"):
-            try:
-                md = datetime.strptime(match["date"], "%Y-%m-%d").date()
-                sd = datetime.strptime(s["date"], "%Y-%m-%d").date()
-                if abs((sd - md).days) > 4:
-                    continue
-            except Exception:
-                pass
-        sh_n = normalise(s["home"])
-        if (sh_n in mh or mh in sh_n or
-                ("virtus roma" in mh and "virtus" in sh_n) or
-                ("luiss" in mh and "luiss" in sh_n)):
-            return s
-    return None
-
-
-# ================================================================
-# LNP — FONTE PRIMARIA PER CALENDARIO E RISULTATI
-# ================================================================
-
-def calc_standings_from_lnp(lnp_matches, aliases):
-    """
-    Calcola W/L/pts da tutte le partite LNP (casa + trasferta).
-    In Serie B Nazionale: vittoria = 2pt, sconfitta = 0pt.
-    Restituisce (w, l, pts) o None se non ci sono risultati.
-    """
+def calc_team_stats(lnp_matches, team_aliases):
+    """Calcola (W, L, pts) di una squadra dal suo calendario completo LNP.
+    In Serie B/A2/A: vittoria = 2pt, sconfitta = 0pt."""
     w, l = 0, 0
+    aliases_norm = [normalise(a) for a in team_aliases if a]
     for lm in lnp_matches:
         sh, sa = lm.get("sh"), lm.get("sa")
         if sh is None or sa is None:
             continue
         home_n = normalise(lm["home"])
-        team_is_home = any(
-            normalise(a) in home_n or home_n in normalise(a)
-            for a in aliases
-        )
+        team_is_home = any(an in home_n or home_n in an for an in aliases_norm)
         if team_is_home:
             won = sh > sa
         else:
-            won = sa > sh   # trasferta: nostro punteggio è sa
+            won = sa > sh
         if won:
             w += 1
         else:
             l += 1
-    if w + l == 0:
-        return None
     return w, l, w * 2
 
 
-def update_from_lnp(matches, config, current_standings):
+def extract_opponents(lnp_matches, team_aliases):
+    """Estrae i nomi raw degli avversari della squadra dal suo calendario."""
+    opponents = set()
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    for m in lnp_matches:
+        h_n = normalise(m["home"])
+        team_is_home = any(an in h_n or h_n in an for an in aliases_norm)
+        opponent_raw = m["away"] if team_is_home else m["home"]
+        if opponent_raw and len(opponent_raw) >= 3:
+            opponents.add(opponent_raw)
+    return opponents
+
+
+# ================================================================
+# DISCOVERY LEGA E GIRONE
+# ================================================================
+
+def discover_team_league(team_slug):
     """
-    STEP 0 — Aggiorna date, orari, risultati e classifica dalle pagine LNP.
-    Fonte ufficiale: nessuna dipendenza da API esterne.
+    Determina in quale lega LNP gioca la squadra.
+    Cascade su LEAGUE_PATHS, restituisce (league_path, html) o (None, None).
 
-    - Partite future: aggiorna data/orario se LNP mostra valori diversi
-    - Partite passate senza risultato: aggiorna sh/sa
-    - Standings: calcola W/L/pts dal calendario completo (casa + trasferta)
-      pos viene mantenuto dall'ultimo valore noto (non derivabile da singola squadra)
-
-    Restituisce (updated_count, new_standings).
+    Resilient ai cambi di lega: se una squadra viene promossa in A2,
+    la prossima run la troverà sotto serie-a2 senza intervento manuale.
     """
-    serie = config["teams"]["virtus"].get("serie", "B Nazionale")
-    tc = TEAM_CONFIG.get(serie, TEAM_CONFIG["B Nazionale"])
-    updated = 0
-    new_standings = {k: dict(v) for k, v in current_standings.items()}
+    for path in LEAGUE_PATHS:
+        url = f"https://www.legapallacanestro.com/{path}/{team_slug}"
+        html = fetch(url)
+        if html and len(html) >= 1000 and "calendario" in html.lower():
+            return path, html
+    return None, None
 
-    team_urls = {
-        "virtus": tc.get("lnp_virtus"),
-        "luiss":  tc.get("lnp_luiss"),
-    }
 
-    for team_key, lnp_url in team_urls.items():
-        if not lnp_url:
+# Path da escludere quando si parsano gli slug della pagina indice lega
+_INDEX_BLACKLIST_KEYWORDS = [
+    "formula", "calendario-dirette", "old-wild-west", "negli-anticipi",
+    "guida-al-campionato", "supercoppa", "coppa-italia", "final-four",
+    "lnp-pass", "archivio-storico", "leaders", "statistiche",
+    "live-match", "mvp", "best-coach", "miglior-under",
+]
+
+
+def discover_girone_slugs(league_path, opponent_names, own_slug):
+    """
+    Identifica gli slug LNP delle squadre del girone in cui gioca la squadra.
+
+    Strategia:
+    1. Fetch della pagina indice lega (es. /serie-b) — HTML statico con
+       link a tutte le squadre della lega (es. 38 = girone A + B).
+    2. Estrae tutti gli slug /serie-X/[slug] dalla pagina indice.
+    3. Filtra quelli i cui nomi normalizzati matchano gli avversari
+       della squadra seguita = squadre dello stesso girone.
+    4. Aggiunge sempre own_slug (la squadra stessa) al risultato.
+    """
+    index_url = f"https://www.legapallacanestro.com/{league_path}"
+    html = fetch(index_url)
+    if not html:
+        print(f"  ⚠️  pagina indice {league_path} non disponibile")
+        return {own_slug}
+
+    # Estrai tutti gli slug candidati dai link
+    pat = re.compile(rf'/{re.escape(league_path)}/([a-zA-Z0-9\-%]+?)(?:["\'\?#/]|$)')
+    raw_slugs = set(pat.findall(html))
+
+    # Filtra blacklist e slug troppo corti
+    candidate_slugs = set()
+    for s in raw_slugs:
+        sl = s.lower()
+        if any(k in sl for k in _INDEX_BLACKLIST_KEYWORDS):
             continue
+        if len(s) < 4:
+            continue
+        candidate_slugs.add(s)
 
-        html = fetch(lnp_url, timeout=8)
+    # Set di nomi avversari normalizzati
+    opp_norm = {normalise(o) for o in opponent_names if o}
+    opp_norm = {o for o in opp_norm if len(o) >= 3}
+
+    girone_slugs = {own_slug}
+    for slug in candidate_slugs:
+        sn = slug_to_normalised(slug)
+        if not sn:
+            continue
+        for on in opp_norm:
+            # Match esatto, oppure substring (token significativo, >= 4 char)
+            if sn == on:
+                girone_slugs.add(slug)
+                break
+            if len(on) >= 4 and (on in sn or sn in on):
+                girone_slugs.add(slug)
+                break
+
+    return girone_slugs
+
+
+def compute_full_standings(league_path, girone_slugs):
+    """
+    Per ogni squadra del girone fa fetch della pagina LNP e calcola W/L/pts.
+    Restituisce lista ordinata [{slug, name, w, l, pts, pos}, ...].
+
+    Tiebreaker semplificato: pts desc, w desc, nome asc.
+    Il tiebreaker ufficiale LNP (scontri diretti, quoziente canestri) non è
+    implementato — la pos può divergere in caso di parità esatta. Sufficiente
+    per uso informativo.
+    """
+    teams = []
+    for slug in sorted(girone_slugs):
+        url = f"https://www.legapallacanestro.com/{league_path}/{slug}"
+        html = fetch(url)
         if not html or len(html) < 1000:
+            print(f"     ⚠️  {slug}: pagina non disponibile")
+            continue
+        matches = parse_lnp_calendar(html)
+        if not matches:
+            print(f"     ⚠️  {slug}: calendario non parsabile")
             continue
 
-        aliases = config["teams"][team_key].get("name_aliases", [team_key])
-        lnp_matches = parse_lnp_calendar(html, aliases)
-
-        if not lnp_matches:
-            print(f"  ⚠️  LNP [{team_key}]: nessuna partita estratta")
-            continue
-
-        # ── Standings da calendario completo (casa + trasferta) ───
-        standings_result = calc_standings_from_lnp(lnp_matches, aliases)
-        if standings_result:
-            w, l, pts = standings_result
-            old_pts = new_standings.get(team_key, {}).get("pts", 0)
-            if pts >= old_pts:
-                new_standings.setdefault(team_key, {})
-                new_standings[team_key]["w"]   = w
-                new_standings[team_key]["l"]   = l
-                new_standings[team_key]["pts"] = pts
-                # pos: mantieni l'ultimo valore noto
-                if "pos" not in new_standings[team_key]:
-                    new_standings[team_key]["pos"] = current_standings.get(team_key, {}).get("pos", "-")
-                print(f"  📊 LNP [{team_key}]: {w}V-{l}P = {pts}pt")
-
-        # ── Aggiornamento partite in casa ─────────────────────────
-        lnp_index = {}
-        for lm in lnp_matches:
-            key = f"{lm['date']}|{normalise(lm['home'])}"
-            lnp_index[key] = lm
-
+        # Trova il nome reale della squadra cercando nelle partite la cella
+        # che contiene lo slug normalizzato (è il "self team" della pagina)
+        sn = slug_to_normalised(slug)
+        team_name = None
         for m in matches:
-            if m.get("team") != team_key:
+            for cell in (m["home"], m["away"]):
+                cn = normalise(cell)
+                if cn == sn or sn in cn or cn in sn:
+                    team_name = cell
+                    break
+            if team_name:
+                break
+        if not team_name:
+            team_name = slug.replace("-", " ").title()
+
+        # Calcola W/L/pts usando il nome trovato come alias unico
+        aliases = [team_name, sn, slug.replace("-", " ")]
+        w, l, pts = calc_team_stats(matches, aliases)
+        teams.append({
+            "slug": slug,
+            "name": team_name,
+            "w": w,
+            "l": l,
+            "pts": pts,
+        })
+
+    teams.sort(key=lambda t: (-t["pts"], -t["w"], t["name"].lower()))
+    for i, t in enumerate(teams, start=1):
+        t["pos"] = i
+    return teams
+
+
+def find_team_in_standings(standings_list, team_aliases):
+    """Cerca una squadra tracciata nella classifica completa."""
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    for t in standings_list:
+        tn = normalise(t["name"])
+        sn = slug_to_normalised(t["slug"])
+        for an in aliases_norm:
+            if not an:
                 continue
+            if (an == tn or an in tn or tn in an or
+                    an == sn or an in sn or sn in an):
+                return t
+    return None
 
-            m_key = f"{m['date']}|{normalise(m['home'])}"
-            lm = lnp_index.get(m_key)
 
-            # Fallback: cerca per squadra avversaria
-            if not lm:
-                m_away_n = normalise(m.get("away", ""))
-                for lnp_m in lnp_matches:
-                    if normalise(lnp_m["home"]) in normalise(m["home"]) or \
-                       normalise(m["home"]) in normalise(lnp_m["home"]):
-                        lnp_away_n = normalise(lnp_m.get("away", ""))
-                        if (m_away_n and lnp_away_n and
-                                (m_away_n in lnp_away_n or lnp_away_n in m_away_n)):
-                            lm = lnp_m
-                            break
+# ================================================================
+# AGGIORNAMENTO PARTITE IN CASA (data.json)
+# ================================================================
 
-            if not lm:
-                continue
+def update_home_matches(matches, team_key, team_aliases, lnp_matches):
+    """
+    Aggiorna date, orari e risultati delle partite IN CASA di una squadra.
+    Le partite playoff/play-in eventualmente aggiunte manualmente vengono
+    aggiornate solo se LNP le pubblica con la stessa data o lo stesso
+    avversario riconoscibile.
+    """
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    updated = 0
 
-            # Aggiorna data e orario per partite future
-            if m.get("sh") is None:
-                changed = False
-                if lm["date"] != m["date"]:
-                    print(f"  📅 LNP [{team_key}] {m['home']} vs {m['away']}: "
-                          f"data {m['date']} → {lm['date']}")
-                    m["date"] = lm["date"]
-                    changed = True
-                if lm["time"] and lm["time"] != m.get("time"):
-                    print(f"  🕐 LNP [{team_key}] {m['home']} vs {m['away']}: "
-                          f"orario → {lm['time']}")
-                    m["time"] = lm["time"]
-                    changed = True
-                if changed:
-                    updated += 1
+    # Solo le partite LNP in cui la nostra squadra gioca in casa
+    lnp_home = []
+    for lm in lnp_matches:
+        h_n = normalise(lm["home"])
+        if any(an in h_n or h_n in an for an in aliases_norm):
+            lnp_home.append(lm)
 
-            # Aggiorna risultato per partite senza punteggio
-            if m.get("sh") is None and lm.get("sh") is not None:
-                m["sh"] = lm["sh"]
-                m["sa"] = lm["sa"]
-                print(f"  ✅ LNP [{team_key}] {m['home']} vs {m['away']}: "
-                      f"{lm['sh']}-{lm['sa']}")
-                updated += 1
+    for m in matches:
+        if m.get("team") != team_key:
+            continue
 
-    print(f"  📡 LNP: {updated} aggiornamenti calendario")
+        # Match per data esatta, fallback per nome avversario
+        target = None
+        m_away_n = normalise(m.get("away", ""))
+        for lm in lnp_home:
+            if lm["date"] == m["date"]:
+                target = lm
+                break
+        if not target and m_away_n:
+            for lm in lnp_home:
+                lm_away_n = normalise(lm.get("away", ""))
+                if lm_away_n and (m_away_n in lm_away_n or lm_away_n in m_away_n):
+                    target = lm
+                    break
+
+        if not target:
+            continue
+
+        changed = False
+        # Aggiorna data e orario per partite future (sh ancora None)
+        if m.get("sh") is None:
+            if target["date"] != m["date"]:
+                print(f"  📅 [{team_key}] {m['home']} vs {m['away']}: "
+                      f"{m['date']} → {target['date']}")
+                m["date"] = target["date"]
+                changed = True
+            if target["time"] and target["time"] != m.get("time"):
+                print(f"  🕐 [{team_key}] {m['home']} vs {m['away']}: "
+                      f"orario → {target['time']}")
+                m["time"] = target["time"]
+                changed = True
+
+        # Aggiorna risultato per partite passate
+        if m.get("sh") is None and target.get("sh") is not None:
+            m["sh"] = target["sh"]
+            m["sa"] = target["sa"]
+            print(f"  ✅ [{team_key}] {m['home']} vs {m['away']}: "
+                  f"{target['sh']}-{target['sa']}")
+            changed = True
+
+        if changed:
+            updated += 1
+
+    return updated
+
+
+# ================================================================
+# MAIN UPDATE LOGIC
+# ================================================================
+
+def update_in_season(matches, config, standings):
+    initial_snap = json.dumps(standings, sort_keys=True)
+    updated = 0
+    new_standings = {k: dict(v) for k, v in standings.items()}
+
+    # Cache classifica per league_path: se più squadre seguite sono nello
+    # stesso girone, calcoliamo la classifica completa una sola volta.
+    classifica_cache = {}
+
+    for team_key, team_info in TRACKED_TEAMS.items():
+        slug = team_info["slug"]
+        aliases = list(team_info["name_aliases"])
+
+        # Aggiungi alias da config (data.json) se presenti
+        cfg_aliases = config.get("teams", {}).get(team_key, {}).get("name_aliases")
+        if cfg_aliases:
+            for a in cfg_aliases:
+                if a not in aliases:
+                    aliases.append(a)
+
+        print(f"\n  🔍 [{team_key}] discovery lega per slug '{slug}'...")
+        league_path, html = discover_team_league(slug)
+        if not league_path:
+            print(f"  ⚠️  [{team_key}] nessuna pagina LNP trovata")
+            continue
+        print(f"  📡 [{team_key}] lega: {league_path}")
+
+        # Auto-aggiornamento del campo serie nel config
+        league_label = LEAGUE_LABELS.get(league_path, league_path)
+        cfg_team = config.setdefault("teams", {}).setdefault(team_key, {})
+        if cfg_team.get("serie") != league_label:
+            old = cfg_team.get("serie", "?")
+            print(f"  🔄 [{team_key}] cambio lega rilevato: {old} → {league_label}")
+            cfg_team["serie"] = league_label
+            updated += 1
+
+        # Parse calendario squadra
+        lnp_matches = parse_lnp_calendar(html)
+        if not lnp_matches:
+            print(f"  ⚠️  [{team_key}] calendario LNP vuoto")
+            continue
+        print(f"  📋 [{team_key}] {len(lnp_matches)} partite nel calendario LNP")
+
+        # Aggiorna partite in casa nel data.json
+        updated += update_home_matches(matches, team_key, aliases, lnp_matches)
+
+        # W/L/pts da calendario completo
+        w, l, pts = calc_team_stats(lnp_matches, aliases)
+        if w + l > 0:
+            new_standings.setdefault(team_key, {})
+            new_standings[team_key]["w"] = w
+            new_standings[team_key]["l"] = l
+            new_standings[team_key]["pts"] = pts
+            print(f"  📊 [{team_key}] {w}V-{l}P = {pts}pt")
+
+        # Discovery girone + classifica completa (con cache per lega)
+        if league_path not in classifica_cache:
+            print(f"  🔎 [{team_key}] discovery girone su {league_path}...")
+            opponents = extract_opponents(lnp_matches, aliases)
+            print(f"     {len(opponents)} avversari distinti")
+            girone_slugs = discover_girone_slugs(league_path, opponents, slug)
+            print(f"     {len(girone_slugs)} squadre identificate nel girone")
+
+            if len(girone_slugs) >= 4:
+                print(f"  📥 Calcolo classifica completa girone...")
+                full = compute_full_standings(league_path, girone_slugs)
+                classifica_cache[league_path] = full
+                print(f"  ✅ Classifica: {len(full)} squadre")
+            else:
+                print(f"  ⚠️  Girone troppo piccolo, skip classifica")
+                classifica_cache[league_path] = None
+
+        full = classifica_cache.get(league_path)
+        if full:
+            entry = find_team_in_standings(full, aliases)
+            if entry:
+                new_standings[team_key]["pos"] = entry["pos"]
+                # Allinea anche w/l/pts ai valori dalla classifica completa
+                new_standings[team_key]["w"] = entry["w"]
+                new_standings[team_key]["l"] = entry["l"]
+                new_standings[team_key]["pts"] = entry["pts"]
+                print(f"  🏆 [{team_key}] pos: {entry['pos']}° su {len(full)} "
+                      f"({entry['w']}V-{entry['l']}P, {entry['pts']}pt)")
+            else:
+                print(f"  ⚠️  [{team_key}] non trovata nella classifica calcolata")
+
+    # Conta cambio standings come aggiornamento (oltre a quelli già contati)
+    if json.dumps(new_standings, sort_keys=True) != initial_snap:
+        updated += 1
+
     return updated, new_standings
 
 
 # ================================================================
-# RICERCA URL — Homepage pianetabasket + fallback stima
+# FUORI STAGIONE — discovery nuova stagione
 # ================================================================
 
-def find_urls_from_rss_and_homepage(serie, last_round):
+def check_new_season(config):
     """
-    Cerca URL reali delle giornate successive all'ultima con risultati.
-    Priorità: 1) Homepage pianetabasket  2) Fallback URL noti
+    Verifica se le squadre seguite sono presenti in una lega LNP.
+    A inizio nuova stagione, basta che LNP pubblichi le pagine squadra
+    e questa funzione le rileva.
     """
-    sources = LEAGUE_SOURCES.get(serie, LEAGUE_SOURCES["B Nazionale"])
-    pb_section = sources["pb_section"]
-    found = []
-
-    # 1. Homepage pianetabasket
-    pb_home = sources["pb_home"]
-    html = fetch(pb_home)
-    if html:
-        pat2 = re.compile(r"(/serie-b/[^<>]{5,80})")
-        for m in pat2.finditer(html):
-            path = m.group(1)
-            if any(k in path.lower() for k in ["risultati", "risultato", "calendario", "classifiche"]):
-                url = "https://www.pianetabasket.com" + path
-                rnd_m = re.search(r"-([0-9]+)-giornata-", url)
-                rnd = int(rnd_m.group(1)) if rnd_m else None
-                if rnd and rnd <= last_round:
-                    continue
-                if url not in found:
-                    found.append(url)
-        print(f"  🔍 Homepage: {len(found)} URL trovati")
-
-    # 2. Fallback stagionale: URL noti recenti per classifica aggiornata
-    if not found:
-        fallback = sources.get("fallback_urls", [])
-        if fallback:
-            print(f"  🔁 Fallback stagionale: {len(fallback)} URL noti")
-            found.extend(fallback)
-
-    return found
-
-
-def get_urls_for_round(rnd):
-    """
-    Restituisce URL da provare per una giornata specifica.
-    1) URL noto verificato  2) Stima ID
-    """
-    # 1. URL noto
-    if rnd in KNOWN_URLS:
-        return [KNOWN_URLS[rnd]]
-
-    # 2. Stima ID (fallback finale)
-    base_id = ROUND_BASE_IDS.get(rnd, 357782 + (rnd - 33) * 642)
-    urls = []
-    for suf, delta in [
-        ("classifiche", 0),
-        ("sabato-classifiche", 0),
-        ("domenica-classifiche", 0),
-        ("classifiche", -300),
-        ("classifiche", +300),
-    ]:
-        url = (
-            f"https://www.pianetabasket.com/serie-b/"
-            f"serie-b-nazionale-calendario-risultati-{suf}-"
-            f"{rnd}-giornata-2025-26-{base_id + delta}"
-        )
-        if url not in urls:
-            urls.append(url)
-    return urls
-
-
-# ================================================================
-# AGGIORNAMENTO CLASSIFICA
-# ================================================================
-
-def update_standings_multi(standings, config, scraped_htmls):
-    """Aggiorna classifica da più fonti, prende quella con punteggio più alto."""
-    aliases_v = config["teams"]["virtus"].get("name_aliases", ["virtus roma"])
-    aliases_l = config["teams"]["luiss"].get("name_aliases", ["luiss roma", "luiss"])
-    serie = config["teams"]["virtus"].get("serie", "B Nazionale")
-    sources = LEAGUE_SOURCES.get(serie, LEAGUE_SOURCES["B Nazionale"])
-    candidates = []
-
-    # Da pagine già scaricate
-    for label, html in scraped_htmls:
-        if not html:
-            continue
-        st = parse_standings_from_html(html, aliases_v, aliases_l)
-        if st:
-            candidates.append((label, st))
-
-    # Pagina classifica pianetabasket
-    pb_class = sources.get("pb_class")
-    if pb_class:
-        html = fetch(pb_class)
-        if html:
-            st = parse_standings_from_html(html, aliases_v, aliases_l)
-            if st:
-                candidates.append(("pb-class", st))
-
-    # LNP ufficiale
-    lnp_url = sources.get("lnp")
-    if lnp_url:
-        html = fetch(lnp_url)
-        if html:
-            st = parse_standings_from_html(html, aliases_v, aliases_l)
-            if st:
-                candidates.append(("lnp", st))
-
-    if not candidates:
-        print("  ⚠️  Nessuna classifica trovata")
-        return standings
-
-    # TODO — Tiebreaker classifica LNP (parità di punti):
-    # La classifica ufficiale LNP risolve i pareggi in quest'ordine:
-    # 1. Scontro diretto  2. Quoziente canestri scontri diretti  3. Quoziente generale
-    # Il parser usa solo i punti — corretto per uso informativo, ma può divergere
-    # dalla classifica ufficiale in caso di parità esatta.
-    best_label, best = max(
-        candidates,
-        key=lambda x: x[1]["virtus"]["pts"] + x[1]["luiss"]["pts"]
-    )
-    current_total = (
-        standings.get("virtus", {}).get("pts", 0) +
-        standings.get("luiss", {}).get("pts", 0)
-    )
-    new_total = best["virtus"]["pts"] + best["luiss"]["pts"]
-
-    if new_total >= current_total:
-        print(
-            f"  ✅ Classifica [{best_label}]: "
-            f"Virtus {best['virtus']['pos']}° {best['virtus']['pts']}pt "
-            f"({best['virtus']['w']}V-{best['virtus']['l']}P) | "
-            f"LUISS {best['luiss']['pos']}° {best['luiss']['pts']}pt "
-            f"({best['luiss']['w']}V-{best['luiss']['l']}P)"
-        )
-        return best
-
-    print("  ℹ️  Classifica già aggiornata")
-    return standings
-
-
-# ================================================================
-# AGGIORNAMENTO CALENDARIO (variazioni)
-# ================================================================
-
-def fetch_calendar_changes(config):
-    """
-    Cerca variazioni di calendario su pianetabasket.
-    Rileva anticipi, posticipi, recuperi per le squadre seguite.
-    """
-    changes = []
-    aliases_v = config["teams"]["virtus"].get("name_aliases", ["virtus roma"])
-    aliases_l = config["teams"]["luiss"].get("name_aliases", ["luiss roma", "luiss"])
-    months_it = {
-        "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4,
-        "maggio": 5, "giugno": 6, "luglio": 7, "agosto": 8,
-        "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12
-    }
-    keywords = ["modif", "anticip", "posticip", "spostata", "rinviata", "recupero"]
-    candidate_urls = []
-
-    print(f"  🔍 Articoli modifica calendario: {len(candidate_urls)}")
-
-    for url in candidate_urls[:5]:
-        art = fetch(url)
-        if not art:
-            continue
-        plain = re.sub(r"<[^>]+>", " ", art)
-        plain = re.sub(r"\s+", " ", plain)
-        pl = plain.lower()
-
-        is_virtus = any(a in pl for a in aliases_v)
-        is_luiss  = any(a in pl for a in aliases_l)
-        if not is_virtus and not is_luiss:
-            continue
-        team = "virtus" if is_virtus else "luiss"
-
-        m1 = re.search(r"(\d{2})/(\d{2})/(\d{4})\s+(\d{2}:\d{2})", plain)
-        if m1:
-            dd, mm, yyyy, t = m1.groups()
-            changes.append({"team": team, "date": f"{yyyy}-{mm}-{dd}", "time": t, "source": url})
-            print(f"  📅 [{team}] {yyyy}-{mm}-{dd} ore {t}")
-            continue
-
-        m2 = re.search(
-            r"(\d{1,2})\s+(\w+)(?:\s+2026)?\s+(?:ore|alle)\s+(\d{1,2}(?::\d{2})?)",
-            plain, re.IGNORECASE
-        )
-        if m2:
-            day, mon_str, t = m2.groups()
-            mon = months_it.get(mon_str.lower())
-            if mon:
-                if ":" not in t:
-                    t += ":00"
-                changes.append({
-                    "team": team,
-                    "date": f"2026-{mon:02d}-{int(day):02d}",
-                    "time": t, "source": url
-                })
-                print(f"  📅 [{team}] 2026-{mon:02d}-{int(day):02d} ore {t}")
-
-    return changes
-
-
-# ================================================================
-# AGGIORNAMENTO IN STAGIONE
-# ================================================================
-
-def update_in_season(matches, config, standings):
-    today = date.today()
-    rounds_done = [
-        m["round"] for m in matches
-        if m.get("sh") is not None and m.get("phase") == "regular"
-    ]
-    last_round = max(rounds_done) if rounds_done else 0
-    print(f"  Ultima giornata con risultati: {last_round}")
-
-    serie = config["teams"]["virtus"].get("serie", "B Nazionale")
-    sources = LEAGUE_SOURCES.get(serie, LEAGUE_SOURCES["B Nazionale"])
-    girone_check = sources.get("girone_check")
-
-    all_scraped = []
-    scraped_htmls = []
-
-    # STEP 0: LNP ufficiale — calendario, risultati e classifica
-    print("\n  📡 STEP 0 — LNP ufficiale...")
-    lnp_updated, standings = update_from_lnp(matches, config, standings)
-
-    # STEP 1: URL dalla homepage pianetabasket
-    home_urls = find_urls_from_rss_and_homepage(serie, last_round)
-    for url in home_urls:
-        html = fetch(url)
-        if not html or len(html) < 1000:
-            continue
-        if girone_check and girone_check not in html.lower():
-            continue
-        scraped = parse_results(html)
-        if scraped:
-            rnd_m = re.search(r"-(\d+)-giornata-", url)
-            rnd = rnd_m.group(1) if rnd_m else "?"
-            print(f"  ✅ RSS/Homepage G{rnd}: {len(scraped)} risultati")
-            all_scraped.extend(scraped)
-            scraped_htmls.append((f"G{rnd}", html))
-
-    # Se l'homepage non ha prodotto pagine valide, forza fallback KNOWN_URLS
-    # per avere almeno l'HTML più recente disponibile per la classifica
-    if not scraped_htmls:
-        latest_known = max(KNOWN_URLS.keys())
-        fb_html = fetch(KNOWN_URLS[latest_known])
-        if fb_html and len(fb_html) > 1000:
-            scraped_htmls.append((f"G{latest_known}-fallback", fb_html))
-            print(f"  🔁 Fallback classifica: G{latest_known}")
-
-    # STEP 2: URL mirati per giornate senza risultato
-    found_rounds = set()
-    for lbl, _ in scraped_htmls:
-        m_rnd = re.search(r"G(\d+)", lbl)
-        if m_rnd:
-            found_rounds.add(int(m_rnd.group(1)))
-
-    for m in matches:
-        md = datetime.strptime(m["date"], "%Y-%m-%d").date()
-        rnd = m.get("round")
-        if not rnd or m.get("sh") is not None:
-            continue
-        if md > today + timedelta(days=60):
-            continue
-        if rnd in found_rounds:
-            continue
-
-        urls = get_urls_for_round(rnd)
-        for url in urls:
-            html = fetch(url)
-            if not html or len(html) < 1000:
-                continue
-            if girone_check and girone_check not in html.lower():
-                continue
-            scraped = parse_results(html)
-            if scraped:
-                print(f"  ✅ G{rnd}: {len(scraped)} risultati")
-                all_scraped.extend(scraped)
-                scraped_htmls.append((f"G{rnd}", html))
-                found_rounds.add(rnd)
-                break
-
-    # STEP 3: Variazioni di calendario
-    print("\n  📅 Ricerca variazioni calendario...")
-    calendar_changes = fetch_calendar_changes(config)
-
-    # Applica variazioni calendario
-    for m in matches:
-        md = datetime.strptime(m["date"], "%Y-%m-%d").date()
-        if md < today or m.get("sh") is not None:
-            continue
-        for chg in calendar_changes:
-            if chg.get("team") != m["team"]:
-                continue
-            try:
-                chg_d = datetime.strptime(chg["date"], "%Y-%m-%d").date()
-                away_n = normalise(chg.get("away", m.get("away", "")))
-                m_away_n = normalise(m.get("away", ""))
-                same_match = (abs((chg_d - md).days) <= 7 and
-                              (away_n in m_away_n or m_away_n in away_n or away_n == ""))
-                if same_match and (chg["date"] != m["date"] or chg["time"] != m.get("time")):
-                    print(f"  📅 {m['home']} vs {m['away']}: {m['date']} → {chg['date']} ore {chg['time']}")
-                    m["date"] = chg["date"]
-                    m["time"] = chg["time"]
-                    break
-            except Exception:
-                continue
-
-    # STEP 4: Applica risultati e orari da pianetabasket
-    updated = lnp_updated
-    for m in matches:
-        md = datetime.strptime(m["date"], "%Y-%m-%d").date()
-
-        if md < today and m.get("sh") is None:
-            found = find_match(all_scraped, m)
-            if found and found.get("sh") is not None:
-                m["sh"] = found["sh"]
-                m["sa"] = found["sa"]
-                if found.get("time"):
-                    m["time"] = found["time"]
-                print(f"  ✅ pianetabasket → {m['home']} vs {m['away']}: {found['sh']}-{found['sa']}")
-                updated += 1
-
-        if md >= today:
-            found = find_match(all_scraped, m)
-            if found and found.get("time") and found["time"] != m.get("time"):
-                print(f"  🕐 {m['home']} vs {m['away']}: orario → {found['time']}")
-                m["time"] = found["time"]
-                updated += 1
-
-    # STEP 5: Classifica da pianetabasket (aggiorna pos se disponibile)
-    print("\n  🏆 Aggiornamento classifica pianetabasket...")
-    standings = update_standings_multi(standings, config, scraped_htmls)
-
-    return updated, standings
-
-
-# ================================================================
-# FUORI STAGIONE
-# ================================================================
-
-def search_new_calendar(next_season, config):
-    print(f"\n🔍 Ricerca calendario {next_season}...")
-    serie = config["teams"]["virtus"].get("serie", "B Nazionale")
-    tc = TEAM_CONFIG.get(serie, TEAM_CONFIG["B Nazionale"])
-
-    pdf_urls = [
-        tc["lnp_pdf_b"].format(season=next_season),
-        tc["lnp_pdf_a2"].format(season=next_season),
-    ]
-    serie_map = ["B Nazionale", "A2"]
-
-    for pdf_url, serie_name in zip(pdf_urls, serie_map):
-        html = fetch(pdf_url, timeout=8)
-        if not html or len(html) < 500:
-            continue
-        for team_key, team_cfg in config["teams"].items():
-            for alias in team_cfg.get("name_aliases", []):
-                if alias in html.lower():
-                    print(f"  📄 {team_cfg['name']} trovato in {serie_name}")
-                    return None, next_season
-
-    print(f"  ℹ️  Calendario {next_season} non ancora disponibile")
-    return None, None
+    print("\n🔍 Controllo nuova stagione...")
+    found_any = False
+    for team_key, info in TRACKED_TEAMS.items():
+        path, _ = discover_team_league(info["slug"])
+        if path:
+            label = LEAGUE_LABELS.get(path, path)
+            print(f"  ✅ [{team_key}] presente in {label}")
+            found_any = True
+        else:
+            print(f"  ⏳ [{team_key}] non ancora disponibile")
+    if found_any:
+        ns = config.get("next_season", "?")
+        print(f"  ℹ️  Squadre rilevate. Per attivare la stagione {ns}, "
+              f"resetta data.json con il nuovo calendario.")
+    return found_any
 
 
 # ================================================================
@@ -861,49 +613,49 @@ def search_new_calendar(next_season, config):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v6 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v7 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
     if data_path.exists():
         with open(data_path) as f:
             current = json.load(f)
-        matches   = current.get("matches", [])
+        matches = current.get("matches", [])
         standings = current.get("standings", dict(BASE_STANDINGS))
-        config    = current.get("config", CONFIG)
-        # Retrocompatibilità
-        for team_key, team_default in CONFIG["teams"].items():
-            if team_key not in config.get("teams", {}):
-                config.setdefault("teams", {})[team_key] = team_default
+        config = current.get("config", CONFIG_DEFAULT)
+        # Retrocompatibilità config: integra campi mancanti
+        for tk, td in CONFIG_DEFAULT["teams"].items():
+            if tk not in config.get("teams", {}):
+                config.setdefault("teams", {})[tk] = td
             else:
-                for field, val in team_default.items():
-                    config["teams"][team_key].setdefault(field, val)
-        config.setdefault("next_season", CONFIG["next_season"])
-        print(f"📂 Caricato — {len(matches)} partite, stagione {config.get('season','?')}")
+                for f, v in td.items():
+                    config["teams"][tk].setdefault(f, v)
+        config.setdefault("next_season", CONFIG_DEFAULT["next_season"])
+        print(f"📂 Caricato — {len(matches)} partite, "
+              f"stagione {config.get('season','?')}")
     else:
-        matches   = []
+        matches = []
         standings = dict(BASE_STANDINGS)
-        config    = CONFIG
+        config = dict(CONFIG_DEFAULT)
         print("📂 Primo avvio — dati base")
 
-    today       = date.today()
-    next_season = config.get("next_season", "2026-27")
-    all_dates   = [datetime.strptime(m["date"], "%Y-%m-%d").date() for m in matches] if matches else []
-    season_end  = max(all_dates) if all_dates else date(2026, 6, 30)
-    in_season   = today <= season_end + timedelta(days=30)
+    today = date.today()
+    all_dates = (
+        [datetime.strptime(m["date"], "%Y-%m-%d").date() for m in matches]
+        if matches else []
+    )
+    season_end = max(all_dates) if all_dates else date(2026, 6, 30)
+    in_season = today <= season_end + timedelta(days=30)
 
     total_updated = 0
 
     if in_season:
-        serie_v = config["teams"]["virtus"].get("serie", "?")
-        print(f"\n📅 IN STAGIONE — {serie_v}")
+        print(f"\n📅 IN STAGIONE")
         total_updated, standings = update_in_season(matches, config, standings)
         print(f"\n📝 Aggiornamenti: {total_updated}")
     else:
-        print(f"\n💤 FUORI STAGIONE — cerco {next_season}")
-        _, found = search_new_calendar(next_season, config)
-        if found:
-            print(f"ℹ️  Stagione {found} rilevata")
+        print(f"\n💤 FUORI STAGIONE")
+        check_new_season(config)
 
     output = {
         "last_updated": datetime.now().isoformat(),
@@ -912,17 +664,19 @@ def main():
         "matches": matches,
         "standings": standings,
     }
-    # Scrivi solo se qualcosa è cambiato (evita commit inutili sul timestamp)
     new_json = json.dumps(output, ensure_ascii=False, indent=2)
+
+    # Skip scrittura se nulla è cambiato (escluso timestamp)
     if data_path.exists():
         old_content = data_path.read_text(encoding="utf-8")
-        import re as _re
-        def strip_ts(s): return _re.sub(r'"last_updated":\s*"[^"]*"', '"last_updated":""', s)
-        if strip_ts(old_content) == strip_ts(new_json) and total_updated == 0:
+        def strip_ts(s):
+            return re.sub(r'"last_updated":\s*"[^"]*"', '"last_updated":""', s)
+        if strip_ts(old_content) == strip_ts(new_json):
             print("ℹ️  Nessuna modifica reale — salto scrittura")
             print("\n💾 Invariato — nessun commit necessario")
             print("✅ Completato!\n")
             return 0
+
     with open(data_path, "w", encoding="utf-8") as f:
         f.write(new_json)
 
