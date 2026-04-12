@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8
-Architettura LNP-only con auto-discovery completa, auto-insert e auto-bootstrap.
+update_data.py — Roma Basket Casa — v8.2
+Architettura LNP-only con auto-discovery, auto-insert e auto-bootstrap.
 
 Fonte unica: legapallacanestro.com (HTML statico)
 - Calendario, date, orari, risultati: pagine squadra LNP
@@ -9,6 +9,8 @@ Fonte unica: legapallacanestro.com (HTML statico)
 - Cambio lega: cascade discovery serie-b → serie-a2 → serie-a
 - Auto-insert partite postseason (playoff/play-in) con phase auto-rilevata
 - Auto-bootstrap nuova stagione con backup file di sicurezza
+- Bootstrap on-demand: se data.json ha matches vuoti, popola da LNP
+- Deduplica robusta: match per nome avversario + tolleranza data ±10 giorni
 - Zero hardcoded round URLs, zero pianetabasket, zero intervento manuale
 """
 
@@ -848,7 +850,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.2 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
@@ -885,7 +887,46 @@ def main():
     total_updated = 0
     bootstrapped = False
 
-    if in_season:
+    # === BOOTSTRAP ON-DEMAND ===
+    # Se matches è vuoto, lo script non ha nulla da aggiornare incrementalmente.
+    # Triggera il bootstrap che ripopola tutto da LNP. Funziona sia in stagione
+    # corrente (uso dichiarativo: "svuota matches per chiedere reset") sia
+    # all'inizio di una stagione nuova.
+    if not matches:
+        print(f"\n🔄 matches vuoto — attivazione bootstrap on-demand")
+        new_matches, new_standings, new_season = bootstrap_new_season(
+            config, config.get("season", "?")
+        )
+        if new_matches and new_standings and new_season:
+            backup_path = Path("data.json.backup")
+            if data_path.exists():
+                backup_path.write_text(
+                    data_path.read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+                print(f"  💾 Backup salvato: {backup_path}")
+
+            matches = new_matches
+            standings = new_standings
+            # Aggiorna season solo se diverso dall'attuale (cambio stagione vero)
+            current_season = config.get("season", "?")
+            if new_season != current_season:
+                try:
+                    start_yr = int(new_season.split("-")[0])
+                    next_season_label = f"{start_yr + 1}-{str(start_yr + 2)[-2:]}"
+                except Exception:
+                    next_season_label = config.get("next_season", "?")
+                config["season"] = new_season
+                config["next_season"] = next_season_label
+                print(f"  🆕 Stagione {new_season} attivata")
+            else:
+                print(f"  🔄 Reset stagione {new_season} (calendario ricostruito)")
+            bootstrapped = True
+            total_updated = len(new_matches)
+        else:
+            print("  ⚠️  Bootstrap fallito (calendario LNP non disponibile)")
+            print("  ℹ️  Riproverà al prossimo run")
+    elif in_season:
         print(f"\n📅 IN STAGIONE")
         total_updated, standings = update_in_season(matches, config, standings)
         print(f"\n📝 Aggiornamenti: {total_updated}")
