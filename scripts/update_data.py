@@ -51,12 +51,13 @@ KNOWN_URLS = {
     32: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-32-giornata-2025-26-357140",
     33: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-33-giornata-2025-26-357782",
     34: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-classifiche-34-giornata-2025-26-358236",
+    35: "https://www.pianetabasket.com/serie-b/serie-b-nazionale-calendario-risultati-sabato-classifiche-35-giornata-2025-26-358804",
 }
 
 # ID base stimati (fallback se non si trova la pagina)
-# G33=357782, incremento reale ~642 per giornata
+# G34=358236, G35=358804 (+568), incremento stimato ~570/giornata
 ROUND_BASE_IDS = {
-    35: 358696, 36: 359156, 37: 359616, 38: 360076,
+    36: 359374, 37: 359944, 38: 360514,
 }
 
 LEAGUE_SOURCES = {
@@ -350,18 +351,51 @@ def find_match(scraped, match):
 # LNP — FONTE PRIMARIA PER CALENDARIO E RISULTATI
 # ================================================================
 
-def update_from_lnp(matches, config):
+def calc_standings_from_lnp(lnp_matches, aliases):
     """
-    STEP 0 — Aggiorna date, orari e risultati dalle pagine ufficiali LNP.
-    Fonte più affidabile: dati ufficiali, nessuna dipendenza da API esterne.
+    Calcola W/L/pts da tutte le partite LNP (casa + trasferta).
+    In Serie B Nazionale: vittoria = 2pt, sconfitta = 0pt.
+    Restituisce (w, l, pts) o None se non ci sono risultati.
+    """
+    w, l = 0, 0
+    for lm in lnp_matches:
+        sh, sa = lm.get("sh"), lm.get("sa")
+        if sh is None or sa is None:
+            continue
+        home_n = normalise(lm["home"])
+        team_is_home = any(
+            normalise(a) in home_n or home_n in normalise(a)
+            for a in aliases
+        )
+        if team_is_home:
+            won = sh > sa
+        else:
+            won = sa > sh   # trasferta: nostro punteggio è sa
+        if won:
+            w += 1
+        else:
+            l += 1
+    if w + l == 0:
+        return None
+    return w, l, w * 2
 
-    Per ogni squadra:
-    - Partite future: aggiorna date/orario se LNP mostra valori diversi
-    - Partite passate senza risultato: aggiorna sh/sa se LNP ha il punteggio
+
+def update_from_lnp(matches, config, current_standings):
+    """
+    STEP 0 — Aggiorna date, orari, risultati e classifica dalle pagine LNP.
+    Fonte ufficiale: nessuna dipendenza da API esterne.
+
+    - Partite future: aggiorna data/orario se LNP mostra valori diversi
+    - Partite passate senza risultato: aggiorna sh/sa
+    - Standings: calcola W/L/pts dal calendario completo (casa + trasferta)
+      pos viene mantenuto dall'ultimo valore noto (non derivabile da singola squadra)
+
+    Restituisce (updated_count, new_standings).
     """
     serie = config["teams"]["virtus"].get("serie", "B Nazionale")
     tc = TEAM_CONFIG.get(serie, TEAM_CONFIG["B Nazionale"])
     updated = 0
+    new_standings = {k: dict(v) for k, v in current_standings.items()}
 
     team_urls = {
         "virtus": tc.get("lnp_virtus"),
@@ -383,7 +417,22 @@ def update_from_lnp(matches, config):
             print(f"  ⚠️  LNP [{team_key}]: nessuna partita estratta")
             continue
 
-        # Costruisci indice LNP per ricerca rapida per data+casa
+        # ── Standings da calendario completo (casa + trasferta) ───
+        standings_result = calc_standings_from_lnp(lnp_matches, aliases)
+        if standings_result:
+            w, l, pts = standings_result
+            old_pts = new_standings.get(team_key, {}).get("pts", 0)
+            if pts >= old_pts:
+                new_standings.setdefault(team_key, {})
+                new_standings[team_key]["w"]   = w
+                new_standings[team_key]["l"]   = l
+                new_standings[team_key]["pts"] = pts
+                # pos: mantieni l'ultimo valore noto
+                if "pos" not in new_standings[team_key]:
+                    new_standings[team_key]["pos"] = current_standings.get(team_key, {}).get("pos", "-")
+                print(f"  📊 LNP [{team_key}]: {w}V-{l}P = {pts}pt")
+
+        # ── Aggiornamento partite in casa ─────────────────────────
         lnp_index = {}
         for lm in lnp_matches:
             key = f"{lm['date']}|{normalise(lm['home'])}"
@@ -393,11 +442,10 @@ def update_from_lnp(matches, config):
             if m.get("team") != team_key:
                 continue
 
-            # Cerca la partita nell'indice LNP
             m_key = f"{m['date']}|{normalise(m['home'])}"
             lm = lnp_index.get(m_key)
 
-            # Se non trovata per data esatta, prova a trovare per away team
+            # Fallback: cerca per squadra avversaria
             if not lm:
                 m_away_n = normalise(m.get("away", ""))
                 for lnp_m in lnp_matches:
@@ -436,8 +484,8 @@ def update_from_lnp(matches, config):
                       f"{lm['sh']}-{lm['sa']}")
                 updated += 1
 
-    print(f"  📡 LNP: {updated} aggiornamenti")
-    return updated
+    print(f"  📡 LNP: {updated} aggiornamenti calendario")
+    return updated, new_standings
 
 
 # ================================================================
@@ -663,9 +711,9 @@ def update_in_season(matches, config, standings):
     all_scraped = []
     scraped_htmls = []
 
-    # STEP 0: Aggiornamento da LNP (fonte primaria)
+    # STEP 0: LNP ufficiale — calendario, risultati e classifica
     print("\n  📡 STEP 0 — LNP ufficiale...")
-    lnp_updated = update_from_lnp(matches, config)
+    lnp_updated, standings = update_from_lnp(matches, config, standings)
 
     # STEP 1: URL dalla homepage pianetabasket
     home_urls = find_urls_from_rss_and_homepage(serie, last_round)
@@ -682,6 +730,15 @@ def update_in_season(matches, config, standings):
             print(f"  ✅ RSS/Homepage G{rnd}: {len(scraped)} risultati")
             all_scraped.extend(scraped)
             scraped_htmls.append((f"G{rnd}", html))
+
+    # Se l'homepage non ha prodotto pagine valide, forza fallback KNOWN_URLS
+    # per avere almeno l'HTML più recente disponibile per la classifica
+    if not scraped_htmls:
+        latest_known = max(KNOWN_URLS.keys())
+        fb_html = fetch(KNOWN_URLS[latest_known])
+        if fb_html and len(fb_html) > 1000:
+            scraped_htmls.append((f"G{latest_known}-fallback", fb_html))
+            print(f"  🔁 Fallback classifica: G{latest_known}")
 
     # STEP 2: URL mirati per giornate senza risultato
     found_rounds = set()
@@ -763,8 +820,8 @@ def update_in_season(matches, config, standings):
                 m["time"] = found["time"]
                 updated += 1
 
-    # STEP 5: Classifica
-    print("\n  🏆 Aggiornamento classifica...")
+    # STEP 5: Classifica da pianetabasket (aggiorna pos se disponibile)
+    print("\n  🏆 Aggiornamento classifica pianetabasket...")
     standings = update_standings_multi(standings, config, scraped_htmls)
 
     return updated, standings
