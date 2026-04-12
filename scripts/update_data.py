@@ -512,6 +512,12 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
     - Recuperi infrasettimanali aggiunti durante la regular
     - Partite di postseason (playoff, play-in) quando LNP le pubblica
 
+    DEDUPLICAZIONE A DUE LIVELLI per evitare falsi positivi quando LNP
+    riporta date diverse dalla nostra (anticipi, recuperi, formato cella):
+    1. Match per (data, avversario_normalizzato) — caso normale
+    2. Match per solo avversario_normalizzato entro ±10 giorni — copre
+       il caso "stessa partita, data diversa"
+
     ID auto-generati con convenzione:
     - Regular: v01..v38, l01..l38 (prefisso = prima lettera del team_key)
     - Postseason: v_po_r39, v_po_r40 ... (round è il riferimento univoco)
@@ -520,11 +526,51 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
     inserted = 0
     existing_ids = {m.get("id") for m in matches}
 
-    # Indice partite esistenti per quel team: chiave = (date, away_normalised)
-    existing_keys = set()
+    # Indici delle partite esistenti per quel team
+    # - existing_by_date_away: chiave forte (data + avversario)
+    # - existing_by_away: chiave debole (solo avversario), con lista date
+    existing_by_date_away = set()
+    existing_by_away = {}  # away_norm → list[date_str]
     for m in matches:
-        if m.get("team") == team_key:
-            existing_keys.add((m.get("date"), normalise(m.get("away", ""))))
+        if m.get("team") != team_key:
+            continue
+        away_n = normalise(m.get("away", ""))
+        date_s = m.get("date", "")
+        if away_n:
+            existing_by_date_away.add((date_s, away_n))
+            existing_by_away.setdefault(away_n, []).append(date_s)
+
+    def is_duplicate(lm_date, lm_away_n):
+        """Verifica se una partita LNP è già nel data.json, anche con data shiftata."""
+        if not lm_away_n:
+            return False
+        # Match forte
+        if (lm_date, lm_away_n) in existing_by_date_away:
+            return True
+        # Match debole: stesso avversario entro ±10 giorni
+        for existing_date in existing_by_away.get(lm_away_n, []):
+            try:
+                d1 = datetime.strptime(lm_date, "%Y-%m-%d").date()
+                d2 = datetime.strptime(existing_date, "%Y-%m-%d").date()
+                if abs((d1 - d2).days) <= 10:
+                    return True
+            except Exception:
+                continue
+        # Match per substring sull'avversario (es. "Latina" vs "Benacquista Latina")
+        for ex_away_n in existing_by_away:
+            if not ex_away_n:
+                continue
+            if len(ex_away_n) >= 4 and len(lm_away_n) >= 4:
+                if ex_away_n in lm_away_n or lm_away_n in ex_away_n:
+                    for existing_date in existing_by_away[ex_away_n]:
+                        try:
+                            d1 = datetime.strptime(lm_date, "%Y-%m-%d").date()
+                            d2 = datetime.strptime(existing_date, "%Y-%m-%d").date()
+                            if abs((d1 - d2).days) <= 10:
+                                return True
+                        except Exception:
+                            continue
+        return False
 
     # Filtra le partite LNP in cui la squadra gioca in casa
     lnp_home = []
@@ -533,26 +579,17 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
         if any(an in h_n or h_n in an for an in aliases_norm):
             lnp_home.append(lm)
 
-    # Tenta di leggere il round dalle partite LNP. Le pagine LNP non lo
-    # espongono direttamente nelle celle della tabella, quindi usiamo
-    # un indice progressivo basato sull'ordine cronologico.
-    # Per la regular season questa è la giornata reale; per la postseason
-    # è un numero progressivo > 38 che attiva il rilevamento phase=playoff.
-    sorted_lnp = sorted(lnp_home, key=lambda x: x["date"])
-
-    for idx, lm in enumerate(sorted_lnp, start=1):
-        key = (lm["date"], normalise(lm.get("away", "")))
-        if key in existing_keys:
+    for lm in lnp_home:
+        lm_away_n = normalise(lm.get("away", ""))
+        if is_duplicate(lm["date"], lm_away_n):
             continue
 
-        # Stima round: idx è la posizione cronologica della partita di casa,
-        # ma in regular ci sono ~19 partite di casa su 36 totali. Per inferire
-        # il round assoluto usiamo: round_estimato = lm posizione nella tabella
-        # completa LNP. Approssimazione: cerchiamo lm in lnp_matches.
+        # absolute_idx = posizione cronologica della partita nel calendario
+        # completo della squadra (regular round 1-38, postseason 39+)
         try:
             absolute_idx = lnp_matches.index(lm) + 1
         except ValueError:
-            absolute_idx = idx
+            absolute_idx = len(matches) + 1
 
         phase = detect_phase(absolute_idx, team_pos)
 
@@ -586,6 +623,10 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
             "sa": lm.get("sa"),
         }
         matches.append(new_match)
+        # Aggiorna gli indici per le iterazioni successive nello stesso run
+        existing_by_date_away.add((lm["date"], lm_away_n))
+        existing_by_away.setdefault(lm_away_n, []).append(lm["date"])
+
         inserted += 1
         score_info = (f" {lm['sh']}-{lm['sa']}"
                       if lm.get("sh") is not None else "")
