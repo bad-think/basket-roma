@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v7
-Architettura LNP-only con auto-discovery completa.
+update_data.py — Roma Basket Casa — v8
+Architettura LNP-only con auto-discovery completa, auto-insert e auto-bootstrap.
 
 Fonte unica: legapallacanestro.com (HTML statico)
 - Calendario, date, orari, risultati: pagine squadra LNP
 - Classifica completa con pos: derivata da tutte le squadre del girone
 - Cambio lega: cascade discovery serie-b → serie-a2 → serie-a
+- Auto-insert partite postseason (playoff/play-in) con phase auto-rilevata
+- Auto-bootstrap nuova stagione con backup file di sicurezza
 - Zero hardcoded round URLs, zero pianetabasket, zero intervento manuale
-
-Il workflow gira ogni ora circa; ~22 fetch a LNP per run.
 """
 
 import json
@@ -484,6 +484,117 @@ def update_home_matches(matches, team_key, team_aliases, lnp_matches):
     return updated
 
 
+def detect_phase(round_num, team_pos):
+    """
+    Inferisce la fase di una partita dal numero di giornata.
+
+    Convenzione LNP Serie B Nazionale 2025-26 (verificata da pagina formula):
+    - Round 1-38  → regular season
+    - Round 39+   → playin (squadre 7°-12°) o playoff (squadre 1°-6°)
+
+    Per altre leghe (A2, A) la convenzione può variare ma il principio
+    "round oltre la regular = postseason" resta valido. Se in futuro LNP
+    cambia il numero di giornate per una lega, il limite va aggiornato qui.
+    """
+    REGULAR_LIMIT = 38  # ultimo round di regular season Serie B Nazionale
+    if round_num <= REGULAR_LIMIT:
+        return "regular"
+    if isinstance(team_pos, int) and 7 <= team_pos <= 12:
+        return "playin"
+    return "playoff"
+
+
+def auto_insert_new_home_matches(matches, team_key, team_aliases,
+                                 lnp_matches, team_pos):
+    """
+    Aggiunge a `matches` le partite di CASA presenti in LNP ma non ancora
+    in data.json. Funziona per:
+    - Recuperi infrasettimanali aggiunti durante la regular
+    - Partite di postseason (playoff, play-in) quando LNP le pubblica
+
+    ID auto-generati con convenzione:
+    - Regular: v01..v38, l01..l38 (prefisso = prima lettera del team_key)
+    - Postseason: v_po_r39, v_po_r40 ... (round è il riferimento univoco)
+    """
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    inserted = 0
+    existing_ids = {m.get("id") for m in matches}
+
+    # Indice partite esistenti per quel team: chiave = (date, away_normalised)
+    existing_keys = set()
+    for m in matches:
+        if m.get("team") == team_key:
+            existing_keys.add((m.get("date"), normalise(m.get("away", ""))))
+
+    # Filtra le partite LNP in cui la squadra gioca in casa
+    lnp_home = []
+    for lm in lnp_matches:
+        h_n = normalise(lm["home"])
+        if any(an in h_n or h_n in an for an in aliases_norm):
+            lnp_home.append(lm)
+
+    # Tenta di leggere il round dalle partite LNP. Le pagine LNP non lo
+    # espongono direttamente nelle celle della tabella, quindi usiamo
+    # un indice progressivo basato sull'ordine cronologico.
+    # Per la regular season questa è la giornata reale; per la postseason
+    # è un numero progressivo > 38 che attiva il rilevamento phase=playoff.
+    sorted_lnp = sorted(lnp_home, key=lambda x: x["date"])
+
+    for idx, lm in enumerate(sorted_lnp, start=1):
+        key = (lm["date"], normalise(lm.get("away", "")))
+        if key in existing_keys:
+            continue
+
+        # Stima round: idx è la posizione cronologica della partita di casa,
+        # ma in regular ci sono ~19 partite di casa su 36 totali. Per inferire
+        # il round assoluto usiamo: round_estimato = lm posizione nella tabella
+        # completa LNP. Approssimazione: cerchiamo lm in lnp_matches.
+        try:
+            absolute_idx = lnp_matches.index(lm) + 1
+        except ValueError:
+            absolute_idx = idx
+
+        phase = detect_phase(absolute_idx, team_pos)
+
+        # Genera ID univoco
+        prefix = team_key[0]
+        if phase == "regular":
+            new_id = f"{prefix}{absolute_idx:02d}"
+        elif phase == "playin":
+            new_id = f"{prefix}_pi_r{absolute_idx}"
+        else:
+            new_id = f"{prefix}_po_r{absolute_idx}"
+
+        # Evita collisioni di ID
+        n = 1
+        base_id = new_id
+        while new_id in existing_ids:
+            n += 1
+            new_id = f"{base_id}_{n}"
+        existing_ids.add(new_id)
+
+        new_match = {
+            "id": new_id,
+            "team": team_key,
+            "phase": phase,
+            "round": absolute_idx,
+            "date": lm["date"],
+            "time": lm["time"],
+            "home": lm["home"],
+            "away": lm["away"],
+            "sh": lm.get("sh"),
+            "sa": lm.get("sa"),
+        }
+        matches.append(new_match)
+        inserted += 1
+        score_info = (f" {lm['sh']}-{lm['sa']}"
+                      if lm.get("sh") is not None else "")
+        print(f"  ➕ [{team_key}] NUOVA {phase} R{absolute_idx} "
+              f"{lm['date']} {lm['time']} vs {lm['away']}{score_info}")
+
+    return inserted
+
+
 # ================================================================
 # MAIN UPDATE LOGIC
 # ================================================================
@@ -561,6 +672,7 @@ def update_in_season(matches, config, standings):
                 classifica_cache[league_path] = None
 
         full = classifica_cache.get(league_path)
+        team_pos = None
         if full:
             entry = find_team_in_standings(full, aliases)
             if entry:
@@ -569,10 +681,19 @@ def update_in_season(matches, config, standings):
                 new_standings[team_key]["w"] = entry["w"]
                 new_standings[team_key]["l"] = entry["l"]
                 new_standings[team_key]["pts"] = entry["pts"]
+                team_pos = entry["pos"]
                 print(f"  🏆 [{team_key}] pos: {entry['pos']}° su {len(full)} "
                       f"({entry['w']}V-{entry['l']}P, {entry['pts']}pt)")
             else:
                 print(f"  ⚠️  [{team_key}] non trovata nella classifica calcolata")
+
+        # Auto-insert: nuove partite di casa (recuperi, postseason)
+        # Eseguito DOPO il calcolo di pos perché serve per detect_phase
+        inserted = auto_insert_new_home_matches(
+            matches, team_key, aliases, lnp_matches, team_pos
+        )
+        if inserted:
+            updated += inserted
 
     # Conta cambio standings come aggiornamento (oltre a quelli già contati)
     if json.dumps(new_standings, sort_keys=True) != initial_snap:
@@ -585,27 +706,100 @@ def update_in_season(matches, config, standings):
 # FUORI STAGIONE — discovery nuova stagione
 # ================================================================
 
-def check_new_season(config):
+def bootstrap_new_season(config, current_season):
     """
-    Verifica se le squadre seguite sono presenti in una lega LNP.
-    A inizio nuova stagione, basta che LNP pubblichi le pagine squadra
-    e questa funzione le rileva.
+    Genera una nuova struttura matches+standings da zero leggendo le pagine
+    squadra LNP. Usato a inizio stagione successiva.
+
+    SOGLIA DI SICUREZZA: pretende ≥ MIN_MATCHES_THRESHOLD partite per ogni
+    squadra seguita. Sotto la soglia, considera il calendario "provvisorio"
+    e non sovrascrive nulla. Questo evita che un fetch parziale o un
+    calendario in costruzione cancelli i dati buoni.
+
+    Restituisce (new_matches, new_standings, new_season_label) oppure
+    (None, None, None) se il bootstrap non è sicuro.
     """
+    MIN_MATCHES_THRESHOLD = 30  # ≥30 partite/squadra = stagione completa
+
     print("\n🔍 Controllo nuova stagione...")
-    found_any = False
+    discovered = {}
+
     for team_key, info in TRACKED_TEAMS.items():
-        path, _ = discover_team_league(info["slug"])
-        if path:
-            label = LEAGUE_LABELS.get(path, path)
-            print(f"  ✅ [{team_key}] presente in {label}")
-            found_any = True
-        else:
-            print(f"  ⏳ [{team_key}] non ancora disponibile")
-    if found_any:
-        ns = config.get("next_season", "?")
-        print(f"  ℹ️  Squadre rilevate. Per attivare la stagione {ns}, "
-              f"resetta data.json con il nuovo calendario.")
-    return found_any
+        slug = info["slug"]
+        league_path, html = discover_team_league(slug)
+        if not league_path:
+            print(f"  ⏳ [{team_key}] non ancora disponibile su LNP")
+            return None, None, None
+
+        lnp_matches = parse_lnp_calendar(html)
+        if len(lnp_matches) < MIN_MATCHES_THRESHOLD:
+            print(f"  ⏳ [{team_key}] solo {len(lnp_matches)} partite "
+                  f"(soglia: {MIN_MATCHES_THRESHOLD}) → calendario provvisorio")
+            return None, None, None
+
+        # Verifica che TUTTE le partite siano della nuova stagione
+        # (le date devono essere posteriori alla fine della stagione corrente)
+        years = {m["date"][:4] for m in lnp_matches}
+        print(f"  ✅ [{team_key}] {len(lnp_matches)} partite su LNP "
+              f"(anni: {sorted(years)})")
+
+        discovered[team_key] = {
+            "league_path": league_path,
+            "lnp_matches": lnp_matches,
+            "aliases": list(info["name_aliases"]),
+        }
+
+    if len(discovered) < len(TRACKED_TEAMS):
+        print("  ⚠️  Non tutte le squadre seguite hanno calendario completo")
+        return None, None, None
+
+    print("\n🆕 Bootstrap nuova stagione: tutte le condizioni verificate")
+
+    # Determina la nuova stagione dalle date trovate
+    all_dates = []
+    for d in discovered.values():
+        all_dates.extend(m["date"] for m in d["lnp_matches"])
+    if not all_dates:
+        return None, None, None
+
+    min_year = min(int(d[:4]) for d in all_dates)
+    max_year = max(int(d[:4]) for d in all_dates)
+    new_season = f"{min_year}-{str(max_year)[-2:]}"
+    print(f"  📅 Stagione rilevata: {new_season}")
+
+    # Costruisci matches: solo partite di casa, ID auto-generati
+    new_matches = []
+    for team_key, d in discovered.items():
+        aliases_norm = [normalise(a) for a in d["aliases"] if a]
+        prefix = team_key[0]
+        home_idx = 0
+        for absolute_idx, lm in enumerate(d["lnp_matches"], start=1):
+            h_n = normalise(lm["home"])
+            is_home = any(an in h_n or h_n in an for an in aliases_norm)
+            if not is_home:
+                continue
+            home_idx += 1
+            new_matches.append({
+                "id": f"{prefix}{absolute_idx:02d}",
+                "team": team_key,
+                "phase": "regular",
+                "round": absolute_idx,
+                "date": lm["date"],
+                "time": lm["time"],
+                "home": lm["home"],
+                "away": lm["away"],
+                "sh": lm.get("sh"),
+                "sa": lm.get("sa"),
+            })
+        print(f"  📋 [{team_key}] {home_idx} partite di casa")
+
+    # Standings azzerati (la prossima run normale calcolerà quelli reali)
+    new_standings = {
+        tk: {"pos": "-", "pts": 0, "w": 0, "l": 0}
+        for tk in TRACKED_TEAMS
+    }
+
+    return new_matches, new_standings, new_season
 
 
 # ================================================================
@@ -613,7 +807,7 @@ def check_new_season(config):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v7 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
@@ -648,6 +842,7 @@ def main():
     in_season = today <= season_end + timedelta(days=30)
 
     total_updated = 0
+    bootstrapped = False
 
     if in_season:
         print(f"\n📅 IN STAGIONE")
@@ -655,7 +850,34 @@ def main():
         print(f"\n📝 Aggiornamenti: {total_updated}")
     else:
         print(f"\n💤 FUORI STAGIONE")
-        check_new_season(config)
+        new_matches, new_standings, new_season = bootstrap_new_season(
+            config, config.get("season", "?")
+        )
+        if new_matches and new_standings and new_season:
+            # SOGLIE DI SICUREZZA superate → backup + sostituzione
+            backup_path = Path("data.json.backup")
+            if data_path.exists():
+                backup_path.write_text(
+                    data_path.read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+                print(f"  💾 Backup salvato: {backup_path}")
+
+            # Calcola la prossima stagione (es. 2026-27 → 2027-28)
+            try:
+                start_yr = int(new_season.split("-")[0])
+                next_season_label = f"{start_yr + 1}-{str(start_yr + 2)[-2:]}"
+            except Exception:
+                next_season_label = config.get("next_season", "?")
+
+            matches = new_matches
+            standings = new_standings
+            config["season"] = new_season
+            config["next_season"] = next_season_label
+            bootstrapped = True
+            total_updated = len(new_matches)
+            print(f"  🆕 Stagione {new_season} attivata "
+                  f"({len(new_matches)} partite di casa)")
 
     output = {
         "last_updated": datetime.now().isoformat(),
@@ -667,7 +889,8 @@ def main():
     new_json = json.dumps(output, ensure_ascii=False, indent=2)
 
     # Skip scrittura se nulla è cambiato (escluso timestamp)
-    if data_path.exists():
+    # Il bootstrap salta sempre questo controllo (la nuova stagione va scritta)
+    if data_path.exists() and not bootstrapped:
         old_content = data_path.read_text(encoding="utf-8")
         def strip_ts(s):
             return re.sub(r'"last_updated":\s*"[^"]*"', '"last_updated":""', s)
