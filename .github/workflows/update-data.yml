@@ -34,9 +34,6 @@ jobs:
           python-version: '3.11'
 
       - name: Esegui aggiornamento dati
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
         run: python scripts/update_data.py
 
       - name: Commit e push se ci sono modifiche
