@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.3
+update_data.py — Roma Basket Casa — v8.4
 Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap, round_map.
 
 Fonte unica: legapallacanestro.com (HTML statico)
 - Calendario, date, orari, risultati: pagine squadra LNP
 - Classifica completa con pos: derivata da tutte le squadre del girone
-- Round di campionato derivato dalle date del girone (build_round_map)
+- Round di campionato: build_round_map a 2 fasi (segmentazione + consolidamento)
 - Cambio lega: cascade discovery serie-b → serie-a2 → serie-a
 - Auto-insert partite postseason (playoff/play-in) con phase auto-rilevata
 - Auto-bootstrap nuova stagione con backup file di sicurezza
@@ -414,33 +414,41 @@ def build_round_map(all_girone_matches):
     Costruisce una mappa date→round_di_campionato dal calendario completo
     del girone.
 
-    DOPPIA REGOLA per identificare i confini di round:
-    1. SQUADRA RIPETUTA: se una delle due squadre della partita corrente
-       ha già giocato nel round in corso, apri un nuovo round.
-       (Garanzia: in un girone, ogni squadra gioca al massimo 1 volta per round)
-    2. INTERVALLO TEMPORALE: se la data corrente è > 3 giorni dopo la prima
-       data del round in corso, apri un nuovo round comunque.
-       Casi reali coperti:
-       - sabato → domenica (1gg) = stesso round ✓
-       - sabato → martedì (3gg) = stesso round (eventuale recupero) ✓
-       - sabato → mercoledì infrasettimanale (4gg) = NUOVO round ✓
-       - domenica → venerdì successivo (5gg) = NUOVO round ✓
-       - sabato → sabato successivo (7gg) = NUOVO round ✓
+    ALGORITMO IN DUE FASI:
 
-    Algoritmo:
-    1. Deduplica le partite (la stessa partita appare in 2 calendari squadra)
-    2. Ordina per data + ora
-    3. Per ogni partita, applica le 2 regole sopra
-    4. Mappa ogni data al round della prima partita di quella data
+    FASE 1 — Prima passata (può sovra-segmentare):
+    Doppia regola per identificare confini di round preliminari:
+    a) SQUADRA RIPETUTA: se una delle due squadre ha già giocato nel round
+       in corso → nuovo round
+    b) INTERVALLO TEMPORALE: se la data corrente è > 3 giorni dopo la prima
+       data del round → nuovo round
+    Questa fase è semplice ma sovra-segmenta in presenza di recuperi/anticipi
+    isolati: una partita di lunedì recuperata produce un mini-round da 1
+    partita, poi il weekend successivo apre un altro round → scarto +1.
+
+    FASE 2 — Consolidamento globale:
+    Un "round vero" del girone B (19 squadre) ha 9 partite (1 squadra riposa).
+    I round con poche partite sono "fantasma" da fondere col vicino.
+
+    Strategia di fusione iterativa:
+    - Per ogni round "piccolo" (≤3 partite), prova a fonderlo col round
+      successivo o precedente
+    - Fusione possibile solo se nessuna squadra del round piccolo è già
+      presente nel round target (regola fondamentale: 1 squadra/round)
+    - Preferisce fusione col successivo (la partita di recupero appartiene
+      logicamente al weekend "in cui dovrebbe stare", che spesso è dopo)
+    - Ripeti finché non ci sono più fusioni possibili
+    - Rinumera i round consecutivi alla fine
 
     Restituisce dict {date_str: round_int}.
     """
     if not all_girone_matches:
         return {}
 
-    MAX_ROUND_SPAN_DAYS = 3  # >3 giorni dalla prima partita del round = nuovo round
+    MAX_ROUND_SPAN_DAYS = 3
+    SMALL_ROUND_THRESHOLD = 3  # round con ≤3 partite sono candidati a fusione
 
-    # Deduplica le partite (la stessa partita appare in 2 calendari squadra).
+    # === Deduplica partite ===
     seen = set()
     unique = []
     for m in all_girone_matches:
@@ -454,7 +462,9 @@ def build_round_map(all_girone_matches):
 
     unique.sort(key=lambda x: (x["date"], x.get("time") or "00:00"))
 
-    round_map = {}
+    # === FASE 1: prima passata ===
+    # Per ogni partita: round_id provvisorio + set squadre coinvolte
+    match_round = []  # list of (match_dict, provisional_round)
     current_round = 1
     teams_in_current_round = set()
     round_start_date = None
@@ -464,17 +474,11 @@ def build_round_map(all_girone_matches):
         a_n = normalise(m["away"])
         m_date = datetime.strptime(m["date"], "%Y-%m-%d").date()
 
-        # Regola 1: squadra ripetuta?
         team_repeated = (h_n in teams_in_current_round or
                          a_n in teams_in_current_round)
+        time_exceeded = (round_start_date is not None and
+                         (m_date - round_start_date).days > MAX_ROUND_SPAN_DAYS)
 
-        # Regola 2: intervallo temporale superato?
-        time_exceeded = False
-        if round_start_date is not None:
-            if (m_date - round_start_date).days > MAX_ROUND_SPAN_DAYS:
-                time_exceeded = True
-
-        # Apri nuovo round se una delle due regole scatta
         if team_repeated or time_exceeded:
             current_round += 1
             teams_in_current_round = set()
@@ -485,9 +489,78 @@ def build_round_map(all_girone_matches):
 
         teams_in_current_round.add(h_n)
         teams_in_current_round.add(a_n)
+        match_round.append((m, current_round))
 
-        if m["date"] not in round_map:
-            round_map[m["date"]] = current_round
+    # === FASE 2: consolidamento ===
+    # Costruisci struttura: round_id → set di squadre + set di partite
+    rounds = {}  # round_id → {"teams": set, "matches": list}
+    for m, r in match_round:
+        if r not in rounds:
+            rounds[r] = {"teams": set(), "matches": []}
+        rounds[r]["teams"].add(normalise(m["home"]))
+        rounds[r]["teams"].add(normalise(m["away"]))
+        rounds[r]["matches"].append(m)
+
+    def can_merge(small_id, target_id):
+        """Verifica se i round small_id e target_id possono fondersi."""
+        if small_id == target_id or target_id not in rounds:
+            return False
+        teams_small = rounds[small_id]["teams"]
+        teams_target = rounds[target_id]["teams"]
+        return len(teams_small & teams_target) == 0
+
+    def merge(src_id, dst_id):
+        """Sposta tutte le partite di src_id in dst_id."""
+        rounds[dst_id]["teams"] |= rounds[src_id]["teams"]
+        rounds[dst_id]["matches"].extend(rounds[src_id]["matches"])
+        del rounds[src_id]
+
+    # Iterazione: trova round piccoli e prova a fondere
+    changed = True
+    max_iter = 50  # safety
+    while changed and max_iter > 0:
+        changed = False
+        max_iter -= 1
+        small_ids = sorted(
+            r_id for r_id, info in rounds.items()
+            if len(info["matches"]) <= SMALL_ROUND_THRESHOLD
+        )
+        for small_id in small_ids:
+            if small_id not in rounds:
+                continue  # già fuso in iterazione precedente
+            # Prova a fondere col successivo (preferito), poi col precedente
+            sorted_ids = sorted(rounds.keys())
+            try:
+                idx = sorted_ids.index(small_id)
+            except ValueError:
+                continue
+            target = None
+            if idx + 1 < len(sorted_ids) and can_merge(small_id, sorted_ids[idx + 1]):
+                target = sorted_ids[idx + 1]
+            elif idx > 0 and can_merge(small_id, sorted_ids[idx - 1]):
+                target = sorted_ids[idx - 1]
+            if target is not None:
+                merge(small_id, target)
+                changed = True
+
+    # === Rinumerazione consecutiva ===
+    # Dopo le fusioni, gli ID round non sono più consecutivi (es. 1,2,4,7,...).
+    # Rinumera 1..N preservando l'ordine cronologico.
+    sorted_round_ids = sorted(rounds.keys())
+    renumber = {old: new for new, old in enumerate(sorted_round_ids, start=1)}
+
+    # Costruisci la mappa finale date → round
+    round_map = {}
+    for old_id in sorted_round_ids:
+        new_id = renumber[old_id]
+        # Ordina partite del round per data per scegliere il round di una data
+        for m in rounds[old_id]["matches"]:
+            if m["date"] not in round_map:
+                round_map[m["date"]] = new_id
+            else:
+                # Se una data appare in più round (può succedere dopo le fusioni),
+                # tieni il round più piccolo (=primo cronologico)
+                round_map[m["date"]] = min(round_map[m["date"]], new_id)
 
     return round_map
 
@@ -995,7 +1068,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.3 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.4 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
