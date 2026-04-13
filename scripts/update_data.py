@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.2
-Architettura LNP-only con auto-discovery, auto-insert e auto-bootstrap.
+update_data.py — Roma Basket Casa — v8.3
+Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap, round_map.
 
 Fonte unica: legapallacanestro.com (HTML statico)
 - Calendario, date, orari, risultati: pagine squadra LNP
 - Classifica completa con pos: derivata da tutte le squadre del girone
+- Round di campionato derivato dalle date del girone (build_round_map)
 - Cambio lega: cascade discovery serie-b → serie-a2 → serie-a
 - Auto-insert partite postseason (playoff/play-in) con phase auto-rilevata
 - Auto-bootstrap nuova stagione con backup file di sicurezza
 - Bootstrap on-demand: se data.json ha matches vuoti, popola da LNP
 - Deduplica robusta: match per nome avversario + tolleranza data ±10 giorni
+- Correzione retroattiva round (auto-fix dei round sbagliati a ogni run)
 - Zero hardcoded round URLs, zero pianetabasket, zero intervento manuale
 """
 
@@ -350,7 +352,10 @@ def discover_girone_slugs(league_path, opponent_names, own_slug):
 def compute_full_standings(league_path, girone_slugs):
     """
     Per ogni squadra del girone fa fetch della pagina LNP e calcola W/L/pts.
-    Restituisce lista ordinata [{slug, name, w, l, pts, pos}, ...].
+    Restituisce (standings_list, all_matches) dove:
+    - standings_list = [{slug, name, w, l, pts, pos}, ...] ordinata
+    - all_matches = lista di tutte le partite del girone (con duplicati,
+                    una per ogni vista squadra) — usata per round_map
 
     Tiebreaker semplificato: pts desc, w desc, nome asc.
     Il tiebreaker ufficiale LNP (scontri diretti, quoziente canestri) non è
@@ -358,6 +363,7 @@ def compute_full_standings(league_path, girone_slugs):
     per uso informativo.
     """
     teams = []
+    all_matches_collected = []  # tutte le partite di tutte le squadre
     for slug in sorted(girone_slugs):
         url = f"https://www.legapallacanestro.com/{league_path}/{slug}"
         html = fetch(url)
@@ -368,6 +374,8 @@ def compute_full_standings(league_path, girone_slugs):
         if not matches:
             print(f"     ⚠️  {slug}: calendario non parsabile")
             continue
+
+        all_matches_collected.extend(matches)
 
         # Trova il nome reale della squadra cercando nelle partite la cella
         # che contiene lo slug normalizzato (è il "self team" della pagina)
@@ -398,7 +406,90 @@ def compute_full_standings(league_path, girone_slugs):
     teams.sort(key=lambda t: (-t["pts"], -t["w"], t["name"].lower()))
     for i, t in enumerate(teams, start=1):
         t["pos"] = i
-    return teams
+    return teams, all_matches_collected
+
+
+def build_round_map(all_girone_matches):
+    """
+    Costruisce una mappa date→round_di_campionato dal calendario completo
+    del girone.
+
+    DOPPIA REGOLA per identificare i confini di round:
+    1. SQUADRA RIPETUTA: se una delle due squadre della partita corrente
+       ha già giocato nel round in corso, apri un nuovo round.
+       (Garanzia: in un girone, ogni squadra gioca al massimo 1 volta per round)
+    2. INTERVALLO TEMPORALE: se la data corrente è > 3 giorni dopo la prima
+       data del round in corso, apri un nuovo round comunque.
+       Casi reali coperti:
+       - sabato → domenica (1gg) = stesso round ✓
+       - sabato → martedì (3gg) = stesso round (eventuale recupero) ✓
+       - sabato → mercoledì infrasettimanale (4gg) = NUOVO round ✓
+       - domenica → venerdì successivo (5gg) = NUOVO round ✓
+       - sabato → sabato successivo (7gg) = NUOVO round ✓
+
+    Algoritmo:
+    1. Deduplica le partite (la stessa partita appare in 2 calendari squadra)
+    2. Ordina per data + ora
+    3. Per ogni partita, applica le 2 regole sopra
+    4. Mappa ogni data al round della prima partita di quella data
+
+    Restituisce dict {date_str: round_int}.
+    """
+    if not all_girone_matches:
+        return {}
+
+    MAX_ROUND_SPAN_DAYS = 3  # >3 giorni dalla prima partita del round = nuovo round
+
+    # Deduplica le partite (la stessa partita appare in 2 calendari squadra).
+    seen = set()
+    unique = []
+    for m in all_girone_matches:
+        if not m.get("date") or not m.get("home") or not m.get("away"):
+            continue
+        key = (m["date"], normalise(m["home"]), normalise(m["away"]))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(m)
+
+    unique.sort(key=lambda x: (x["date"], x.get("time") or "00:00"))
+
+    round_map = {}
+    current_round = 1
+    teams_in_current_round = set()
+    round_start_date = None
+
+    for m in unique:
+        h_n = normalise(m["home"])
+        a_n = normalise(m["away"])
+        m_date = datetime.strptime(m["date"], "%Y-%m-%d").date()
+
+        # Regola 1: squadra ripetuta?
+        team_repeated = (h_n in teams_in_current_round or
+                         a_n in teams_in_current_round)
+
+        # Regola 2: intervallo temporale superato?
+        time_exceeded = False
+        if round_start_date is not None:
+            if (m_date - round_start_date).days > MAX_ROUND_SPAN_DAYS:
+                time_exceeded = True
+
+        # Apri nuovo round se una delle due regole scatta
+        if team_repeated or time_exceeded:
+            current_round += 1
+            teams_in_current_round = set()
+            round_start_date = None
+
+        if round_start_date is None:
+            round_start_date = m_date
+
+        teams_in_current_round.add(h_n)
+        teams_in_current_round.add(a_n)
+
+        if m["date"] not in round_map:
+            round_map[m["date"]] = current_round
+
+    return round_map
 
 
 def find_team_in_standings(standings_list, team_aliases):
@@ -507,7 +598,7 @@ def detect_phase(round_num, team_pos):
 
 
 def auto_insert_new_home_matches(matches, team_key, team_aliases,
-                                 lnp_matches, team_pos):
+                                 lnp_matches, team_pos, round_map=None):
     """
     Aggiunge a `matches` le partite di CASA presenti in LNP ma non ancora
     in data.json. Funziona per:
@@ -520,10 +611,15 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
     2. Match per solo avversario_normalizzato entro ±10 giorni — copre
        il caso "stessa partita, data diversa"
 
+    Il `round` di campionato viene letto da round_map (passato dal chiamante).
+    Se round_map è None o non contiene la data, fallback all'indice progressivo.
+
     ID auto-generati con convenzione:
     - Regular: v01..v38, l01..l38 (prefisso = prima lettera del team_key)
     - Postseason: v_po_r39, v_po_r40 ... (round è il riferimento univoco)
     """
+    if round_map is None:
+        round_map = {}
     aliases_norm = [normalise(a) for a in team_aliases if a]
     inserted = 0
     existing_ids = {m.get("id") for m in matches}
@@ -586,23 +682,26 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
         if is_duplicate(lm["date"], lm_away_n):
             continue
 
-        # absolute_idx = posizione cronologica della partita nel calendario
-        # completo della squadra (regular round 1-38, postseason 39+)
-        try:
-            absolute_idx = lnp_matches.index(lm) + 1
-        except ValueError:
-            absolute_idx = len(matches) + 1
+        # Round vero dal round_map del girone (giornata di campionato).
+        # Se round_map non disponibile, fallback all'indice cronologico
+        # nell'array LNP della squadra (approssimazione).
+        real_round = round_map.get(lm["date"])
+        if real_round is None:
+            try:
+                real_round = lnp_matches.index(lm) + 1
+            except ValueError:
+                real_round = len(matches) + 1
 
-        phase = detect_phase(absolute_idx, team_pos)
+        phase = detect_phase(real_round, team_pos)
 
         # Genera ID univoco
         prefix = team_key[0]
         if phase == "regular":
-            new_id = f"{prefix}{absolute_idx:02d}"
+            new_id = f"{prefix}{real_round:02d}"
         elif phase == "playin":
-            new_id = f"{prefix}_pi_r{absolute_idx}"
+            new_id = f"{prefix}_pi_r{real_round}"
         else:
-            new_id = f"{prefix}_po_r{absolute_idx}"
+            new_id = f"{prefix}_po_r{real_round}"
 
         # Evita collisioni di ID
         n = 1
@@ -616,7 +715,7 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
             "id": new_id,
             "team": team_key,
             "phase": phase,
-            "round": absolute_idx,
+            "round": real_round,
             "date": lm["date"],
             "time": lm["time"],
             "home": lm["home"],
@@ -632,7 +731,7 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
         inserted += 1
         score_info = (f" {lm['sh']}-{lm['sa']}"
                       if lm.get("sh") is not None else "")
-        print(f"  ➕ [{team_key}] NUOVA {phase} R{absolute_idx} "
+        print(f"  ➕ [{team_key}] NUOVA {phase} R{real_round} "
               f"{lm['date']} {lm['time']} vs {lm['away']}{score_info}")
 
     return inserted
@@ -707,14 +806,20 @@ def update_in_season(matches, config, standings):
 
             if len(girone_slugs) >= 4:
                 print(f"  📥 Calcolo classifica completa girone...")
-                full = compute_full_standings(league_path, girone_slugs)
-                classifica_cache[league_path] = full
-                print(f"  ✅ Classifica: {len(full)} squadre")
+                full, all_girone_matches = compute_full_standings(league_path, girone_slugs)
+                round_map = build_round_map(all_girone_matches)
+                classifica_cache[league_path] = {
+                    "standings": full,
+                    "round_map": round_map,
+                }
+                print(f"  ✅ Classifica: {len(full)} squadre — round_map: {len(round_map)} date → {max(round_map.values()) if round_map else 0} giornate")
             else:
                 print(f"  ⚠️  Girone troppo piccolo, skip classifica")
                 classifica_cache[league_path] = None
 
-        full = classifica_cache.get(league_path)
+        cache_entry = classifica_cache.get(league_path)
+        full = cache_entry["standings"] if cache_entry else None
+        round_map = cache_entry["round_map"] if cache_entry else {}
         team_pos = None
         if full:
             entry = find_team_in_standings(full, aliases)
@@ -730,10 +835,24 @@ def update_in_season(matches, config, standings):
             else:
                 print(f"  ⚠️  [{team_key}] non trovata nella classifica calcolata")
 
+        # Aggiorna i round delle partite esistenti usando round_map (correzione retroattiva)
+        if round_map:
+            corrected = 0
+            for m in matches:
+                if m.get("team") != team_key:
+                    continue
+                real_round = round_map.get(m.get("date"))
+                if real_round and m.get("round") != real_round:
+                    m["round"] = real_round
+                    corrected += 1
+            if corrected:
+                print(f"  🔢 [{team_key}] round corretti: {corrected}")
+                updated += corrected
+
         # Auto-insert: nuove partite di casa (recuperi, postseason)
-        # Eseguito DOPO il calcolo di pos perché serve per detect_phase
+        # Eseguito DOPO il calcolo di pos e round_map
         inserted = auto_insert_new_home_matches(
-            matches, team_key, aliases, lnp_matches, team_pos
+            matches, team_key, aliases, lnp_matches, team_pos, round_map
         )
         if inserted:
             updated += inserted
@@ -810,23 +929,49 @@ def bootstrap_new_season(config, current_season):
     new_season = f"{min_year}-{str(max_year)[-2:]}"
     print(f"  📅 Stagione rilevata: {new_season}")
 
-    # Costruisci matches: solo partite di casa, ID auto-generati
+    # Calcola round_map dal girone completo (necessario per ID/round corretti).
+    # Cache per league_path: se più squadre seguite sono nello stesso girone,
+    # discovery e round_map vengono fatti una sola volta.
+    round_map_by_league = {}
+    for team_key, d in discovered.items():
+        lp = d["league_path"]
+        if lp in round_map_by_league:
+            continue
+        print(f"  🔎 Discovery girone su {lp} per round_map...")
+        opponents = extract_opponents(d["lnp_matches"], d["aliases"])
+        girone_slugs = discover_girone_slugs(lp, opponents, TRACKED_TEAMS[team_key]["slug"])
+        print(f"     {len(girone_slugs)} squadre identificate")
+        if len(girone_slugs) >= 4:
+            print(f"  📥 Fetch calendari completi del girone...")
+            _, all_girone_matches = compute_full_standings(lp, girone_slugs)
+            round_map_by_league[lp] = build_round_map(all_girone_matches)
+            print(f"  ✅ round_map: {len(round_map_by_league[lp])} date → "
+                  f"{max(round_map_by_league[lp].values()) if round_map_by_league[lp] else 0} giornate")
+        else:
+            round_map_by_league[lp] = {}
+
+    # Costruisci matches: solo partite di casa, ID basati sul round vero
     new_matches = []
     for team_key, d in discovered.items():
         aliases_norm = [normalise(a) for a in d["aliases"] if a]
         prefix = team_key[0]
-        home_idx = 0
-        for absolute_idx, lm in enumerate(d["lnp_matches"], start=1):
+        round_map = round_map_by_league.get(d["league_path"], {})
+        home_count = 0
+        for lm in d["lnp_matches"]:
             h_n = normalise(lm["home"])
             is_home = any(an in h_n or h_n in an for an in aliases_norm)
             if not is_home:
                 continue
-            home_idx += 1
+            home_count += 1
+            real_round = round_map.get(lm["date"])
+            if real_round is None:
+                # Fallback: se per qualche motivo round_map non ha questa data
+                real_round = home_count
             new_matches.append({
-                "id": f"{prefix}{absolute_idx:02d}",
+                "id": f"{prefix}{real_round:02d}",
                 "team": team_key,
                 "phase": "regular",
-                "round": absolute_idx,
+                "round": real_round,
                 "date": lm["date"],
                 "time": lm["time"],
                 "home": lm["home"],
@@ -834,7 +979,7 @@ def bootstrap_new_season(config, current_season):
                 "sh": lm.get("sh"),
                 "sa": lm.get("sa"),
             })
-        print(f"  📋 [{team_key}] {home_idx} partite di casa")
+        print(f"  📋 [{team_key}] {home_count} partite di casa")
 
     # Standings azzerati (la prossima run normale calcolerà quelli reali)
     new_standings = {
@@ -850,7 +995,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.2 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.3 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
