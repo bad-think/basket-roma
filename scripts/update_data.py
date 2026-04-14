@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.5
+update_data.py — Roma Basket Casa — v8.6
 Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap.
 
 Fonte unica: legapallacanestro.com
@@ -457,14 +457,15 @@ def fetch_pdf_bytes(url):
 def extract_pdf_text(pdf_bytes):
     """
     Estrae il testo da un PDF. Prova in ordine:
-    1. pdftotext (poppler) via subprocess — preinstallato su ubuntu-latest
-    2. pypdf (puro Python)
-    3. None se entrambi falliscono.
+    1. pdftotext (poppler) via subprocess — se installato sul sistema
+    2. pypdf (puro Python) — se la libreria è disponibile
+    3. Parser stdlib-only minimale — sempre disponibile, estrae text operators
+       dagli stream FlateDecode. Funziona per PDF text-based non cifrati.
     """
     if not pdf_bytes:
         return None
 
-    # Tentativo 1: pdftotext
+    # Tentativo 1: pdftotext (poppler-utils)
     try:
         import subprocess
         result = subprocess.run(
@@ -472,9 +473,15 @@ def extract_pdf_text(pdf_bytes):
             input=pdf_bytes, capture_output=True, timeout=15,
         )
         if result.returncode == 0 and result.stdout:
-            return result.stdout.decode("utf-8", errors="replace")
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+            text = result.stdout.decode("utf-8", errors="replace")
+            if text.strip():
+                print(f"  🔧 PDF text extracted via pdftotext ({len(text)} chars)")
+                return text
+            print(f"  ⚠️  pdftotext: output vuoto")
+    except FileNotFoundError:
+        print(f"  ℹ️  pdftotext non installato, provo fallback")
+    except subprocess.TimeoutExpired:
+        print(f"  ⚠️  pdftotext timeout")
     except Exception as e:
         print(f"  ⚠️  pdftotext error: {e}")
 
@@ -483,13 +490,122 @@ def extract_pdf_text(pdf_bytes):
         import pypdf
         import io
         reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        if text.strip():
+            print(f"  🔧 PDF text extracted via pypdf ({len(text)} chars)")
+            return text
+        print(f"  ⚠️  pypdf: output vuoto")
     except ImportError:
-        pass
+        print(f"  ℹ️  pypdf non installato, provo fallback stdlib")
     except Exception as e:
         print(f"  ⚠️  pypdf error: {e}")
 
+    # Tentativo 3: parser stdlib-only (FlateDecode + Tj/TJ operators)
+    text = extract_pdf_text_stdlib(pdf_bytes)
+    if text and text.strip():
+        print(f"  🔧 PDF text extracted via stdlib parser ({len(text)} chars)")
+        return text
+    print(f"  ⚠️  stdlib parser: output vuoto")
+
     return None
+
+
+def extract_pdf_text_stdlib(pdf_bytes):
+    """
+    Parser PDF minimale, solo stdlib. Estrae testo dai text operators
+    (Tj e TJ) presenti negli stream del PDF, decomprimendo con zlib.
+
+    Funziona per:
+    - PDF non cifrati
+    - Stream compressi con FlateDecode (standard)
+    - PDF text-based (non scansioni/immagini)
+
+    NON funziona per:
+    - PDF cifrati
+    - Altri filtri (LZW, RunLengthDecode, ecc.)
+    - PDF "image-based" (scansioni)
+
+    Il PDF LNP è generato da Word → FlateDecode + text, quindi funziona.
+    """
+    if not pdf_bytes or not pdf_bytes.startswith(b"%PDF"):
+        return None
+
+    import zlib
+
+    texts = []
+    pos = 0
+    while True:
+        start = pdf_bytes.find(b"stream", pos)
+        if start == -1:
+            break
+        end = pdf_bytes.find(b"endstream", start)
+        if end == -1:
+            break
+
+        # Skip newline dopo "stream"
+        data_start = start + len(b"stream")
+        if pdf_bytes[data_start:data_start + 2] == b"\r\n":
+            data_start += 2
+        elif pdf_bytes[data_start:data_start + 1] in (b"\n", b"\r"):
+            data_start += 1
+        # Skip newline prima di "endstream"
+        data_end = end
+        if pdf_bytes[data_end - 2:data_end] == b"\r\n":
+            data_end -= 2
+        elif pdf_bytes[data_end - 1:data_end] in (b"\n", b"\r"):
+            data_end -= 1
+
+        stream_data = pdf_bytes[data_start:data_end]
+
+        # Tenta decompressione FlateDecode
+        decompressed = None
+        try:
+            decompressed = zlib.decompress(stream_data)
+        except zlib.error:
+            # Non compresso o altro filtro — prova comunque come-è
+            decompressed = stream_data
+
+        try:
+            content = decompressed.decode("latin-1", errors="replace")
+        except Exception:
+            pos = end + len(b"endstream")
+            continue
+
+        # Estrai text operators Tj: (testo)Tj
+        for m in re.finditer(r"\(((?:[^()\\]|\\[\\()nrtbf])*)\)\s*Tj", content):
+            s = _pdf_unescape(m.group(1))
+            if s:
+                texts.append(s)
+                texts.append(" ")  # separator
+
+        # Estrai text operators TJ: [(frag1)num(frag2)num...]TJ
+        for m in re.finditer(r"\[([^\]]*)\]\s*TJ", content):
+            inner = m.group(1)
+            for sm in re.finditer(r"\(((?:[^()\\]|\\[\\()nrtbf])*)\)", inner):
+                s = _pdf_unescape(sm.group(1))
+                if s:
+                    texts.append(s)
+            texts.append(" ")
+
+        # Newline dopo ogni "T*" (text move) — euristica per separare righe
+        # Lo aggiungo alla fine del processing dello stream
+        texts.append("\n")
+
+        pos = end + len(b"endstream")
+
+    return "".join(texts)
+
+
+def _pdf_unescape(s):
+    """Decodifica escape sequences di una stringa PDF."""
+    return (s.replace("\\\\", "\\")
+            .replace("\\(", "(")
+            .replace("\\)", ")")
+            .replace("\\n", " ")
+            .replace("\\r", " ")
+            .replace("\\t", " ")
+            .replace("\\b", "")
+            .replace("\\f", ""))
 
 
 def parse_lnp_pdf_calendar(pdf_text, known_teams=None):
@@ -498,17 +614,15 @@ def parse_lnp_pdf_calendar(pdf_text, known_teams=None):
     Formato di ogni partita: <round> <DD/MM/YYYY> <home> <away>
     dove home e away possono contenere spazi interni.
 
-    Il PDF usa un layout tabulare, ma dopo extract_text gli spazi di
-    allineamento diventano spazi singoli, quindi non c'è un separatore
-    chiaro tra home e away. Lo split per "2+ spazi" funziona solo se
-    è stato usato pdftotext -layout sul PDF.
+    Il parser gestisce due casi:
+    1. TESTO MULTIRIGA (pdftotext/pypdf): ogni partita su una riga separata
+    2. TESTO MONORIGA (stdlib parser): tutte le partite concatenate in una
+       singola riga con spazi. In questo caso facciamo split preliminare
+       sui pattern "<round> <data>" per separare le partite.
 
     STRATEGIA ROBUSTA: se è disponibile `known_teams` (set di nomi squadra
     noti da LNP HTML), il parser trova quali squadre appaiono come
-    substring nella parte "<rest>" della riga. La prima trovata è home,
-    la seconda è away.
-
-    STRATEGIA FALLBACK: regex con spazi multipli (caso pdftotext -layout).
+    substring nel resto della riga. La prima trovata è home, la seconda away.
 
     Restituisce dict {(home_normalized, away_normalized): round_int}.
     """
@@ -518,57 +632,58 @@ def parse_lnp_pdf_calendar(pdf_text, known_teams=None):
     round_map = {}
     known_norm = None
     if known_teams:
-        # Lista ordinata per lunghezza decrescente per match greedy:
-        # "Virtus GVM Roma 1960" prima di "Virtus Imola" prima di "Virtus".
         known_norm = sorted(
             {normalise(t): t for t in known_teams if t}.items(),
             key=lambda kv: -len(kv[0]),
         )
 
-    # Pattern: <round> <date> <rest>
-    row_pattern = re.compile(
-        r"^\s*(\d{1,2})\s+(\d{2}/\d{2}/\d{4})\s+(.+?)\s*$"
-    )
-    # Pattern fallback: due colonne separate da 2+ spazi
-    two_col_pattern = re.compile(
-        r"^(.+?)\s{2,}(.+?)$"
-    )
+    # Pattern per identificare l'inizio di una partita: "<round> <DD/MM/YYYY>"
+    match_start = re.compile(r"(\d{1,2})\s+(\d{2}/\d{2}/\d{4})\s+")
 
-    for line in pdf_text.splitlines():
-        line = line.rstrip()
-        if not line:
-            continue
+    # Split del testo completo in "segmenti partita" usando finditer.
+    # Ogni segmento va dall'inizio di un match all'inizio del successivo
+    # (o alla fine del testo).
+    matches = list(match_start.finditer(pdf_text))
+    if not matches:
+        return {}
 
-        m = row_pattern.match(line)
-        if not m:
-            continue
-        round_num, _date, rest = m.groups()
+    segments = []  # list of (round_int, rest_text)
+    for i, m in enumerate(matches):
+        round_num, _date = m.group(1), m.group(2)
         try:
             round_int = int(round_num)
         except ValueError:
             continue
-        if not (1 <= round_int <= 80):  # plausibilità
+        if not (1 <= round_int <= 80):
             continue
+        # Il "rest" è dal dopo-data fino all'inizio della prossima partita
+        rest_start = m.end()
+        rest_end = matches[i + 1].start() if i + 1 < len(matches) else len(pdf_text)
+        rest = pdf_text[rest_start:rest_end].strip()
+        # Rimuovi eventuali "Riposa: ..." o contenuti extra che non
+        # fanno parte del nome squadra away
+        rest = re.split(r"\bRiposa\b[: ]", rest, maxsplit=1)[0].strip()
+        segments.append((round_int, rest))
 
+    for round_int, rest in segments:
         home = away = None
 
         # Strategia 1: match con vocabolario known_teams
         if known_norm:
             rest_norm = normalise(rest)
             found = []
-            # Trova tutti i match, preferendo i nomi più lunghi
             consumed = [False] * len(rest_norm)
             for tn, _orig in known_norm:
-                if not tn:
+                if not tn or len(tn) < 3:
                     continue
                 idx = 0
                 while True:
                     pos = rest_norm.find(tn, idx)
                     if pos == -1:
                         break
-                    if not any(consumed[pos:pos+len(tn)]):
+                    if not any(consumed[pos:pos + len(tn)]):
                         found.append((pos, tn))
-                        for i in range(pos, pos+len(tn)):
+                        for i in range(pos, pos + len(tn)):
                             consumed[i] = True
                         break
                     idx = pos + 1
@@ -579,7 +694,7 @@ def parse_lnp_pdf_calendar(pdf_text, known_teams=None):
 
         # Strategia 2 (fallback): split per 2+ spazi
         if home is None:
-            m2 = two_col_pattern.match(rest)
+            m2 = re.match(r"^(.+?)\s{2,}(.+?)$", rest)
             if m2:
                 home = normalise(m2.group(1))
                 away = normalise(m2.group(2))
@@ -1372,7 +1487,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.5 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.6 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
