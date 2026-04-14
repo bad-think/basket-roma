@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.4
-Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap, round_map.
+update_data.py — Roma Basket Casa — v8.5
+Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap.
 
-Fonte unica: legapallacanestro.com (HTML statico)
-- Calendario, date, orari, risultati: pagine squadra LNP
+Fonte unica: legapallacanestro.com
+- Calendario, date, orari, risultati: pagine squadra LNP (HTML)
 - Classifica completa con pos: derivata da tutte le squadre del girone
-- Round di campionato: build_round_map a 2 fasi (segmentazione + consolidamento)
+- Round di campionato: PDF ufficiale LNP della stagione (fonte autoritativa)
+  fallback: build_round_map_from_dates (algoritmo legacy basato su date)
 - Cambio lega: cascade discovery serie-b → serie-a2 → serie-a
 - Auto-insert partite postseason (playoff/play-in) con phase auto-rilevata
 - Auto-bootstrap nuova stagione con backup file di sicurezza
@@ -46,6 +47,27 @@ TRACKED_TEAMS = {
         "name_aliases": ["luiss roma", "luiss", "luiss basketball"],
     },
 }
+
+# PDF ufficiali LNP del calendario stagione — fonte autoritativa per round.
+# Pattern URL standard: si convertono lega+girone+stagione in URL prevedibile.
+# Se il PDF non è raggiungibile, lo script ricade sull'algoritmo basato su date.
+#
+# Stagione viene espressa nel filename come "YYYY-NN" (es. "2025-26").
+# Il formato esatto del nome cambia leggermente tra leghe:
+# - Serie B: calendario_b_nazionale_gir._{a|b}_{season}.pdf
+# - A2:      calendario_a2_{season}.pdf  (nessun girone, da verificare)
+LNP_PDF_BASE = "https://static.legapallacanestro.com/sites/default/files/editor"
+
+def lnp_pdf_url(league_path, season, girone_letter=None):
+    """Costruisce URL del PDF calendario LNP per una lega/girone/stagione."""
+    season_norm = season.replace("/", "-")  # "2025/26" → "2025-26"
+    if league_path == "serie-b" and girone_letter:
+        return f"{LNP_PDF_BASE}/calendario_b_nazionale_gir._{girone_letter.lower()}_{season_norm}.pdf"
+    if league_path == "serie-a2":
+        return f"{LNP_PDF_BASE}/calendario_a2_{season_norm}.pdf"
+    if league_path == "serie-a":
+        return f"{LNP_PDF_BASE}/calendario_serie_a_{season_norm}.pdf"
+    return None
 
 # Cascade leghe LNP — ordine di tentativo per discovery automatica
 LEAGUE_PATHS = ["serie-b", "serie-a2", "serie-a"]
@@ -409,6 +431,225 @@ def compute_full_standings(league_path, girone_slugs):
     return teams, all_matches_collected
 
 
+# ================================================================
+# ROUND MAP — PDF UFFICIALE LNP (FONTE AUTORITATIVA)
+# ================================================================
+
+def fetch_pdf_bytes(url):
+    """
+    Scarica un PDF come bytes. Non usa fetch() perché quello decodifica
+    a stringa, mentre i PDF sono binari. Stessa logica di UA/timeout.
+    """
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/pdf,*/*",
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.read()
+    except Exception as e:
+        print(f"  ⚠️  PDF fetch fallito {url}: {e}")
+        return None
+
+
+def extract_pdf_text(pdf_bytes):
+    """
+    Estrae il testo da un PDF. Prova in ordine:
+    1. pdftotext (poppler) via subprocess — preinstallato su ubuntu-latest
+    2. pypdf (puro Python)
+    3. None se entrambi falliscono.
+    """
+    if not pdf_bytes:
+        return None
+
+    # Tentativo 1: pdftotext
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["pdftotext", "-layout", "-", "-"],
+            input=pdf_bytes, capture_output=True, timeout=15,
+        )
+        if result.returncode == 0 and result.stdout:
+            return result.stdout.decode("utf-8", errors="replace")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    except Exception as e:
+        print(f"  ⚠️  pdftotext error: {e}")
+
+    # Tentativo 2: pypdf
+    try:
+        import pypdf
+        import io
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+    except ImportError:
+        pass
+    except Exception as e:
+        print(f"  ⚠️  pypdf error: {e}")
+
+    return None
+
+
+def parse_lnp_pdf_calendar(pdf_text, known_teams=None):
+    r"""
+    Parsa il testo estratto dal PDF calendario ufficiale LNP.
+    Formato di ogni partita: <round> <DD/MM/YYYY> <home> <away>
+    dove home e away possono contenere spazi interni.
+
+    Il PDF usa un layout tabulare, ma dopo extract_text gli spazi di
+    allineamento diventano spazi singoli, quindi non c'è un separatore
+    chiaro tra home e away. Lo split per "2+ spazi" funziona solo se
+    è stato usato pdftotext -layout sul PDF.
+
+    STRATEGIA ROBUSTA: se è disponibile `known_teams` (set di nomi squadra
+    noti da LNP HTML), il parser trova quali squadre appaiono come
+    substring nella parte "<rest>" della riga. La prima trovata è home,
+    la seconda è away.
+
+    STRATEGIA FALLBACK: regex con spazi multipli (caso pdftotext -layout).
+
+    Restituisce dict {(home_normalized, away_normalized): round_int}.
+    """
+    if not pdf_text:
+        return {}
+
+    round_map = {}
+    known_norm = None
+    if known_teams:
+        # Lista ordinata per lunghezza decrescente per match greedy:
+        # "Virtus GVM Roma 1960" prima di "Virtus Imola" prima di "Virtus".
+        known_norm = sorted(
+            {normalise(t): t for t in known_teams if t}.items(),
+            key=lambda kv: -len(kv[0]),
+        )
+
+    # Pattern: <round> <date> <rest>
+    row_pattern = re.compile(
+        r"^\s*(\d{1,2})\s+(\d{2}/\d{2}/\d{4})\s+(.+?)\s*$"
+    )
+    # Pattern fallback: due colonne separate da 2+ spazi
+    two_col_pattern = re.compile(
+        r"^(.+?)\s{2,}(.+?)$"
+    )
+
+    for line in pdf_text.splitlines():
+        line = line.rstrip()
+        if not line:
+            continue
+
+        m = row_pattern.match(line)
+        if not m:
+            continue
+        round_num, _date, rest = m.groups()
+        try:
+            round_int = int(round_num)
+        except ValueError:
+            continue
+        if not (1 <= round_int <= 80):  # plausibilità
+            continue
+
+        home = away = None
+
+        # Strategia 1: match con vocabolario known_teams
+        if known_norm:
+            rest_norm = normalise(rest)
+            found = []
+            # Trova tutti i match, preferendo i nomi più lunghi
+            consumed = [False] * len(rest_norm)
+            for tn, _orig in known_norm:
+                if not tn:
+                    continue
+                idx = 0
+                while True:
+                    pos = rest_norm.find(tn, idx)
+                    if pos == -1:
+                        break
+                    if not any(consumed[pos:pos+len(tn)]):
+                        found.append((pos, tn))
+                        for i in range(pos, pos+len(tn)):
+                            consumed[i] = True
+                        break
+                    idx = pos + 1
+            found.sort(key=lambda x: x[0])
+            if len(found) >= 2:
+                home = found[0][1]
+                away = found[1][1]
+
+        # Strategia 2 (fallback): split per 2+ spazi
+        if home is None:
+            m2 = two_col_pattern.match(rest)
+            if m2:
+                home = normalise(m2.group(1))
+                away = normalise(m2.group(2))
+
+        if home and away:
+            round_map[(home, away)] = round_int
+
+    return round_map
+
+
+def fetch_lnp_pdf_round_map(league_path, season, girone_letter=None, known_teams=None):
+    """
+    Scarica il PDF calendario ufficiale LNP e costruisce il round_map
+    {(home_norm, away_norm): round}.
+    `known_teams`: set/list di nomi squadra noti (da LNP HTML) — fortemente
+    raccomandato per parsing robusto quando il PDF non ha layout tabulare.
+    Restituisce dict vuoto se il fetch o il parsing falliscono.
+    """
+    url = lnp_pdf_url(league_path, season, girone_letter)
+    if not url:
+        return {}
+
+    print(f"  📄 Fetch PDF calendario LNP: {url}")
+    pdf_bytes = fetch_pdf_bytes(url)
+    if not pdf_bytes:
+        return {}
+    if not pdf_bytes.startswith(b"%PDF"):
+        print(f"  ⚠️  Risposta non è un PDF (magic: {pdf_bytes[:8]!r})")
+        return {}
+
+    text = extract_pdf_text(pdf_bytes)
+    if not text:
+        print(f"  ⚠️  Impossibile estrarre testo dal PDF")
+        return {}
+
+    round_map = parse_lnp_pdf_calendar(text, known_teams=known_teams)
+    if not round_map:
+        print(f"  ⚠️  Parsing PDF non ha prodotto entry")
+        return {}
+
+    rounds = set(round_map.values())
+    print(f"  ✅ PDF parsato: {len(round_map)} partite, "
+          f"round {min(rounds)}..{max(rounds)} ({len(rounds)} giornate)")
+    return round_map
+
+
+def round_for_match(pdf_round_map, home, away):
+    """
+    Cerca il round di una partita nel pdf_round_map (chiavi normalizzate).
+    Match esatto su (home_norm, away_norm), con fallback substring se
+    i nomi non combaciano perfettamente (es. "Virtus GVM Roma 1960" vs
+    "Virtus GVM Roma" potrebbe variare leggermente tra LNP HTML e PDF).
+    """
+    if not pdf_round_map:
+        return None
+    h_n = normalise(home)
+    a_n = normalise(away)
+
+    # Match esatto
+    if (h_n, a_n) in pdf_round_map:
+        return pdf_round_map[(h_n, a_n)]
+
+    # Match per substring (tollerante a varianti del nome)
+    for (ph, pa), r in pdf_round_map.items():
+        if (h_n in ph or ph in h_n) and (a_n in pa or pa in a_n):
+            return r
+
+    return None
+
+
 def build_round_map(all_girone_matches):
     """
     Costruisce una mappa date→round_di_campionato dal calendario completo
@@ -492,74 +733,87 @@ def build_round_map(all_girone_matches):
         match_round.append((m, current_round))
 
     # === FASE 2: consolidamento ===
-    # Costruisci struttura: round_id → set di squadre + set di partite
-    rounds = {}  # round_id → {"teams": set, "matches": list}
+    # Costruisci struttura: round_id → set di squadre + lista partite + first_date
+    rounds = {}
     for m, r in match_round:
+        m_date = datetime.strptime(m["date"], "%Y-%m-%d").date()
         if r not in rounds:
-            rounds[r] = {"teams": set(), "matches": []}
+            rounds[r] = {"teams": set(), "matches": [], "first_date": m_date}
         rounds[r]["teams"].add(normalise(m["home"]))
         rounds[r]["teams"].add(normalise(m["away"]))
         rounds[r]["matches"].append(m)
+        if m_date < rounds[r]["first_date"]:
+            rounds[r]["first_date"] = m_date
 
-    def can_merge(small_id, target_id):
-        """Verifica se i round small_id e target_id possono fondersi."""
-        if small_id == target_id or target_id not in rounds:
+    def can_merge(src_id, dst_id):
+        """Verifica se i round src_id e dst_id possono fondersi (no team in conflitto)."""
+        if src_id == dst_id or src_id not in rounds or dst_id not in rounds:
             return False
-        teams_small = rounds[small_id]["teams"]
-        teams_target = rounds[target_id]["teams"]
-        return len(teams_small & teams_target) == 0
+        return len(rounds[src_id]["teams"] & rounds[dst_id]["teams"]) == 0
 
     def merge(src_id, dst_id):
         """Sposta tutte le partite di src_id in dst_id."""
         rounds[dst_id]["teams"] |= rounds[src_id]["teams"]
         rounds[dst_id]["matches"].extend(rounds[src_id]["matches"])
+        if rounds[src_id]["first_date"] < rounds[dst_id]["first_date"]:
+            rounds[dst_id]["first_date"] = rounds[src_id]["first_date"]
         del rounds[src_id]
 
-    # Iterazione: trova round piccoli e prova a fondere
-    changed = True
-    max_iter = 50  # safety
-    while changed and max_iter > 0:
-        changed = False
+    # Iterazione greedy: ad ogni passo trova il round più piccolo e prova
+    # a fonderlo con il candidato più vicino temporalmente (compatibile).
+    # Continua finché ci sono fusioni possibili.
+    max_iter = 200
+    while max_iter > 0:
         max_iter -= 1
-        small_ids = sorted(
+        # Trova tutti i round "piccoli" (≤ soglia)
+        small_ids = [
             r_id for r_id, info in rounds.items()
             if len(info["matches"]) <= SMALL_ROUND_THRESHOLD
-        )
-        for small_id in small_ids:
-            if small_id not in rounds:
-                continue  # già fuso in iterazione precedente
-            # Prova a fondere col successivo (preferito), poi col precedente
-            sorted_ids = sorted(rounds.keys())
-            try:
-                idx = sorted_ids.index(small_id)
-            except ValueError:
-                continue
-            target = None
-            if idx + 1 < len(sorted_ids) and can_merge(small_id, sorted_ids[idx + 1]):
-                target = sorted_ids[idx + 1]
-            elif idx > 0 and can_merge(small_id, sorted_ids[idx - 1]):
-                target = sorted_ids[idx - 1]
-            if target is not None:
-                merge(small_id, target)
-                changed = True
+        ]
+        if not small_ids:
+            break
 
-    # === Rinumerazione consecutiva ===
-    # Dopo le fusioni, gli ID round non sono più consecutivi (es. 1,2,4,7,...).
-    # Rinumera 1..N preservando l'ordine cronologico.
-    sorted_round_ids = sorted(rounds.keys())
+        # Per ogni piccolo, calcola il miglior target = round compatibile più
+        # vicino temporalmente (escluso se stesso)
+        best_merge = None  # (src_id, dst_id, distance_days)
+        for src_id in small_ids:
+            src_date = rounds[src_id]["first_date"]
+            best_target = None
+            best_distance = None
+            for dst_id, info in rounds.items():
+                if dst_id == src_id:
+                    continue
+                if not can_merge(src_id, dst_id):
+                    continue
+                dist = abs((info["first_date"] - src_date).days)
+                if best_distance is None or dist < best_distance:
+                    best_distance = dist
+                    best_target = dst_id
+            if best_target is not None:
+                if best_merge is None or best_distance < best_merge[2]:
+                    best_merge = (src_id, best_target, best_distance)
+
+        if best_merge is None:
+            break  # nessuna fusione possibile
+
+        merge(best_merge[0], best_merge[1])
+
+    # === Rinumerazione cronologica ===
+    # Dopo le fusioni, gli ID round non sono più consecutivi né
+    # necessariamente in ordine cronologico. Riordino per first_date
+    # e rinumero 1..N.
+    sorted_round_ids = sorted(rounds.keys(),
+                              key=lambda r: rounds[r]["first_date"])
     renumber = {old: new for new, old in enumerate(sorted_round_ids, start=1)}
 
     # Costruisci la mappa finale date → round
     round_map = {}
     for old_id in sorted_round_ids:
         new_id = renumber[old_id]
-        # Ordina partite del round per data per scegliere il round di una data
         for m in rounds[old_id]["matches"]:
             if m["date"] not in round_map:
                 round_map[m["date"]] = new_id
             else:
-                # Se una data appare in più round (può succedere dopo le fusioni),
-                # tieni il round più piccolo (=primo cronologico)
                 round_map[m["date"]] = min(round_map[m["date"]], new_id)
 
     return round_map
@@ -671,7 +925,8 @@ def detect_phase(round_num, team_pos):
 
 
 def auto_insert_new_home_matches(matches, team_key, team_aliases,
-                                 lnp_matches, team_pos, round_map=None):
+                                 lnp_matches, team_pos,
+                                 pdf_round_map=None, date_round_map=None):
     """
     Aggiunge a `matches` le partite di CASA presenti in LNP ma non ancora
     in data.json. Funziona per:
@@ -684,15 +939,19 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
     2. Match per solo avversario_normalizzato entro ±10 giorni — copre
        il caso "stessa partita, data diversa"
 
-    Il `round` di campionato viene letto da round_map (passato dal chiamante).
-    Se round_map è None o non contiene la data, fallback all'indice progressivo.
+    Round vero (giornata di campionato) determinato in priorità:
+    1. pdf_round_map[(home_n, away_n)] — fonte ufficiale LNP
+    2. date_round_map[date] — fallback algoritmo basato su date
+    3. Indice cronologico nell'array LNP della squadra — ultimo fallback
 
-    ID auto-generati con convenzione:
+    ID auto-generati:
     - Regular: v01..v38, l01..l38 (prefisso = prima lettera del team_key)
-    - Postseason: v_po_r39, v_po_r40 ... (round è il riferimento univoco)
+    - Postseason: v_po_r39, v_po_r40, v_pi_r39, ...
     """
-    if round_map is None:
-        round_map = {}
+    if pdf_round_map is None:
+        pdf_round_map = {}
+    if date_round_map is None:
+        date_round_map = {}
     aliases_norm = [normalise(a) for a in team_aliases if a]
     inserted = 0
     existing_ids = {m.get("id") for m in matches}
@@ -755,10 +1014,10 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
         if is_duplicate(lm["date"], lm_away_n):
             continue
 
-        # Round vero dal round_map del girone (giornata di campionato).
-        # Se round_map non disponibile, fallback all'indice cronologico
-        # nell'array LNP della squadra (approssimazione).
-        real_round = round_map.get(lm["date"])
+        # Round vero: priorità PDF (per coppia), poi date_map, poi fallback
+        real_round = round_for_match(pdf_round_map, lm.get("home", ""), lm.get("away", ""))
+        if real_round is None:
+            real_round = date_round_map.get(lm["date"])
         if real_round is None:
             try:
                 real_round = lnp_matches.index(lm) + 1
@@ -880,19 +1139,46 @@ def update_in_season(matches, config, standings):
             if len(girone_slugs) >= 4:
                 print(f"  📥 Calcolo classifica completa girone...")
                 full, all_girone_matches = compute_full_standings(league_path, girone_slugs)
-                round_map = build_round_map(all_girone_matches)
+
+                # Round map: prima fonte è il PDF ufficiale LNP (autoritativo).
+                # Fallback: algoritmo basato su date (legacy, può sbagliare ±5)
+                season = config.get("season", "")
+                girone_letter = (cfg_team.get("girone") or "").lower() or None
+                # Nomi squadra dal calcolo classifica (usati come vocabolario
+                # per il parser del PDF, dove home/away sono separati da
+                # spazi singoli)
+                known_teams = [t["name"] for t in full] if full else None
+                pdf_round_map = fetch_lnp_pdf_round_map(
+                    league_path, season, girone_letter, known_teams
+                )
+                date_round_map = build_round_map(all_girone_matches)
+
                 classifica_cache[league_path] = {
                     "standings": full,
-                    "round_map": round_map,
+                    "pdf_round_map": pdf_round_map,
+                    "date_round_map": date_round_map,
                 }
-                print(f"  ✅ Classifica: {len(full)} squadre — round_map: {len(round_map)} date → {max(round_map.values()) if round_map else 0} giornate")
+                src = "PDF" if pdf_round_map else "date-based"
+                pdf_count = len(pdf_round_map)
+                date_count = len(date_round_map)
+                print(f"  ✅ Classifica: {len(full)} squadre — round_map: "
+                      f"{pdf_count or date_count} entries ({src})")
             else:
                 print(f"  ⚠️  Girone troppo piccolo, skip classifica")
                 classifica_cache[league_path] = None
 
         cache_entry = classifica_cache.get(league_path)
         full = cache_entry["standings"] if cache_entry else None
-        round_map = cache_entry["round_map"] if cache_entry else {}
+        pdf_round_map = cache_entry["pdf_round_map"] if cache_entry else {}
+        date_round_map = cache_entry["date_round_map"] if cache_entry else {}
+
+        def lookup_round(m_date, m_home, m_away):
+            """Cerca il round vero: prima nel PDF (per coppia), poi per data."""
+            r = round_for_match(pdf_round_map, m_home, m_away)
+            if r is not None:
+                return r
+            return date_round_map.get(m_date)
+
         team_pos = None
         if full:
             entry = find_team_in_standings(full, aliases)
@@ -908,13 +1194,15 @@ def update_in_season(matches, config, standings):
             else:
                 print(f"  ⚠️  [{team_key}] non trovata nella classifica calcolata")
 
-        # Aggiorna i round delle partite esistenti usando round_map (correzione retroattiva)
-        if round_map:
+        # Aggiorna i round delle partite esistenti (correzione retroattiva)
+        if pdf_round_map or date_round_map:
             corrected = 0
             for m in matches:
                 if m.get("team") != team_key:
                     continue
-                real_round = round_map.get(m.get("date"))
+                real_round = lookup_round(
+                    m.get("date"), m.get("home", ""), m.get("away", "")
+                )
                 if real_round and m.get("round") != real_round:
                     m["round"] = real_round
                     corrected += 1
@@ -925,7 +1213,8 @@ def update_in_season(matches, config, standings):
         # Auto-insert: nuove partite di casa (recuperi, postseason)
         # Eseguito DOPO il calcolo di pos e round_map
         inserted = auto_insert_new_home_matches(
-            matches, team_key, aliases, lnp_matches, team_pos, round_map
+            matches, team_key, aliases, lnp_matches, team_pos,
+            pdf_round_map, date_round_map
         )
         if inserted:
             updated += inserted
@@ -1003,12 +1292,14 @@ def bootstrap_new_season(config, current_season):
     print(f"  📅 Stagione rilevata: {new_season}")
 
     # Calcola round_map dal girone completo (necessario per ID/round corretti).
+    # Priorità: PDF ufficiale LNP (autoritativo) > algoritmo basato su date.
     # Cache per league_path: se più squadre seguite sono nello stesso girone,
     # discovery e round_map vengono fatti una sola volta.
-    round_map_by_league = {}
+    pdf_round_map_by_league = {}
+    date_round_map_by_league = {}
     for team_key, d in discovered.items():
         lp = d["league_path"]
-        if lp in round_map_by_league:
+        if lp in pdf_round_map_by_league:
             continue
         print(f"  🔎 Discovery girone su {lp} per round_map...")
         opponents = extract_opponents(d["lnp_matches"], d["aliases"])
@@ -1016,19 +1307,30 @@ def bootstrap_new_season(config, current_season):
         print(f"     {len(girone_slugs)} squadre identificate")
         if len(girone_slugs) >= 4:
             print(f"  📥 Fetch calendari completi del girone...")
-            _, all_girone_matches = compute_full_standings(lp, girone_slugs)
-            round_map_by_league[lp] = build_round_map(all_girone_matches)
-            print(f"  ✅ round_map: {len(round_map_by_league[lp])} date → "
-                  f"{max(round_map_by_league[lp].values()) if round_map_by_league[lp] else 0} giornate")
+            full, all_girone_matches = compute_full_standings(lp, girone_slugs)
+            date_round_map_by_league[lp] = build_round_map(all_girone_matches)
+            # Tenta fetch PDF ufficiale (per girone noto da config)
+            cfg_team = config.get("teams", {}).get(team_key, {})
+            girone_letter = (cfg_team.get("girone") or "").lower() or None
+            known_teams = [t["name"] for t in full] if full else None
+            pdf_round_map_by_league[lp] = fetch_lnp_pdf_round_map(
+                lp, new_season, girone_letter, known_teams
+            )
+            src = "PDF" if pdf_round_map_by_league[lp] else "date-based"
+            pdf_n = len(pdf_round_map_by_league[lp])
+            date_n = len(date_round_map_by_league[lp])
+            print(f"  ✅ round_map: {pdf_n or date_n} entries ({src})")
         else:
-            round_map_by_league[lp] = {}
+            pdf_round_map_by_league[lp] = {}
+            date_round_map_by_league[lp] = {}
 
     # Costruisci matches: solo partite di casa, ID basati sul round vero
     new_matches = []
     for team_key, d in discovered.items():
         aliases_norm = [normalise(a) for a in d["aliases"] if a]
         prefix = team_key[0]
-        round_map = round_map_by_league.get(d["league_path"], {})
+        pdf_rm = pdf_round_map_by_league.get(d["league_path"], {})
+        date_rm = date_round_map_by_league.get(d["league_path"], {})
         home_count = 0
         for lm in d["lnp_matches"]:
             h_n = normalise(lm["home"])
@@ -1036,9 +1338,11 @@ def bootstrap_new_season(config, current_season):
             if not is_home:
                 continue
             home_count += 1
-            real_round = round_map.get(lm["date"])
+            # Priorità: PDF (per coppia) → date_map → fallback progressivo
+            real_round = round_for_match(pdf_rm, lm.get("home", ""), lm.get("away", ""))
             if real_round is None:
-                # Fallback: se per qualche motivo round_map non ha questa data
+                real_round = date_rm.get(lm["date"])
+            if real_round is None:
                 real_round = home_count
             new_matches.append({
                 "id": f"{prefix}{real_round:02d}",
@@ -1068,7 +1372,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.4 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.5 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
