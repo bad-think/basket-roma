@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-16T04:48:42.114918",
+  "last_updated": "2026-04-16T05:23:10.103575",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -452,8 +452,8 @@
       "time": "20:00",
       "home": "Luiss Roma",
       "away": "Tema Sinergie Faenza",
-      "sh": null,
-      "sa": null
+      "sh": 87,
+      "sa": 75
     },
     {
       "id": "l35",
@@ -470,15 +470,15 @@
   ],
   "standings": {
     "virtus": {
-      "pos": 1,
+      "pos": 2,
       "pts": 54,
       "w": 27,
-      "l": 6
+      "l": 7
     },
     "luiss": {
       "pos": 6,
-      "pts": 38,
-      "w": 19,
+      "pts": 40,
+      "w": 20,
       "l": 14
     }
   }
