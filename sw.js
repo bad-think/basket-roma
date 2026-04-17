@@ -3,7 +3,7 @@
 // v2 — Strategia differenziata per asset statici e dati
 // ============================================================
 
-const CACHE_VERSION = 'basket-roma-v2';
+const CACHE_VERSION = 'basket-roma-v3';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const DATA_CACHE    = `${CACHE_VERSION}-data`;
 
@@ -75,7 +75,15 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // 6. Asset statici → Cache-First
+  // 6. HTML (index.html, /) → Stale-While-Revalidate
+  //    Serve dalla cache subito (veloce), ma aggiorna in background.
+  //    Alla visita successiva l'utente ha la versione aggiornata.
+  if (path === '/' || path.endsWith('.html')) {
+    e.respondWith(staleWhileRevalidate(e.request));
+    return;
+  }
+
+  // 7. Asset statici (JS, CSS, immagini, manifest) → Cache-First
   e.respondWith(cacheFirstStatic(e.request));
 });
 
@@ -110,6 +118,29 @@ async function networkFirstData(request) {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   }
+}
+
+// ── Stale-While-Revalidate per HTML ──────────────────────────
+//    Serve dalla cache subito (caricamento istantaneo), intanto aggiorna
+//    dalla rete. Alla visita successiva l'utente ha la versione nuova
+//    senza bisogno di hard-refresh.
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  const cached = await cache.match(request);
+
+  const fetchPromise = fetch(request)
+    .then(response => {
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  // Cache presente → servila subito, la rete aggiorna in background
+  // Cache assente → aspetta la rete
+  return cached || await fetchPromise ||
+    new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
 }
 
 // ── Cache-First per asset statici ────────────────────────────
