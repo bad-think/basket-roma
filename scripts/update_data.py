@@ -741,12 +741,50 @@ def fetch_lnp_pdf_round_map(league_path, season, girone_letter=None, known_teams
     return round_map
 
 
+def _team_tokens(name_norm):
+    """Estrae token significativi (≥4 char) da un nome squadra normalizzato."""
+    return {w for w in name_norm.split() if len(w) >= 4}
+
+
+def _teams_match(name_a, name_b):
+    """
+    Verifica se due nomi squadra normalizzati si riferiscono alla stessa squadra.
+    Gestisce i cambi di sponsor/denominazione:
+      "consultinvest loreto pesaro" ↔ "loreto basket pesaro"  (condividono "loreto", "pesaro")
+      "raggisolaris faenza" ↔ "tema sinergie faenza"  (condividono "faenza")
+      "verodol cbd pielle livorno" ↔ "pielle livorno"  (substring + tokens)
+
+    Regole (in ordine):
+    1. Match esatto → True
+    2. Substring (una contenuta nell'altra) → True
+    3. ≥2 token significativi (≥4 char) in comune → True
+    4. ≥1 token significativo (≥5 char) in comune → True
+    """
+    if name_a == name_b:
+        return True
+    if name_a in name_b or name_b in name_a:
+        return True
+    ta = _team_tokens(name_a)
+    tb = _team_tokens(name_b)
+    shared = ta & tb
+    if len(shared) >= 2:
+        return True
+    # 1 token lungo (≥5) = tipicamente la città (Faenza, Chiusi, Ravenna)
+    if any(len(t) >= 5 for t in shared):
+        return True
+    return False
+
+
 def round_for_match(pdf_round_map, home, away):
     """
     Cerca il round di una partita nel pdf_round_map (chiavi normalizzate).
-    Match esatto su (home_norm, away_norm), con fallback substring se
-    i nomi non combaciano perfettamente (es. "Virtus GVM Roma 1960" vs
-    "Virtus GVM Roma" potrebbe variare leggermente tra LNP HTML e PDF).
+
+    Gestisce le discrepanze tra nomi squadra nel PDF (pubblicato a luglio
+    con i nomi ufficiali) e quelli nelle pagine LNP HTML (aggiornati con
+    i nuovi sponsor durante la stagione):
+    - PDF: "Loreto Basket Pesaro"  →  LNP: "Consultinvest Loreto Pesaro"
+    - PDF: "Raggisolaris Faenza"   →  LNP: "Tema Sinergie Faenza"
+    - PDF: "Pielle Livorno"        →  LNP: "Verodol CBD Pielle Livorno"
     """
     if not pdf_round_map:
         return None
@@ -757,9 +795,9 @@ def round_for_match(pdf_round_map, home, away):
     if (h_n, a_n) in pdf_round_map:
         return pdf_round_map[(h_n, a_n)]
 
-    # Match per substring (tollerante a varianti del nome)
+    # Match fuzzy con token overlap
     for (ph, pa), r in pdf_round_map.items():
-        if (h_n in ph or ph in h_n) and (a_n in pa or pa in a_n):
+        if _teams_match(h_n, ph) and _teams_match(a_n, pa):
             return r
 
     return None
