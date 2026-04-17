@@ -79,6 +79,13 @@ LEAGUE_LABELS = {
     "serie-a": "A",
 }
 
+# Mapping leghe → ID numerico per URL classifica LNP
+# URL pattern: https://www.legapallacanestro.com/serie/{id}/classifica
+LEAGUE_SERIE_IDS = {
+    "serie-b": 4,
+    "serie-a2": 1,
+}
+
 # Default config (compat con data.json esistente)
 CONFIG_DEFAULT = {
     "season": "2025-26",
@@ -1261,6 +1268,14 @@ def update_in_season(matches, config, standings):
             print(f"  🔄 [{team_key}] cambio lega rilevato: {old} → {league_label}")
             cfg_team["serie"] = league_label
             updated += 1
+
+        # Auto-aggiornamento URL classifica ufficiale LNP
+        serie_id = LEAGUE_SERIE_IDS.get(league_path)
+        if serie_id:
+            classifica_url = f"https://www.legapallacanestro.com/serie/{serie_id}/classifica"
+            if config.get("classifica_url") != classifica_url:
+                config["classifica_url"] = classifica_url
+                updated += 1
 
         # Parse calendario squadra
         lnp_matches = parse_lnp_calendar(html)
