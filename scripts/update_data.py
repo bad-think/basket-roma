@@ -296,6 +296,21 @@ def extract_opponents(lnp_matches, team_aliases):
     return opponents
 
 
+def filter_season(matches, season):
+    """Filtra partite alla stagione corrente (es. '2025-26' → date 2025-07..2026-06).
+    Necessario perché LNP a volte mostra anche la stagione precedente."""
+    if not season or not matches:
+        return matches
+    try:
+        y1 = int(season.split("-")[0])
+        y2 = int(f"{str(y1)[:2]}{season.split('-')[1]}")
+    except (ValueError, IndexError):
+        return matches
+    lo, hi = f"{y1}-07-01", f"{y2}-06-30"
+    out = [m for m in matches if lo <= m.get("date", "") <= hi]
+    return out if out else matches  # safety: se filtro troppo, tieni tutto
+
+
 # ================================================================
 # DISCOVERY LEGA E GIRONE
 # ================================================================
@@ -378,7 +393,7 @@ def discover_girone_slugs(league_path, opponent_names, own_slug):
     return girone_slugs
 
 
-def compute_full_standings(league_path, girone_slugs):
+def compute_full_standings(league_path, girone_slugs, season=None):
     """
     Per ogni squadra del girone fa fetch della pagina LNP e calcola W/L/pts.
     Restituisce (standings_list, all_matches) dove:
@@ -403,6 +418,7 @@ def compute_full_standings(league_path, girone_slugs):
         if not matches:
             print(f"     ⚠️  {slug}: calendario non parsabile")
             continue
+        matches = filter_season(matches, season)
 
         all_matches_collected.extend(matches)
 
@@ -1318,6 +1334,7 @@ def update_in_season(matches, config, standings):
         if not lnp_matches:
             print(f"  ⚠️  [{team_key}] calendario LNP vuoto")
             continue
+        lnp_matches = filter_season(lnp_matches, config.get("season"))
         print(f"  📋 [{team_key}] {len(lnp_matches)} partite nel calendario LNP")
 
         # Aggiorna partite in casa nel data.json
@@ -1342,7 +1359,9 @@ def update_in_season(matches, config, standings):
 
             if len(girone_slugs) >= 4:
                 print(f"  📥 Calcolo classifica completa girone...")
-                full, all_girone_matches = compute_full_standings(league_path, girone_slugs)
+                full, all_girone_matches = compute_full_standings(
+                    league_path, girone_slugs, season=config.get("season")
+                )
 
                 # Round map: prima fonte è il PDF ufficiale LNP (autoritativo).
                 # Fallback: algoritmo basato su date (legacy, può sbagliare ±5)
@@ -1495,6 +1514,10 @@ def bootstrap_new_season(config, current_season):
     new_season = f"{min_year}-{str(max_year)[-2:]}"
     print(f"  📅 Stagione rilevata: {new_season}")
 
+    # Filtra partite alla stagione rilevata (pagine LNP possono includere la precedente)
+    for d in discovered.values():
+        d["lnp_matches"] = filter_season(d["lnp_matches"], new_season)
+
     # Calcola round_map dal girone completo (necessario per ID/round corretti).
     # Priorità: PDF ufficiale LNP (autoritativo) > algoritmo basato su date.
     # Cache per league_path: se più squadre seguite sono nello stesso girone,
@@ -1511,7 +1534,7 @@ def bootstrap_new_season(config, current_season):
         print(f"     {len(girone_slugs)} squadre identificate")
         if len(girone_slugs) >= 4:
             print(f"  📥 Fetch calendari completi del girone...")
-            full, all_girone_matches = compute_full_standings(lp, girone_slugs)
+            full, all_girone_matches = compute_full_standings(lp, girone_slugs, season=new_season)
             date_round_map_by_league[lp] = build_round_map(all_girone_matches)
             # Tenta fetch PDF ufficiale (per girone noto da config)
             cfg_team = config.get("teams", {}).get(team_key, {})
