@@ -452,17 +452,32 @@ def compute_full_standings(league_path, girone_slugs, season=None):
         # Calcola W/L/pts usando il nome trovato come alias unico
         aliases = [team_name, sn, slug.replace("-", " ")]
         w, l, pts = calc_team_stats(matches, aliases)
+        # Calcola canestri fatti/subiti per quoziente canestri (tiebreaker)
+        pf = pa = 0
+        aliases_norm = [normalise(a) for a in aliases]
+        for m in matches:
+            if m.get("sh") is None or m.get("sa") is None:
+                continue
+            try:
+                sh, sa = int(m["sh"]), int(m["sa"])
+            except (ValueError, TypeError):
+                continue
+            hn = normalise(m["home"])
+            is_home = any(an in hn or hn in an for an in aliases_norm)
+            if is_home:
+                pf += sh; pa += sa
+            else:
+                pf += sa; pa += sh
         teams.append({
             "slug": slug,
             "name": team_name,
-            "w": w,
-            "l": l,
-            "pts": pts,
+            "w": w, "l": l, "pts": pts,
+            "pf": pf, "pa": pa,
         })
 
-    # Costruisci matrice scontri diretti da all_matches_collected
-    # h2h[(team_a_norm, team_b_norm)] = numero vittorie di A vs B
-    h2h = {}
+    # Costruisci matrice scontri diretti e canestri H2H
+    h2h = {}      # (a_norm, b_norm) → wins di A vs B
+    h2h_pf = {}   # (a_norm, b_norm) → canestri di A vs B (somma partite)
     for m in all_matches_collected:
         if m.get("sh") is None or m.get("sa") is None:
             continue
@@ -471,26 +486,36 @@ def compute_full_standings(league_path, girone_slugs, season=None):
         except (ValueError, TypeError):
             continue
         hn, an = normalise(m["home"]), normalise(m["away"])
+        h2h_pf[(hn, an)] = h2h_pf.get((hn, an), 0) + sh
+        h2h_pf[(an, hn)] = h2h_pf.get((an, hn), 0) + sa
         if sh > sa:
             h2h[(hn, an)] = h2h.get((hn, an), 0) + 1
         elif sa > sh:
             h2h[(an, hn)] = h2h.get((an, hn), 0) + 1
 
-    def h2h_wins(team_name_norm, rivals_norm):
-        """Vittorie H2H di team contro tutti i rivals."""
-        return sum(h2h.get((team_name_norm, r), 0) for r in rivals_norm)
+    def h2h_wins(tn, rivals):
+        return sum(h2h.get((tn, r), 0) for r in rivals)
 
-    # Ordina: pts desc, poi per gruppi a pari punti usa H2H, poi W desc
+    def h2h_diff(tn, rivals):
+        """Differenza canestri H2H: fatti - subiti contro i rivals."""
+        scored = sum(h2h_pf.get((tn, r), 0) for r in rivals)
+        conceded = sum(h2h_pf.get((r, tn), 0) for r in rivals)
+        return scored - conceded
+
+    # Ordina: pts desc, poi per gruppi a pari punti:
+    #   1. H2H wins desc  2. H2H canestri diff desc
+    #   3. Overall canestri diff desc  4. W desc
     from itertools import groupby
     teams.sort(key=lambda t: (-t["pts"], -t["w"]))
     ordered = []
     for _key, group in groupby(teams, key=lambda t: t["pts"]):
         tied = list(group)
         if len(tied) > 1:
-            norms = {normalise(t["name"]): t for t in tied}
-            norm_set = set(norms.keys())
+            norm_set = {normalise(t["name"]) for t in tied}
             tied.sort(key=lambda t: (
                 -h2h_wins(normalise(t["name"]), norm_set - {normalise(t["name"])}),
+                -h2h_diff(normalise(t["name"]), norm_set - {normalise(t["name"])}),
+                -(t["pf"] - t["pa"]),
                 -t["w"],
                 t["name"].lower(),
             ))
