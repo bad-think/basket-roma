@@ -432,7 +432,43 @@ def compute_full_standings(league_path, girone_slugs):
             "pts": pts,
         })
 
-    teams.sort(key=lambda t: (-t["pts"], -t["w"], t["name"].lower()))
+    # Costruisci matrice scontri diretti da all_matches_collected
+    # h2h[(team_a_norm, team_b_norm)] = numero vittorie di A vs B
+    h2h = {}
+    for m in all_matches_collected:
+        if m.get("sh") is None or m.get("sa") is None:
+            continue
+        try:
+            sh, sa = int(m["sh"]), int(m["sa"])
+        except (ValueError, TypeError):
+            continue
+        hn, an = normalise(m["home"]), normalise(m["away"])
+        if sh > sa:
+            h2h[(hn, an)] = h2h.get((hn, an), 0) + 1
+        elif sa > sh:
+            h2h[(an, hn)] = h2h.get((an, hn), 0) + 1
+
+    def h2h_wins(team_name_norm, rivals_norm):
+        """Vittorie H2H di team contro tutti i rivals."""
+        return sum(h2h.get((team_name_norm, r), 0) for r in rivals_norm)
+
+    # Ordina: pts desc, poi per gruppi a pari punti usa H2H, poi W desc
+    from itertools import groupby
+    teams.sort(key=lambda t: (-t["pts"], -t["w"]))
+    ordered = []
+    for _key, group in groupby(teams, key=lambda t: t["pts"]):
+        tied = list(group)
+        if len(tied) > 1:
+            norms = {normalise(t["name"]): t for t in tied}
+            norm_set = set(norms.keys())
+            tied.sort(key=lambda t: (
+                -h2h_wins(normalise(t["name"]), norm_set - {normalise(t["name"])}),
+                -t["w"],
+                t["name"].lower(),
+            ))
+        ordered.extend(tied)
+    teams = ordered
+
     for i, t in enumerate(teams, start=1):
         t["pos"] = i
     return teams, all_matches_collected
