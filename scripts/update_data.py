@@ -297,18 +297,30 @@ def extract_opponents(lnp_matches, team_aliases):
 
 
 def filter_season(matches, season):
-    """Filtra partite alla stagione corrente (es. '2025-26' → date 2025-07..2026-06).
-    Necessario perché LNP a volte mostra anche la stagione precedente."""
-    if not season or not matches:
+    """Filtra partite alla stagione corrente e deduplica.
+    LNP a volte mostra stagioni precedenti o duplica le righe nell'HTML."""
+    if not matches:
         return matches
-    try:
-        y1 = int(season.split("-")[0])
-        y2 = int(f"{str(y1)[:2]}{season.split('-')[1]}")
-    except (ValueError, IndexError):
-        return matches
-    lo, hi = f"{y1}-07-01", f"{y2}-06-30"
-    out = [m for m in matches if lo <= m.get("date", "") <= hi]
-    return out if out else matches  # safety: se filtro troppo, tieni tutto
+    # Dedup per (data, home, away)
+    seen = set()
+    deduped = []
+    for m in matches:
+        key = (m.get("date"), normalise(m.get("home", "")), normalise(m.get("away", "")))
+        if key not in seen:
+            seen.add(key)
+            deduped.append(m)
+    # Filtro stagione
+    if season:
+        try:
+            y1 = int(season.split("-")[0])
+            y2 = int(f"{str(y1)[:2]}{season.split('-')[1]}")
+            lo, hi = f"{y1}-07-01", f"{y2}-06-30"
+            filtered = [m for m in deduped if lo <= m.get("date", "") <= hi]
+            if filtered:
+                deduped = filtered
+        except (ValueError, IndexError):
+            pass
+    return deduped
 
 
 # ================================================================
