@@ -48,6 +48,7 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;flex:1}
 .schip{flex-shrink:0;padding:8px 14px;border-radius:12px;border:1px solid;font-size:12px;font-weight:500;white-space:nowrap}
 .schip.sv{background:rgba(200,16,46,.08);border-color:rgba(200,16,46,.2);color:rgba(255,110,110,.9)}
 .schip.sl{background:rgba(0,48,135,.12);border-color:rgba(0,48,135,.3);color:rgba(110,160,255,.9)}
+.schip.slink{background:rgba(245,197,24,.08);border-color:rgba(245,197,24,.25);color:rgba(245,197,24,.85);text-decoration:none;font-size:11px}
 .schip b{font-family:'Bebas Neue',sans-serif;font-size:15px;margin-right:3px}
 
 /* HERO */
@@ -285,6 +286,7 @@ if (savedMatches && Array.isArray(savedMatches)) {
 
 let standings = JSON.parse(localStorage.getItem('brc_s') || 'null') || {...STANDINGS};
 let lastUpdate = localStorage.getItem('brc_lu') || null;
+let classificaUrl = localStorage.getItem('brc_cu') || null;
 let currentTab = 'all';
 let notifEnabled = localStorage.getItem('brc_n') === '1';
 let cdTimer = null;
@@ -360,6 +362,10 @@ function doRefresh(manual) {
         standings = data.standings;
         localStorage.setItem('brc_s', JSON.stringify(standings));
       }
+      if (data.config && data.config.classifica_url) {
+        classificaUrl = data.config.classifica_url;
+        localStorage.setItem('brc_cu', classificaUrl);
+      }
       const ts = data.last_updated
         ? new Date(data.last_updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
         : new Date().toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -433,9 +439,13 @@ function render() {
 function renderStandings() {
   const v = getTeamStats('virtus');
   const l = getTeamStats('luiss');
+  const link = classificaUrl
+    ? `<a href="${classificaUrl}" target="_blank" rel="noopener" class="schip slink">📊 Classifica ufficiale</a>`
+    : '';
   return `<div class="stand">
     <div class="schip sv"><b>${v.pos}°</b> Virtus Roma — ${v.pts}pt (${v.w}V-${v.l}P)</div>
     <div class="schip sl"><b>${l.pos}°</b> LUISS Roma — ${l.pts}pt (${l.w}V-${l.l}P)</div>
+    ${link}
   </div>`;
 }
 
