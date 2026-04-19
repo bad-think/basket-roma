@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-18T10:33:34.430588",
+  "last_updated": "2026-04-19T05:21:28.722468",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -465,8 +465,8 @@
       "time": "18:30",
       "home": "Luiss Roma",
       "away": "Verodol CBD Pielle Livorno",
-      "sh": null,
-      "sa": null
+      "sh": 77,
+      "sa": 71
     }
   ],
   "standings": {
@@ -478,8 +478,8 @@
     },
     "luiss": {
       "pos": 6,
-      "pts": 40,
-      "w": 20,
+      "pts": 42,
+      "w": 21,
       "l": 14
     }
   }
