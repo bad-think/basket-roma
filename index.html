@@ -939,6 +939,14 @@ function getTeamStats(teamKey) {
 function escHtml(s){
   return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function teamInitials(name){
+  if (!name) return '?';
+  const skip = new Set(['basket','assicurazioni','consorzio','leonardo','dany','golfo','cbd','gvm','psa','malvin','solbat','up','old','wild','west']);
+  const words = name.split(/\s+/).filter(w => w.length >= 2 && !skip.has(w.toLowerCase()));
+  if (!words.length) return name.charAt(0).toUpperCase();
+  if (words.length === 1) return words[0].substring(0,3).toUpperCase();
+  return words.slice(-2).map(w => w.charAt(0)).join('').toUpperCase();
+}
 
 // Calcola etichetta stagione (es. "'25/'26") dai dati partite — auto-aggiornante
 function getCurrentSeasonLabel() {
@@ -1166,7 +1174,7 @@ function renderHero(m) {
         <div class="sb-vs-line"></div>
       </div>
       <div class="sb-row">
-        <div class="sb-away-box">?</div>
+        <div class="sb-away-box">${teamInitials(m.away)}</div>
         <div class="sb-team-name" style="font-size:14px;color:#222">${escHtml(m.away).toUpperCase()}</div>
         <div class="sb-badge away">AWAY</div>
       </div>
