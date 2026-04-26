@@ -986,22 +986,12 @@ function doRefresh(manual) {
     .then(r => r.ok ? r.json() : Promise.reject('404'))
     .then(data => {
       if (data.matches && data.matches.length) {
-        data.matches.forEach(dm => {
-          const t = matches.find(m => m.id === dm.id || (m.team === dm.team && m.round === dm.round));
-          if (t) {
-            if (dm.sh !== undefined && dm.sh !== null) t.sh = dm.sh;
-            if (dm.sa !== undefined && dm.sa !== null) t.sa = dm.sa;
-            if (dm.date) t.date = dm.date;
-            if (dm.time) t.time = dm.time;
-            if (dm.away) t.away = dm.away;
-            if (dm.home) t.home = dm.home;
-            if (dm.phase) t.phase = dm.phase;
-          }
-          // Aggiungi partite NUOVE (es. playoff non presenti nel default)
-          else if (dm.id && dm.team && dm.date) {
-            matches.push({...dm});
-          }
-        });
+        // Sostituzione completa: data.json è la fonte autoritativa
+        matches = data.matches.map(dm => ({
+          id: dm.id, team: dm.team, phase: dm.phase || 'regular',
+          round: dm.round, date: dm.date, time: dm.time,
+          home: dm.home, away: dm.away, sh: dm.sh, sa: dm.sa
+        }));
         localStorage.setItem('brc_m', JSON.stringify(matches));
       }
       if (data.standings) {
