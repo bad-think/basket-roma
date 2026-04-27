@@ -1417,6 +1417,7 @@ def update_in_season(matches, config, standings):
                     "standings": full,
                     "pdf_round_map": pdf_round_map,
                     "date_round_map": date_round_map,
+                    "all_girone_matches": all_girone_matches,
                 }
                 src = "PDF" if pdf_round_map else "date-based"
                 pdf_count = len(pdf_round_map)
@@ -1478,6 +1479,32 @@ def update_in_season(matches, config, standings):
         )
         if inserted:
             updated += inserted
+
+        # Fill punteggi mancanti dal girone completo (19 pagine squadra).
+        # Se la pagina Virtus non ha ancora il risultato ma quella di Chiusi sì,
+        # lo troviamo in all_girone_matches (dal lato avversario).
+        girone_matches = (cache_entry or {}).get("all_girone_matches", [])
+        if girone_matches:
+            filled = 0
+            for m in matches:
+                if m.get("team") != team_key or m.get("sh") is not None:
+                    continue
+                m_home_n = normalise(m.get("home", ""))
+                m_away_n = normalise(m.get("away", ""))
+                for gm in girone_matches:
+                    gh_n = normalise(gm.get("home", ""))
+                    ga_n = normalise(gm.get("away", ""))
+                    if gm.get("sh") is None:
+                        continue
+                    if (_teams_match(m_home_n, gh_n) and _teams_match(m_away_n, ga_n)):
+                        m["sh"] = gm["sh"]
+                        m["sa"] = gm["sa"]
+                        print(f"  ✅ [{team_key}] {m['away']}: "
+                              f"{gm['sh']}-{gm['sa']} (da girone)")
+                        filled += 1
+                        break
+            if filled:
+                updated += filled
 
     # Conta cambio standings come aggiornamento (oltre a quelli già contati)
     if json.dumps(new_standings, sort_keys=True) != initial_snap:
