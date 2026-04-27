@@ -1331,43 +1331,37 @@ function renderSeasonBanners() {
     banners.push(makeBanner('warning',
       'BREAKING — RISULTATI MANCANTI',
       `${w.pastNoScore.length} RISULTAT${w.pastNoScore.length>1?'I':'O'} DA AGGIORNARE`,
-      `${nomi} — lo script dovrebbe aggiornarli automaticamente al prossimo run. Se non avviene, aggiorna <code>data.json</code> manualmente.`,
-      [{label:'PIANETABASKET', url:'https://www.pianetabasket.com/serie-b/'}]
+      `${nomi} — verranno aggiornati automaticamente entro poche ore.`,
+      [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]
     ));
   }
 
-  // SCENARIO B: regular finita, no post in JSON
+  // SCENARIO B: regular finita, in attesa playoff
   if (now > w.regularEnd.getTime() && !w.hasPostseason && now <= w.seasonEnd.getTime()) {
     banners.push(makeBanner('action',
-      '★ AZIONE RICHIESTA ★',
-      'PLAYOFF E PLAY-IN DA AGGIUNGERE',
-      `La regular season è terminata il <em>${escHtml(fmtShort(w.regularEnd))}</em>. Se Virtus o LUISS sono qualificate, aggiungi le loro partite casalinghe in <code>data.json</code> con <code>phase: "playoff"</code> / <code>"playin"</code> / <code>"playout"</code>.`,
-      [
-        {label:'DATE LNP', url:'https://www.legapallacanestro.com/serie-b-nazionale-old-wild-west-202526-le-date-della-stagione'},
-        {label:'PIANETABASKET', url:'https://www.pianetabasket.com/serie-b/'}
-      ]
+      '🏀 FINE REGULAR SEASON',
+      'IN ATTESA DEI PLAYOFF',
+      `La regular season è terminata il <em>${escHtml(fmtShort(w.regularEnd))}</em>. Le partite di playoff e play-in verranno aggiunte automaticamente quando il calendario sarà disponibile su LNP.`,
+      [{label:'CLASSIFICA LNP', url:'https://www.legapallacanestro.com/serie/4/classifica'}]
     ));
   }
 
   // SCENARIO C: playoff in corso ma risultati mancanti
   if (w.hasPostseason && w.postNoScore.length > 0) {
-    const nomi = w.postNoScore.map(m =>
-      `<em>${escHtml(m.home)} VS ${escHtml(m.away)}</em>`).join(', ');
     banners.push(makeBanner('warning',
-      'PLAYOFF — UPDATE NEEDED',
-      `${w.postNoScore.length} GARA${w.postNoScore.length>1?'E':''} SENZA PUNTEGGIO`,
-      `${nomi} — aggiorna <code>data.json</code> con i risultati e/o le date delle prossime gare.`,
-      [{label:'PIANETABASKET', url:'https://www.pianetabasket.com/serie-b/'}]
+      '🏀 PLAYOFF IN CORSO',
+      `${w.postNoScore.length} GARA${w.postNoScore.length>1?'E':''} IN PROGRAMMA`,
+      `I risultati verranno aggiornati automaticamente al termine delle partite.`,
+      [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]
     ));
   }
 
   // SCENARIO D: stagione conclusa
   if (now > w.seasonEnd.getTime() && now < w.newSeasonStart.getTime()) {
-    const nextSeasonLabel = `${w.newSeasonStart.getFullYear()}-${String(w.newSeasonStart.getFullYear()+1).slice(2)}`;
     banners.push(makeBanner('done',
       '★ STAGIONE CONCLUSA ★',
       `STAGIONE ${w.seasonEnd.getFullYear()-1}-${String(w.seasonEnd.getFullYear()).slice(2)} TERMINATA`,
-      `Tutti i risultati sono definitivi. Quando LNP pubblicherà il calendario <em>${nextSeasonLabel}</em> (atteso luglio-agosto), aggiorna <code>data.json</code> con le nuove partite e verifica i gironi (le due squadre potrebbero finire in campionati diversi).`,
+      `Tutti i risultati sono definitivi. Il calendario della prossima stagione verrà caricato automaticamente quando disponibile (luglio-agosto).`,
       [{label:'LEGAPALLACANESTRO', url:'https://www.legapallacanestro.com'}]
     ));
   }
@@ -1382,12 +1376,11 @@ function renderSeasonBanners() {
     );
     if (!hasNewSeason) {
       banners.push(makeBanner('new',
-        '★ NEW SEASON ALERT ★',
-        `CALENDARIO ${yr}-${String(nextYr).slice(2)} NON CARICATO`,
-        `Il calendario ufficiale della stagione <em>${yr}-${String(nextYr).slice(2)}</em> dovrebbe essere disponibile. Aggiorna <code>data.json</code> con le partite casalinghe. <em>Verifica se le due squadre giocano nello stesso campionato</em> (potrebbero essere in Serie B Nazionale, Serie B Interregionale, A2 o leghe diverse).`,
+        '★ NUOVA STAGIONE ★',
+        `CALENDARIO ${yr}-${String(nextYr).slice(2)}`,
+        `In attesa del calendario ufficiale della stagione <em>${yr}-${String(nextYr).slice(2)}</em>. Verrà caricato automaticamente appena disponibile su LNP.`,
         [
           {label:'LNP', url:'https://www.legapallacanestro.com'},
-          {label:'PIANETABASKET', url:'https://www.pianetabasket.com/serie-b/'}
         ]
       ));
     }
