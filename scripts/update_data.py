@@ -86,6 +86,14 @@ LEAGUE_SERIE_IDS = {
     "serie-a2": 1,
 }
 
+# Mapping leghe+girone → codice Domino API (risultati in tempo reale)
+# URL: https://lnpstat.domino.it/getstatisticsfiles?task=schedule&year=x{YYNN}&league={code}&round={N}
+DOMINO_LEAGUE_CODES = {
+    ("serie-b", "b"): "ita3_b",
+    ("serie-b", "a"): "ita3_a",
+    ("serie-a2", None): "ita2",
+}
+
 # Default config (compat con data.json esistente)
 CONFIG_DEFAULT = {
     "season": "2025-26",
@@ -899,6 +907,61 @@ def round_for_match(pdf_round_map, home, away):
     return None
 
 
+# ================================================================
+# DOMINO API — RISULTATI IN TEMPO REALE
+# ================================================================
+
+def domino_season_code(season):
+    """'2025-26' → 'x2526'"""
+    try:
+        y1 = int(season.split("-")[0])
+        y2_short = season.split("-")[1]
+        return f"x{str(y1)[-2:]}{y2_short}"
+    except (ValueError, IndexError):
+        return None
+
+
+def fetch_domino_scores(league_path, girone_letter, season, rounds):
+    """
+    Fetcha i risultati da Domino API per le giornate specificate.
+    Restituisce dict {(home_norm, away_norm): (sh, sa)} per partite finite.
+    `rounds` = lista/set di numeri di round da fetchare.
+    """
+    girone_key = (girone_letter or "").lower() or None
+    code = DOMINO_LEAGUE_CODES.get((league_path, girone_key))
+    if not code:
+        return {}
+    year = domino_season_code(season)
+    if not year:
+        return {}
+
+    results = {}
+    for rnd in rounds:
+        url = (f"https://lnpstat.domino.it/getstatisticsfiles"
+               f"?task=schedule&year={year}&league={code}&round={rnd}")
+        raw = fetch(url, timeout=5)
+        if not raw:
+            continue
+        try:
+            games = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        for g in games:
+            if g.get("game_status") != "finished":
+                continue
+            try:
+                sh = int(g["score_home"])
+                sa = int(g["score_away"])
+            except (ValueError, KeyError, TypeError):
+                continue
+            hn = normalise(g.get("teamname_home", ""))
+            an = normalise(g.get("teamname_away", ""))
+            if hn and an:
+                results[(hn, an)] = (sh, sa)
+
+    return results
+
+
 def build_round_map(all_girone_matches):
     """
     Costruisce una mappa date→round_di_campionato dal calendario completo
@@ -1480,9 +1543,35 @@ def update_in_season(matches, config, standings):
         if inserted:
             updated += inserted
 
-        # Fill punteggi mancanti dal girone completo (19 pagine squadra).
-        # Se la pagina Virtus non ha ancora il risultato ma quella di Chiusi sì,
-        # lo troviamo in all_girone_matches (dal lato avversario).
+        # Fill punteggi mancanti — fonte 1: Domino API (tempo reale)
+        missing = [m for m in matches
+                   if m.get("team") == team_key and m.get("sh") is None
+                   and m.get("date", "9") < datetime.now().strftime("%Y-%m-%d")]
+        if missing:
+            missing_rounds = {m["round"] for m in missing if m.get("round")}
+            if missing_rounds:
+                girone_letter = (cfg_team.get("girone") or "").lower() or None
+                domino = fetch_domino_scores(
+                    league_path, girone_letter,
+                    config.get("season", ""), missing_rounds
+                )
+                if domino:
+                    for m in missing:
+                        key = (normalise(m.get("home", "")), normalise(m.get("away", "")))
+                        score = domino.get(key)
+                        if not score:
+                            # Fuzzy match
+                            for (dh, da), s in domino.items():
+                                if _teams_match(key[0], dh) and _teams_match(key[1], da):
+                                    score = s
+                                    break
+                        if score:
+                            m["sh"], m["sa"] = score
+                            print(f"  ⚡ [{team_key}] {m['away']}: "
+                                  f"{score[0]}-{score[1]} (Domino API)")
+                            updated += 1
+
+        # Fill punteggi mancanti — fonte 2: girone completo (19 pagine squadra)
         girone_matches = (cache_entry or {}).get("all_girone_matches", [])
         if girone_matches:
             filled = 0
