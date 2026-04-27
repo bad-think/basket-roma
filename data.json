@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-26T18:33:57.706631",
+  "last_updated": "2026-04-27T05:20:09.565398",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -249,8 +249,8 @@
       "time": "18:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Umana San Giobbe Chiusi",
-      "sh": null,
-      "sa": null
+      "sh": 92,
+      "sa": 76
     },
     {
       "id": "l03",
@@ -472,8 +472,8 @@
   "standings": {
     "virtus": {
       "pos": 1,
-      "pts": 56,
-      "w": 28,
+      "pts": 58,
+      "w": 29,
       "l": 7
     },
     "luiss": {
