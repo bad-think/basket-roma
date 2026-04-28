@@ -13,7 +13,7 @@
 <title>Roma Basket Casa — Roma Basket Sport</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@400;500;700;900&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --cream:#FFF6D8;
@@ -534,6 +534,7 @@ header{
   border:3px solid var(--black);
   box-shadow:5px 5px 0 var(--black);
   overflow:hidden;
+  position:relative;
 }
 .sbnr-top{
   padding:6px 11px;color:var(--yellow);
@@ -541,12 +542,13 @@ header{
   font-size:10px;letter-spacing:2px;
   display:flex;align-items:center;gap:8px;
   border-bottom:2px solid var(--black);
+  position:relative;z-index:2;
 }
 .sbnr.sb-action .sbnr-top{background:var(--red)}
 .sbnr.sb-warning .sbnr-top{background:var(--blue)}
 .sbnr.sb-done .sbnr-top{background:#1a7a2e}
 .sbnr.sb-new .sbnr-top{background:var(--black)}
-.sbnr-body{padding:12px 14px 14px}
+.sbnr-body{padding:12px 14px 14px;position:relative;z-index:2}
 .sbnr-title{
   font-family:'Archivo Black',sans-serif;
   font-size:18px;letter-spacing:-.3px;line-height:1.1;
@@ -556,6 +558,186 @@ header{
 .sbnr.sb-warning .sbnr-title{color:var(--blue)}
 .sbnr.sb-done .sbnr-title{color:#1a7a2e}
 .sbnr.sb-new .sbnr-title{color:var(--black)}
+
+/* === HALFTIME — countdown grande con scoreboard fittizio === */
+.bnr-halftime{
+  background:var(--black);
+  color:var(--yellow);
+  padding:14px;
+  margin:10px -14px -14px;
+  border-top:3px solid var(--yellow);
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.bnr-halftime::before{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(circle, rgba(255,212,0,.12) 1px, transparent 1.5px);
+  background-size:8px 8px;
+}
+.bnr-ht-label{
+  font-family:'Archivo Black',sans-serif;
+  font-size:10px;letter-spacing:2.5px;color:var(--yellow);
+  margin-bottom:8px;position:relative;
+}
+.bnr-ht-score{
+  font-family:'Archivo Black',sans-serif;
+  font-size:38px;line-height:1;letter-spacing:-2px;
+  color:var(--yellow);
+  text-shadow:3px 3px 0 var(--red);
+  margin:6px 0;position:relative;
+}
+.bnr-ht-score .ht-dash{color:#fff;margin:0 6px}
+.bnr-ht-q{
+  display:inline-block;
+  background:var(--red);color:var(--yellow);
+  font-family:'Archivo Black',sans-serif;
+  font-size:11px;letter-spacing:2px;
+  padding:3px 10px;border:2px solid var(--yellow);
+  position:relative;
+}
+
+/* === SCOUTING — clipboard del coach === */
+.bnr-scout{
+  background:repeating-linear-gradient(
+    transparent 0, transparent 33px,
+    rgba(30,58,138,.18) 33px, rgba(30,58,138,.18) 34px
+  );
+  border:2px dashed var(--blue);
+  padding:18px 13px 11px;
+  margin:14px 0 0;
+  position:relative;
+}
+.bnr-scout::before{
+  content:'CLIPBOARD';position:absolute;top:-9px;left:14px;
+  background:var(--blue);color:var(--yellow);
+  font-family:'Archivo Black',sans-serif;
+  font-size:9px;letter-spacing:2px;
+  padding:2px 8px;border:2px solid var(--blue);
+}
+.bnr-scout-row{
+  display:flex;gap:10px;font-size:13px;color:var(--black);
+  font-weight:600;align-items:center;height:34px;line-height:1.2;
+  white-space:nowrap;overflow:hidden;
+}
+.bnr-scout-row span:last-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bnr-scout-check{
+  flex-shrink:0;width:18px;height:18px;
+  border:2px solid var(--blue);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Archivo Black',sans-serif;font-size:13px;color:var(--blue);
+  background:var(--cream);
+}
+.bnr-scout-check.done{background:var(--blue);color:var(--yellow)}
+
+/* === STAR BURST — celebrativo per fine stagione === */
+.bnr-burst{
+  background:var(--yellow);
+  color:var(--black);
+  padding:18px 14px;
+  margin:10px -14px -14px;
+  border-top:3px solid var(--black);
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.bnr-burst::before{
+  content:'';position:absolute;inset:0;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg, transparent 18deg,
+      rgba(232,17,45,.08) 18deg, rgba(232,17,45,.08) 36deg);
+  pointer-events:none;
+}
+.bnr-burst-stars{
+  font-size:24px;letter-spacing:6px;color:var(--red);
+  margin-bottom:6px;position:relative;
+  text-shadow:2px 2px 0 var(--black);
+}
+.bnr-burst-headline{
+  font-family:'Archivo Black',sans-serif;
+  font-size:22px;letter-spacing:-.5px;color:var(--black);
+  text-shadow:2px 2px 0 var(--red);
+  -webkit-text-stroke:.5px var(--black);
+  line-height:1;position:relative;
+  transform:skewX(-6deg);
+}
+.bnr-burst-sub{
+  font-family:'Archivo Black',sans-serif;
+  font-size:10px;letter-spacing:2px;color:var(--black);
+  margin-top:8px;position:relative;
+}
+
+/* === TEST PATTERN — TV barre per "in attesa" === */
+.bnr-testpat{
+  display:flex;height:42px;
+  margin:10px -14px -14px;
+  border-top:3px solid var(--black);
+}
+.bnr-testpat>div{flex:1;display:flex;align-items:center;justify-content:center}
+.bnr-testpat .tp-1{background:#fff}
+.bnr-testpat .tp-2{background:var(--yellow)}
+.bnr-testpat .tp-3{background:#00BFA0}
+.bnr-testpat .tp-4{background:var(--green)}
+.bnr-testpat .tp-5{background:#C72BC4}
+.bnr-testpat .tp-6{background:var(--red)}
+.bnr-testpat .tp-7{background:var(--blue)}
+.bnr-tp-label{
+  text-align:center;background:var(--black);color:var(--yellow);
+  font-family:'Archivo Black',sans-serif;
+  font-size:11px;letter-spacing:3px;
+  padding:8px;margin:10px -14px -14px;
+  border-top:3px solid var(--black);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.bnr-tp-label .tp-bounce{
+  display:inline-block;animation:bounce 1.2s ease-in-out infinite;
+}
+@keyframes bounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+
+/* === COUNTDOWN — fine regular fino a primo playoff === */
+.bnr-countdown{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  margin:10px 0 0;
+}
+.bnr-cd-box{
+  background:var(--black);color:var(--yellow);
+  border:2px solid var(--black);
+  text-align:center;padding:8px 4px;
+  box-shadow:2px 2px 0 var(--red);
+}
+.bnr-cd-num{
+  font-family:'Archivo Black',sans-serif;
+  font-size:22px;line-height:1;letter-spacing:-1px;
+}
+.bnr-cd-lbl{
+  font-size:8px;letter-spacing:1.5px;font-weight:700;
+  margin-top:3px;color:var(--yellow);opacity:.85;
+}
+
+/* === MISSING SCORES — "ON THE WIRE" stile feed agenzia === */
+.bnr-wire{
+  background:var(--black);color:var(--yellow);
+  font-family:'JetBrains Mono',monospace;
+  padding:10px 12px;margin:10px -14px -14px;
+  border-top:3px solid var(--yellow);
+  font-size:11px;line-height:1.7;
+  letter-spacing:.5px;
+}
+.bnr-wire-row{display:flex;gap:6px;align-items:center;padding:2px 0}
+.bnr-wire-tag{
+  background:var(--yellow);color:var(--black);
+  padding:1px 5px;font-weight:700;font-size:9px;
+  letter-spacing:1px;font-family:'Archivo Black',sans-serif;
+  flex-shrink:0;
+}
+.bnr-wire-cursor{
+  display:inline-block;width:8px;height:13px;
+  background:var(--yellow);
+  animation:blink 1s steps(2) infinite;vertical-align:middle;
+}
+@keyframes blink{50%{opacity:0}}
 .sbnr-text{
   font-size:13px;color:#333;line-height:1.5;
   font-weight:500;
@@ -1318,71 +1500,141 @@ function fmtShort(d) {
   return `${D[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function makeRichBanner(type, label, title, innerHtml, links) {
+  const btns = (links||[]).map(l =>
+    `<a class="sb-btn" href="${escHtml(l.url)}" target="_blank" rel="noopener">★ ${escHtml(l.label)}</a>`
+  ).join('');
+  return `<div class="sbnr sb-${type}">
+    <div class="sbnr-top"><span class="live-dot"></span>${escHtml(label)}</div>
+    <div class="sbnr-body">
+      <div class="sbnr-title">${title}</div>
+      ${innerHtml}
+      ${btns ? `<div class="sbnr-actions">${btns}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// Debug: ?banner=wire|halftime|testpat|buzzer|camp|all forza i banner
+function getDebugBanner() {
+  try {
+    const p = new URLSearchParams(location.search).get('banner');
+    return p ? p.toLowerCase() : null;
+  } catch(e) { return null; }
+}
+
 function renderSeasonBanners() {
   const w = getSeasonWindows();
   if (!w) return '';
   const now = today().getTime();
   const banners = [];
+  const dbg = getDebugBanner();
+  const forceAll = dbg === 'all';
 
-  // SCENARIO A: risultati regular mancanti
-  if (w.pastNoScore.length > 0 && now <= w.regularEnd.getTime() + 3 * 86400000) {
-    const nomi = w.pastNoScore.map(m =>
-      `<em>${escHtml(m.home)} VS ${escHtml(m.away)} (G${m.round})</em>`).join(', ');
-    banners.push(makeBanner('warning',
-      'BREAKING — RISULTATI MANCANTI',
-      `${w.pastNoScore.length} RISULTAT${w.pastNoScore.length>1?'I':'O'} DA AGGIORNARE`,
-      `${nomi} — verranno aggiornati automaticamente entro poche ore.`,
-      [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]
-    ));
+  // SCENARIO A: risultati regular mancanti — "ON THE WIRE"
+  if (forceAll || dbg === 'wire' || (!dbg && w.pastNoScore.length > 0 && now <= w.regularEnd.getTime() + 3 * 86400000)) {
+    if ((dbg === 'wire' || forceAll) && w.pastNoScore.length === 0) {
+      // demo data
+      w.pastNoScore = [
+        {team:'virtus', round:18, home:'Virtus Roma', away:'Nardo Basket', sh:null},
+        {team:'luiss', round:19, home:'LUISS Roma', away:'Brindisi Basket', sh:null},
+        {team:'virtus', round:20, home:'Virtus Roma', away:'Sant Antimo', sh:null},
+      ];
+    }
+    if (w.pastNoScore.length > 0) {
+    const rows = w.pastNoScore.slice(0,4).map(m => {
+      const tag = m.team==='virtus'?'VIR':'LUI';
+      const opp = m.away.split(' ').slice(0,2).join(' ').toUpperCase();
+      return `<div class="bnr-wire-row"><span class="bnr-wire-tag">${tag}</span><span>G${m.round} VS ${escHtml(opp)} · score: --</span></div>`;
+    }).join('');
+    const more = w.pastNoScore.length > 4 ? `<div class="bnr-wire-row" style="opacity:.6">+ altri ${w.pastNoScore.length-4} in attesa</div>` : '';
+    const inner = `
+      <div class="sbnr-text">Aggiornamento dati in arrivo dalla redazione — sync ogni poche ore.</div>
+      <div class="bnr-wire">
+        <div style="opacity:.7;font-size:9px;letter-spacing:2px;margin-bottom:4px">▶ FEED RISULTATI</div>
+        ${rows}${more}
+        <div class="bnr-wire-row" style="margin-top:4px"><span style="opacity:.7">> in arrivo<span class="bnr-wire-cursor"></span></span></div>
+      </div>`;
+    banners.push(makeRichBanner('warning', '★ ON THE WIRE ★',
+      `${w.pastNoScore.length} RISULTAT${w.pastNoScore.length>1?'I':'O'} IN ARRIVO`, inner,
+      [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]));
+    }
   }
 
-  // SCENARIO B: regular finita, in attesa playoff
-  if (now > w.regularEnd.getTime() && !w.hasPostseason && now <= w.seasonEnd.getTime()) {
-    banners.push(makeBanner('action',
-      '🏀 FINE REGULAR SEASON',
-      'IN ATTESA DEI PLAYOFF',
-      `La regular season è terminata il <em>${escHtml(fmtShort(w.regularEnd))}</em>. Le partite di playoff e play-in verranno aggiunte automaticamente quando il calendario sarà disponibile su LNP.`,
-      [{label:'CLASSIFICA LNP', url:'https://www.legapallacanestro.com/serie/4/classifica'}]
-    ));
+  // SCENARIO B: regular finita, in attesa playoff — "HALFTIME SHOW"
+  if (forceAll || dbg === 'halftime' || (!dbg && now > w.regularEnd.getTime() && !w.hasPostseason && now <= w.seasonEnd.getTime())) {
+    const daysSince = Math.floor((now - w.regularEnd.getTime()) / 86400000);
+    const inner = `
+      <div class="sbnr-text">La regular season si è chiusa <em>${daysSince} giorn${daysSince===1?'o':'i'} fa</em>. Stiamo aspettando il calendario ufficiale di playoff e play-in.</div>
+      <div class="bnr-halftime">
+        <div class="bnr-ht-label">★ HALFTIME SHOW ★</div>
+        <div class="bnr-ht-score">REG<span class="ht-dash">·</span>END</div>
+        <div class="bnr-ht-q">PROSSIMO QUARTO: PLAYOFF</div>
+      </div>`;
+    banners.push(makeRichBanner('action', '🏀 INTERVALLO',
+      'REGULAR SEASON CONCLUSA', inner,
+      [{label:'CLASSIFICA LNP', url:'https://www.legapallacanestro.com/serie/4/classifica'}]));
   }
 
-  // SCENARIO C: playoff in corso ma risultati mancanti
-  if (w.hasPostseason && w.postNoScore.length > 0) {
-    banners.push(makeBanner('warning',
-      '🏀 PLAYOFF IN CORSO',
-      `${w.postNoScore.length} GARA${w.postNoScore.length>1?'E':''} IN PROGRAMMA`,
-      `I risultati verranno aggiornati automaticamente al termine delle partite.`,
-      [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]
-    ));
+  // SCENARIO C: playoff in corso, gare senza score — "TEST PATTERN"
+  if (forceAll || dbg === 'testpat' || (!dbg && w.hasPostseason && w.postNoScore.length > 0)) {
+    const cnt = w.postNoScore.length || 2;
+    const inner = `
+      <div class="sbnr-text"><em>${cnt} gar${cnt>1?'e':'a'}</em> ancora in programma. I tabellini compaiono automaticamente al fischio finale.</div>
+      <div class="bnr-testpat">
+        <div class="tp-1"></div><div class="tp-2"></div><div class="tp-3"></div>
+        <div class="tp-4"></div><div class="tp-5"></div><div class="tp-6"></div><div class="tp-7"></div>
+      </div>
+      <div class="bnr-tp-label">
+        <span class="tp-bounce">🏀</span>
+        STAND BY — TRASMISSIONE IN ATTESA
+        <span class="tp-bounce" style="animation-delay:.2s">🏀</span>
+      </div>`;
+    banners.push(makeRichBanner('warning', '★ PLAYOFF · ON AIR ★',
+      `${cnt} GAR${cnt>1?'E':'A'} IN PROGRAMMA`, inner,
+      [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]));
   }
 
-  // SCENARIO D: stagione conclusa
-  if (now > w.seasonEnd.getTime() && now < w.newSeasonStart.getTime()) {
-    banners.push(makeBanner('done',
-      '★ STAGIONE CONCLUSA ★',
-      `STAGIONE ${w.seasonEnd.getFullYear()-1}-${String(w.seasonEnd.getFullYear()).slice(2)} TERMINATA`,
-      `Tutti i risultati sono definitivi. Il calendario della prossima stagione verrà caricato automaticamente quando disponibile (luglio-agosto).`,
-      [{label:'LEGAPALLACANESTRO', url:'https://www.legapallacanestro.com'}]
-    ));
+  // SCENARIO D: stagione conclusa — "FINAL BUZZER" star burst
+  if (forceAll || dbg === 'buzzer' || (!dbg && now > w.seasonEnd.getTime() && now < w.newSeasonStart.getTime())) {
+    const daysToNew = Math.max(1, Math.ceil((w.newSeasonStart.getTime() - now) / 86400000)) || 47;
+    const lblSeason = `${w.seasonEnd.getFullYear()-1}-${String(w.seasonEnd.getFullYear()).slice(2)}`;
+    const inner = `
+      <div class="sbnr-text">Tutti i risultati sono ufficiali. Si torna in campo con il nuovo calendario — atteso entro l'estate.</div>
+      <div class="bnr-burst">
+        <div class="bnr-burst-stars">★ ★ ★ ★ ★</div>
+        <div class="bnr-burst-headline">FINAL BUZZER</div>
+        <div class="bnr-burst-sub">STAGIONE ${escHtml(lblSeason)} · ARCHIVIO CHIUSO</div>
+      </div>
+      <div class="bnr-countdown">
+        <div class="bnr-cd-box"><div class="bnr-cd-num">${daysToNew}</div><div class="bnr-cd-lbl">GIORNI</div></div>
+        <div class="bnr-cd-box" style="grid-column:span 3"><div class="bnr-cd-num" style="font-size:14px;letter-spacing:1px">AL VIA NUOVA STAGIONE</div><div class="bnr-cd-lbl">FINESTRA — LUG/AGO</div></div>
+      </div>`;
+    banners.push(makeRichBanner('done', '★ STAGIONE ARCHIVIATA ★',
+      `${escHtml(lblSeason)} — SI CHIUDE QUI`, inner,
+      [{label:'LEGAPALLACANESTRO', url:'https://www.legapallacanestro.com'}]));
   }
 
-  // SCENARIO E: nuova stagione attesa
-  if (now >= w.newSeasonStart.getTime()) {
-    const yr = w.newSeasonStart.getFullYear();
+  // SCENARIO E: nuova stagione attesa — "TRAINING CAMP" coach's clipboard
+  if (forceAll || dbg === 'camp' || (!dbg && now >= w.newSeasonStart.getTime())) {
+    const yr = (w.newSeasonStart && w.newSeasonStart.getFullYear()) || (new Date().getFullYear()+1);
     const nextYr = yr + 1;
-    const hasNewSeason = matches.some(m =>
+    const hasNewSeason = !forceAll && dbg !== 'camp' && matches.some(m =>
       m.phase === 'regular' && toDate(m.date).getFullYear() >= yr &&
       toDate(m.date).getTime() >= w.newSeasonStart.getTime()
     );
     if (!hasNewSeason) {
-      banners.push(makeBanner('new',
-        '★ NUOVA STAGIONE ★',
-        `CALENDARIO ${yr}-${String(nextYr).slice(2)}`,
-        `In attesa del calendario ufficiale della stagione <em>${yr}-${String(nextYr).slice(2)}</em>. Verrà caricato automaticamente appena disponibile su LNP.`,
-        [
-          {label:'LNP', url:'https://www.legapallacanestro.com'},
-        ]
-      ));
+      const inner = `
+        <div class="sbnr-text">Stiamo preparando la stagione <em>${yr}/'${String(nextYr).slice(2)}</em>. Appena LNP pubblica il calendario, partite e classifiche compaiono qui in automatico.</div>
+        <div class="bnr-scout">
+          <div class="bnr-scout-row"><span class="bnr-scout-check done">✓</span><span>Loghi &amp; palette</span></div>
+          <div class="bnr-scout-row"><span class="bnr-scout-check done">✓</span><span>Sync attivo</span></div>
+          <div class="bnr-scout-row"><span class="bnr-scout-check"></span><span>Calendario</span></div>
+          <div class="bnr-scout-row"><span class="bnr-scout-check"></span><span>Campionati confermati</span></div>
+          <div class="bnr-scout-row"><span class="bnr-scout-check"></span><span>Prima palla a due</span></div>
+        </div>`;
+      banners.push(makeRichBanner('new', '★ TRAINING CAMP ★',
+        `STAGIONE ${yr}/'${String(nextYr).slice(2)} — IN ARRIVO`, inner,
+        [{label:'LNP', url:'https://www.legapallacanestro.com'}]));
     }
   }
 
