@@ -15,6 +15,15 @@ on:
     - cron: '0 3 * * *'    # 04:00 inverno (UTC+1)
   workflow_dispatch:
 
+# Concurrency guard: serializza esecuzioni del workflow.
+# Se un cron parte mentre una run manuale (workflow_dispatch) sta girando
+# — o viceversa — la nuova attende che la precedente finisca invece di
+# lanciarsi in parallelo. Previene push concorrenti su data.json che
+# fallirebbero con "non-fast-forward". Una sola run alla volta, sempre.
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
