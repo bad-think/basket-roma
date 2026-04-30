@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.6
+update_data.py — Roma Basket Casa — v8.7
 Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap.
 
 Fonte unica: legapallacanestro.com
@@ -1824,7 +1824,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.6 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.7 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
