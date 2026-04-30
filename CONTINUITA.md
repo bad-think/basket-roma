@@ -1,8 +1,8 @@
-[CONTINUITA.md](https://github.com/user-attachments/files/27234455/CONTINUITA.md)
+[CONTINUITA.md](https://github.com/user-attachments/files/27235149/CONTINUITA.md)
 # Roma Basket Casa — Documento di Continuità
 
-> Ultimo aggiornamento: 29 aprile 2026
-> Versione script: v8.7 (1960 righe, 37 funzioni)
+> Ultimo aggiornamento: 30 aprile 2026
+> Versione script: v8.7 (1972 righe)
 > Repo: `github.com/bad-think/basket-roma`
 > Live: `bad-think.github.io/basket-roma/`
 
@@ -40,8 +40,8 @@ GitHub Pages
 | `index.html` | Frontend PWA single-file (HTML+CSS+JS inline) |
 | `sw.js` | Service worker v3. Cache: stale-while-revalidate per HTML, network-first per data.json |
 | `assets/*.png` | Loghi squadre (sfondo trasparente) |
-| `.github/workflows/update-data.yml` | Workflow update con cron 8 run/giorno (6 serali 18-23 IT + 1 notturna 04:00 IT, con duplicato per gestione DST) + commit automatico. Schedule basketball-aware: copre orari di gioco senza sprecare run inutili |
-| `.github/workflows/freshness-check.yml` | Workflow giornaliero di sanity (09:00 UTC): fallisce se `data.json` è più vecchio di 18h (in stagione) o 30h (lug-ago). Notifica via email |
+| `.github/workflows/update-data.yml` | Workflow update con cron 8 run/giorno (6 serali 18-23 IT + 1 notturna 04:00 IT, con duplicato per gestione DST) + commit automatico. Schedule basketball-aware: copre orari di gioco senza sprecare run inutili. **Concurrency guard** (`group: update-data`, `cancel-in-progress: false`) serializza run sovrapposte (cron + manuali) per prevenire push concorrenti |
+| `.github/workflows/freshness-check.yml` | Workflow giornaliero (09:00 UTC): controlla via API GitHub l'ultima esecuzione *riuscita* di `update-data.yml`. Soglia 24h normale / 36h off-season (lug-ago). Fallisce → email automatica. **NB**: controlla l'esecuzione del workflow, NON il `last_updated` di `data.json` (il dato può non cambiare per giorni in fasi statiche, falsi positivi) |
 
 ## 4. update_data.py — Struttura funzionale
 
@@ -182,8 +182,10 @@ GitHub Pages
 | v8.7 | `detect_phase` può classificare playoff come regular se build_round_map dà round ≤38 | Doppio check: round + data; se data > fine regular → postseason |
 | v8.7 | `REGULAR_END_DATE` hardcoded richiederebbe modifica manuale ogni stagione | Dedotto runtime dall'N-esima partita LNP della squadra (N da `N_REGULAR_GAMES_BY_LEAGUE`). Zero manutenzione |
 | v8.7 | Nessuna protezione contro parse LNP corrotto (cambio HTML) | Sanity check per-team: skip se `lnp_matches < home esistenti`. Sanity globale: exit 1 se tutte le squadre saltate |
-| v8.7 | Cron senza coverage di failure systemic (cron fermo, parser rotto, repo archiviato) | Workflow `freshness-check.yml` giornaliero: fallisce se data.json vecchio → email automatica |
-| v8.7 | CONTINUITA.md descriveva "cron orario" ma lo schedule reale è 8 run/giorno serali+notturna | Documentazione corretta: schedule basketball-aware già efficiente, non richiede modifiche |
+| v8.7 | Cron senza coverage di failure systemic (cron fermo, parser rotto, repo archiviato) | Workflow `freshness-check.yml` giornaliero: controlla via API GitHub l'ultima run riuscita di `update-data.yml` → email automatica se ferma |
+| v8.7 | Push concorrenti possibili se cron + workflow_dispatch partono ravvicinati → "non-fast-forward" | Concurrency guard (`group: update-data`) serializza esecuzioni: nuova run aspetta che la precedente finisca |
+| v8.7 (interim) | Prima versione di freshness-check controllava `last_updated` in data.json → falso positivo quando lo script gira ma non commetta (dati invariati) | Riscritto: ora controlla via `gh api` l'ultima run riuscita del workflow, non il timestamp del JSON |
+| v8.7 | CONTINUITA.md descriveva "cron orario" ma lo schedule reale è 8 run/giorno serali+notturna | Documentazione corretta: schedule basketball-aware già efficiente |
 
 ## 10. Problemi noti / limiti
 
@@ -191,21 +193,113 @@ GitHub Pages
 2. **Nomi squadra possono cambiare con sponsor**: `_teams_match` gestisce i casi noti ma potrebbe fallire su nomi completamente nuovi. Token overlap ≥1 parola ≥5 char copre la maggior parte.
 3. **PDF calendario non esiste per playoff**: i round playoff non sono nel PDF statico. Lo script usa fallback `build_round_map` + check su `regular_end_date` dedotto runtime per riconoscere comunque le partite postseason.
 4. **Domino API non documentata**: trovata via DevTools, potrebbe cambiare. Codici playoff (`ita3_b_poff`, `ita3_a_poff`) o play-in (`_pin`) ancora da verificare empiricamente con `curl` quando i calendari saranno pubblici. Fallback su girone + pagine squadra copre.
+
+   **Comandi di test Domino playoff** (riferiti da §12.5):
+   ```bash
+   # Ipotesi A: suffisso _poff / _pin
+   curl -s 'https://lnpstat.domino.it/getstatisticsfiles?task=schedule&year=x2526&league=ita3_b_poff&round=1' | head -c 500
+   curl -s 'https://lnpstat.domino.it/getstatisticsfiles?task=schedule&year=x2526&league=ita3_b_pin&round=1' | head -c 500
+
+   # Ipotesi B: stessa lega, round estesi
+   curl -s 'https://lnpstat.domino.it/getstatisticsfiles?task=schedule&year=x2526&league=ita3_b&round=39' | head -c 500
+   curl -s 'https://lnpstat.domino.it/getstatisticsfiles?task=schedule&year=x2526&league=ita3_b&round=37' | head -c 500
+   ```
+   Il primo che restituisce JSON non vuoto identifica la convenzione.
 5. **GitHub Actions**: `pdftotext` e `pypdf` non disponibili sui runner. Il parser stdlib funziona ma è meno robusto su PDF esotici.
 6. **`N_REGULAR_GAMES_BY_LEAGUE` hardcoded**: 36 per B/A2, 30 per A. Se LNP cambia il numero di squadre per girone va aggiornato. Probabilità: bassa.
 
-## 11. Stagione 2025-26 — Stato finale regular season
+## 11. Stagione 2025-26 — Stato playoff
 
-- **Virtus GVM Roma 1960**: 1° posto, 29V-7L, 58pt, qualificata playoff Tabellone 2
-- **LUISS Roma**: 6° posto, 21V-14L, 42pt, qualificata playoff Tabellone 1
-- **Girone B**: 19 squadre, 38 giornate, tutti i risultati regular acquisiti
-- **Tabelloni playoff pubblicati LNP** (26 apr 2026)
-  - Virtus: Tab. 2 quarti vs 8ª girone A (vincente Play-In Gara 4)
-  - LUISS: Tab. 1 quarti vs 3ª girone A
-- **Date quarti**: 8, 10, 13, 15, 18 maggio (calendario definitivo dopo Play-In del 7 maggio)
-- **PDF calendario playoff non esiste**: lo script userà `build_round_map` + sanity check data per detect_phase
+- **Virtus GVM Roma 1960**: 1° posto regular (29V-7L, 58pt), Tabellone 2 quarti
+- **LUISS Roma**: 6° posto regular (21V-14L, 42pt), Tabellone 1 quarti
+- **Tabelloni playoff pubblicati LNP** il 26 aprile 2026
+- **Avversario Virtus ai quarti**: vincente Play-In Tab. 2 — sarà Omegna (8A), Capo d'Orlando (9A) o Vicenza (12A), determinato entro il 7 maggio sera
+- **Calendario quarti**: 8, 10, 13, 15, 18 maggio 2026 (orari e ordine casa/fuori pubblicati da LNP dopo il Play-In del 7 maggio)
+- **PDF calendario playoff non esiste**: lo script userà `build_round_map` + sanity check su `regular_end_date` per detect_phase
+- **Codici Domino playoff non confermati**: ipotesi `ita3_b_poff` (suffisso URL) o stesso `ita3_b` con round 39+. Da verificare empiricamente all'8 maggio
 
-## 12. Istruzioni per nuova sessione Claude
+
+---
+
+## 12. Troubleshooting playoff — diagnosi guidata
+
+> Da consultare se l'8 maggio (o successive partite playoff) la prima partita di Virtus/LUISS non appare in `data.json` entro un'ora dalla pubblicazione su LNP.
+
+### 12.1 Procedura diagnostica (in ordine)
+
+**Step 1 — Verifica che LNP abbia pubblicato la partita**
+- Apri `legapallacanestro.com/squadre/serie-b/virtus-gvm-roma-1960`
+- Se la partita NON è elencata → non è un problema dello script, attendere
+- Se è elencata → procedi
+
+**Step 2 — Lancia run manuale del workflow**
+- GitHub repo → Actions → "Aggiorna Dati Basket Roma" → "Run workflow"
+- Attendi 30s, apri il log della run
+
+**Step 3 — Cerca questi pattern nel log**
+
+| Pattern nel log | Significato | Sezione fix |
+|---|---|---|
+| `📋 [virtus] N partite nel calendario LNP` con N=36 (regular) | LNP non espone playoff in pagina squadra → problema #A | §12.2 |
+| `📋 [virtus] N partite nel calendario LNP` con N≥37 ma `📝 Aggiornamenti: 0` | Partita parsata ma scartata da dedup o detect_phase → problema #B | §12.3 |
+| `🚨 [virtus] SAFETY SKIP` | Il sanity check ha bloccato l'inserimento → problema #C | §12.4 |
+| `🎯 Domino round X: 0 partite` per round playoff | Codice Domino sbagliato per playoff → problema #D | §12.5 |
+| Errore `urllib.error` o traceback Python | Eccezione runtime → problema #E | §12.6 |
+
+### 12.2 Problema A — LNP non espone playoff in pagina squadra
+
+**Sintomo**: lo script non vede la partita perché `parse_lnp_calendar` legge la pagina squadra ma LNP la mette solo nella pagina playoff dedicata.
+
+**Verifica manuale**: apri `https://www.legapallacanestro.com/serie/4/playoff-playout/2026/ita3_b_poff`. Se la partita è lì ma non in pagina squadra → confermato.
+
+**Cosa dire al prossimo Claude**:
+> "Lo script non vede le partite playoff perché LNP le pubblica solo in `/serie/4/playoff-playout/...` e non nelle pagine squadra. Serve estendere `discover_team_league` o `parse_lnp_calendar` per fetchare anche la pagina playoff e fonderne il calendario."
+
+### 12.3 Problema B — Partita parsata ma non inserita
+
+**Sintomo**: `lnp_matches` contiene la partita ma `data.json` no.
+
+**Cause possibili**:
+1. `is_duplicate` la scarta (false positive del dedup)
+2. `detect_phase` la classifica come `regular` invece di `playoff` → ID generato non riconosciuto
+3. Filtro stagione (`filter_season`) la esclude se la data non matcha la stagione corrente
+
+**Cosa dire al prossimo Claude**:
+> "Una partita playoff Virtus del [DATA] vs [AVVERSARIO] è in `lnp_matches` (parse OK) ma non finisce in `data.json`. Verifica con uno script di debug: chiama `is_duplicate(date, away_normalised, is_postseason=True)` e `detect_phase(real_round, team_pos, match_date, regular_end_date)` per quella partita e dimmi i valori. Allego il log della run."
+
+### 12.4 Problema C — Sanity check skip
+
+**Sintomo**: log mostra `🚨 [team] SAFETY SKIP: lnp_matches=N < home esistenti=M`.
+
+**Causa**: il sanity check protegge contro parse corrotto. Se LNP ha cambiato HTML e ora `parse_lnp_calendar` torna meno partite di quante ce ne sono già nel JSON, lo script salta per evitare data loss.
+
+**Cosa dire al prossimo Claude**:
+> "Il sanity check di `update_in_season` blocca l'aggiornamento di [team] perché `parse_lnp_calendar` torna meno partite del previsto. Probabile cambio HTML LNP. Verifica con `curl` la pagina squadra e adatta il parser. La logica safety in `update_in_season` è `if existing_home > 0 and len(lnp_matches) < existing_home: skip`."
+
+### 12.5 Problema D — Domino non popola scores playoff
+
+**Sintomo**: la partita appare in `data.json` ma con `sh: null, sa: null` (punteggi vuoti) anche dopo la fine del match.
+
+**Causa**: il codice lega Domino per playoff è diverso. `DOMINO_LEAGUE_CODES` ha solo `("serie-b", "b"): "ita3_b"` per la regular.
+
+**Cosa dire al prossimo Claude**:
+> "I punteggi delle partite playoff non vengono popolati da Domino. Allego il log con le righe `🎯 Domino round X`. Devi: (1) testare manualmente con `curl 'https://lnpstat.domino.it/getstatisticsfiles?task=schedule&year=x2526&league=ita3_b_poff&round=1'` e altre varianti (`_pin`, round 39+ con `ita3_b`), (2) trovare il codice giusto, (3) aggiornare `DOMINO_LEAGUE_CODES` o modificare `fetch_domino_scores` per gestire playoff. Le ipotesi da testare sono in §10.4 di questa CONTINUITA."
+
+### 12.6 Problema E — Eccezione runtime
+
+**Sintomo**: traceback Python nel log, workflow fallisce con exit code ≠ 0.
+
+**Cosa dire al prossimo Claude**:
+> "Workflow `update-data.yml` fallisce con eccezione. Allego log completo. Diagnostica e proponi fix chirurgico."
+
+### 12.7 Note generali per fix futuri
+
+- L'utente non programma. Fornisci sempre file completi pronti da incollare, non patch parziali.
+- Verifica sintassi Python con `python3 -c "import ast; ast.parse(...)"` prima di consegnare.
+- Aggiorna sempre il banner versione in `update_data.py` quando applichi patch (`vX.Y` → `vX.Y+1`) per dare un segnale visibile nei log.
+- Aggiorna questa CONTINUITA con la nuova entry in §9 (Bug risolti).
+
+## 13. Istruzioni per nuova sessione Claude
 
 ### Contesto minimo da dare
 ```
@@ -242,3 +336,4 @@ L'unico caso che richiederebbe intervento manuale è se LNP cambia il numero di 
 - Programmatore principiante: spiegare cosa fare passo-passo
 - Lingua italiana per l'interfaccia, inglese per il codice
 - Mai usare Gemini sul progetto (ha rotto file 3 volte in passato)
+- **Ottimizzare l'uso di token**: massimo risultato con minimo consumo. Niente preamboli, riepiloghi, ripetizioni o postamboli di cortesia. Output denso, diretto. Quando si modifica un file usare `str_replace` su singoli blocchi, mai riscrivere file interi se non strettamente necessario.
