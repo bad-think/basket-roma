@@ -94,6 +94,17 @@ DOMINO_LEAGUE_CODES = {
     ("serie-a2", None): "ita2",
 }
 
+# Numero di partite di regular season per squadra in ogni lega.
+# Serve a dedurre automaticamente la data di fine regular season dal
+# calendario LNP della squadra: la N-esima partita cronologica è
+# l'ultima regular, tutto ciò che viene dopo è postseason.
+# Aggiornare se LNP cambia il numero di squadre per girone.
+N_REGULAR_GAMES_BY_LEAGUE = {
+    "serie-b": 36,    # 19 squadre per girone, 36 partite andata+ritorno
+    "serie-a2": 36,   # 19 squadre, 36 partite (con turno di riposo)
+    "serie-a": 30,    # 16 squadre, 30 partite andata+ritorno
+}
+
 # Default config (compat con data.json esistente)
 CONFIG_DEFAULT = {
     "season": "2025-26",
@@ -1216,20 +1227,31 @@ def update_home_matches(matches, team_key, team_aliases, lnp_matches):
     return updated
 
 
-def detect_phase(round_num, team_pos):
+def detect_phase(round_num, team_pos, match_date=None, regular_end_date=None):
     """
-    Inferisce la fase di una partita dal numero di giornata.
+    Inferisce la fase di una partita.
 
-    Convenzione LNP Serie B Nazionale 2025-26 (verificata da pagina formula):
-    - Round 1-38  → regular season
-    - Round 39+   → playin (squadre 7°-12°) o playoff (squadre 1°-6°)
+    Doppio check:
+    1. round_num: round 1-38 = regular, 39+ = postseason.
+    2. match_date: se la data è oltre `regular_end_date`, è postseason
+       a prescindere dal round. Necessario perché build_round_map
+       (fallback) per le partite playoff può restituire round ancora
+       ≤38 (l'algoritmo conta dall'inizio della stagione e non sa
+       distinguere recuperi da playoff).
 
-    Per altre leghe (A2, A) la convenzione può variare ma il principio
-    "round oltre la regular = postseason" resta valido. Se in futuro LNP
-    cambia il numero di giornate per una lega, il limite va aggiornato qui.
+    `regular_end_date` viene calcolato runtime in update_in_season
+    dall'N-esima partita LNP della squadra (N = N_REGULAR_GAMES_BY_LEAGUE).
+    Se None (es. regular ancora in corso, calendario incompleto), il
+    check sulla data viene saltato e si usa solo il round.
     """
-    REGULAR_LIMIT = 38  # ultimo round di regular season Serie B Nazionale
-    if round_num <= REGULAR_LIMIT:
+    REGULAR_LIMIT = 38
+
+    is_postseason = round_num > REGULAR_LIMIT
+    if not is_postseason and match_date and regular_end_date \
+            and match_date > regular_end_date:
+        is_postseason = True
+
+    if not is_postseason:
         return "regular"
     if isinstance(team_pos, int) and 7 <= team_pos <= 12:
         return "playin"
@@ -1238,7 +1260,8 @@ def detect_phase(round_num, team_pos):
 
 def auto_insert_new_home_matches(matches, team_key, team_aliases,
                                  lnp_matches, team_pos,
-                                 pdf_round_map=None, date_round_map=None):
+                                 pdf_round_map=None, date_round_map=None,
+                                 regular_end_date=None):
     """
     Aggiunge a `matches` le partite di CASA presenti in LNP ma non ancora
     in data.json. Funziona per:
@@ -1282,14 +1305,24 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
             existing_by_date_away.add((date_s, away_n))
             existing_by_away.setdefault(away_n, []).append(date_s)
 
-    def is_duplicate(lm_date, lm_away_n):
-        """Verifica se una partita LNP è già nel data.json, anche con data shiftata."""
+    def is_duplicate(lm_date, lm_away_n, is_postseason=False):
+        """Verifica se una partita LNP è già nel data.json, anche con data shiftata.
+
+        In postseason (playoff/playin) si applica solo il match forte
+        (data + avversario esatti), perché in una serie best-of-5 le
+        partite vs lo stesso avversario si giocano a 2-3 giorni di
+        distanza (es. G1 e G2 in casa) e il dedup ±10 giorni le
+        scarterebbe come falsi duplicati.
+        """
         if not lm_away_n:
             return False
         # Match forte
         if (lm_date, lm_away_n) in existing_by_date_away:
             return True
-        # Match debole: stesso avversario entro ±10 giorni
+        # In postseason fermarsi qui: G1/G2/G5 stesso avversario sono partite distinte
+        if is_postseason:
+            return False
+        # Match debole: stesso avversario entro ±10 giorni (solo regular)
         for existing_date in existing_by_away.get(lm_away_n, []):
             try:
                 d1 = datetime.strptime(lm_date, "%Y-%m-%d").date()
@@ -1323,10 +1356,10 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
 
     for lm in lnp_home:
         lm_away_n = normalise(lm.get("away", ""))
-        if is_duplicate(lm["date"], lm_away_n):
-            continue
 
-        # Round vero: priorità PDF (per coppia), poi date_map, poi fallback
+        # Round e fase calcolati PRIMA del dedup, perché in postseason
+        # il dedup deve essere più stretto (best-of-5: stesso avversario
+        # in pochi giorni è normale, non un duplicato).
         real_round = round_for_match(pdf_round_map, lm.get("home", ""), lm.get("away", ""))
         if real_round is None:
             real_round = date_round_map.get(lm["date"])
@@ -1336,7 +1369,11 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
             except ValueError:
                 real_round = len(matches) + 1
 
-        phase = detect_phase(real_round, team_pos)
+        phase = detect_phase(real_round, team_pos, lm["date"], regular_end_date)
+        is_postseason = phase != "regular"
+
+        if is_duplicate(lm["date"], lm_away_n, is_postseason):
+            continue
 
         # Genera ID univoco
         prefix = team_key[0]
@@ -1394,6 +1431,13 @@ def update_in_season(matches, config, standings):
     # stesso girone, calcoliamo la classifica completa una sola volta.
     classifica_cache = {}
 
+    # Sanity check globale: se TUTTE le squadre vengono saltate per
+    # protezione (parse LNP sospetto), abortiamo per non corrompere
+    # data.json. Il main rileverà il sentinel -1 ed uscirà con codice 1
+    # → GitHub Actions invierà notifica via email.
+    teams_total = len(TRACKED_TEAMS)
+    teams_safety_skipped = 0
+
     for team_key, team_info in TRACKED_TEAMS.items():
         slug = team_info["slug"]
         aliases = list(team_info["name_aliases"])
@@ -1433,9 +1477,21 @@ def update_in_season(matches, config, standings):
         lnp_matches = parse_lnp_calendar(html)
         if not lnp_matches:
             print(f"  ⚠️  [{team_key}] calendario LNP vuoto")
+            teams_safety_skipped += 1
             continue
         lnp_matches = filter_season(lnp_matches, config.get("season"))
         print(f"  📋 [{team_key}] {len(lnp_matches)} partite nel calendario LNP")
+
+        # Sanity check: lnp_matches deve essere ≥ partite home già nel
+        # data.json (LNP riporta sia home che away, quindi tot LNP ≥ tot
+        # home esistenti). Se è meno, è probabile un parse fallito
+        # (es. cambio HTML LNP). Skip per non corrompere data.json.
+        existing_home = sum(1 for m in matches if m.get("team") == team_key)
+        if existing_home > 0 and len(lnp_matches) < existing_home:
+            print(f"  🚨 [{team_key}] SAFETY SKIP: lnp_matches={len(lnp_matches)} "
+                  f"< home esistenti={existing_home}. Parse sospetto.")
+            teams_safety_skipped += 1
+            continue
 
         # Aggiorna partite in casa nel data.json
         updated += update_home_matches(matches, team_key, aliases, lnp_matches)
@@ -1535,10 +1591,17 @@ def update_in_season(matches, config, standings):
                 updated += corrected
 
         # Auto-insert: nuove partite di casa (recuperi, postseason)
-        # Eseguito DOPO il calcolo di pos e round_map
+        # Eseguito DOPO il calcolo di pos e round_map.
+        # regular_end_date: dedotto dall'N-esima partita LNP cronologica
+        # (N = numero partite regular della lega). Tutto ciò che è dopo
+        # questa data è postseason, anche se build_round_map dà round ≤38.
+        n_regular = N_REGULAR_GAMES_BY_LEAGUE.get(league_path, 36)
+        regular_end_date = None
+        if len(lnp_matches) >= n_regular:
+            regular_end_date = lnp_matches[n_regular - 1].get("date")
         inserted = auto_insert_new_home_matches(
             matches, team_key, aliases, lnp_matches, team_pos,
-            pdf_round_map, date_round_map
+            pdf_round_map, date_round_map, regular_end_date
         )
         if inserted:
             updated += inserted
@@ -1598,6 +1661,15 @@ def update_in_season(matches, config, standings):
     # Conta cambio standings come aggiornamento (oltre a quelli già contati)
     if json.dumps(new_standings, sort_keys=True) != initial_snap:
         updated += 1
+
+    # Safety check globale: se TUTTE le squadre saltate per protezione,
+    # ritorna sentinel -1. main() abortirà la scrittura di data.json
+    # ed uscirà con codice 1 (GitHub Actions invierà email).
+    if teams_total > 0 and teams_safety_skipped == teams_total:
+        print(f"\n🚨 SAFETY ABORT: tutte le {teams_total} squadre saltate.")
+        print(f"   Probabile cambio HTML LNP o parse fallito.")
+        print(f"   data.json NON sarà aggiornato.")
+        return -1, new_standings
 
     return updated, new_standings
 
@@ -1831,6 +1903,10 @@ def main():
     elif in_season:
         print(f"\n📅 IN STAGIONE")
         total_updated, standings = update_in_season(matches, config, standings)
+        if total_updated < 0:
+            # Safety abort: data.json non va sovrascritto
+            print(f"\n❌ Run abortito per safety. Exit code 1.")
+            sys.exit(1)
         print(f"\n📝 Aggiornamenti: {total_updated}")
     else:
         print(f"\n💤 FUORI STAGIONE")
