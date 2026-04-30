@@ -1,14 +1,17 @@
 name: Controllo freschezza dati
 
-# Verifica giornaliera che data.json sia stato aggiornato di recente.
-# Se è troppo vecchio (parser rotto, cron fermo, repo archiviato, ecc.)
-# il workflow fallisce e GitHub manda email all'owner.
+# Verifica giornaliera che il workflow update-data sia girato
+# CON SUCCESSO di recente. Se è fermo (cron rotto, GitHub down,
+# repo archiviato, ecc.) il workflow fallisce e GitHub manda email.
 #
-# Soglie tarate sullo schedule reale di update-data.yml:
-# - Run alle 04:00 IT + 18:00-23:00 IT (8 run/giorno)
-# - Gap massimo normale: 14h (tra 04:00 e 18:00 IT)
-# - Soglia 18h: tollera un failure singolo della run notturna,
-#   alerta se si perdono notte + serale (sintomo di problema sistemico)
+# IMPORTANTE: controlla l'esecuzione del workflow, NON il timestamp
+# dentro data.json. Il dato può non cambiare per giorni (es. fine
+# stagione, periodo senza partite) — lo script gira correttamente
+# ma salta il commit. Verificare data.json darebbe falsi positivi.
+#
+# Soglia 24h: lo schedule update-data.yml ha 8 run/giorno con gap
+# massimo di 14h. 24h tollera un failure transitorio singolo, alerta
+# se due cicli consecutivi falliscono (sintomo di problema reale).
 #
 # Verifica notifiche email attive:
 # Settings personali GitHub → Notifications → Actions →
@@ -25,38 +28,52 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Verifica età data.json
+      - name: Verifica ultima esecuzione riuscita di update-data
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python3 <<'EOF'
-          import json
-          import sys
+          # Recupera l'ultima run riuscita del workflow update-data.yml
+          RESPONSE=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/workflows/update-data.yml/runs?status=success&per_page=1")
+
+          LAST_RUN=$(echo "$RESPONSE" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          runs = data.get('workflow_runs', [])
+          if not runs:
+              print('NONE')
+          else:
+              print(runs[0]['updated_at'])
+          ")
+
+          if [ "$LAST_RUN" = "NONE" ]; then
+            echo "::error::Nessuna run riuscita trovata per update-data.yml"
+            exit 1
+          fi
+
+          echo "Ultima run riuscita: $LAST_RUN"
+
+          AGE_H=$(python3 -c "
           from datetime import datetime, timezone
-
-          with open('data.json') as f:
-              data = json.load(f)
-
-          last_str = data.get('last_updated', '')
-          last = datetime.fromisoformat(last_str)
-          if last.tzinfo is None:
-              last = last.replace(tzinfo=timezone.utc)
+          last = datetime.fromisoformat('$LAST_RUN'.replace('Z', '+00:00'))
           now = datetime.now(timezone.utc)
-          age_h = (now - last).total_seconds() / 3600
+          print(f'{(now - last).total_seconds() / 3600:.1f}')
+          ")
 
-          # Soglia: 18h normale, 30h se off-season (lug-ago)
-          # In stagione lo schedule attuale lascia max 14h di gap
-          # (tra 04:00 IT notturna e 18:00 IT prima serale)
-          off_season = now.month in (7, 8)
-          max_age_h = 30 if off_season else 18
+          # Soglia: 24h normale, 36h se off-season (lug-ago)
+          MONTH=$(date -u +%m)
+          if [ "$MONTH" = "07" ] || [ "$MONTH" = "08" ]; then
+            MAX_AGE=36
+          else
+            MAX_AGE=24
+          fi
 
-          print(f"data.json last_updated: {last_str}")
-          print(f"Età: {age_h:.1f}h (soglia: {max_age_h}h, off_season: {off_season})")
+          echo "Età: ${AGE_H}h (soglia: ${MAX_AGE}h)"
 
-          if age_h > max_age_h:
-              print(f"::error::data.json non aggiornato da {age_h:.1f}h "
-                    f"(limite {max_age_h}h). Probabile cron fermo o parser rotto.")
-              sys.exit(1)
-          print("OK")
-          EOF
+          if python3 -c "import sys; sys.exit(0 if float('$AGE_H') > $MAX_AGE else 1)"; then
+            echo "::error::update-data.yml non gira con successo da ${AGE_H}h (limite ${MAX_AGE}h). Cron fermo o workflow rotto."
+            exit 1
+          fi
+
+          echo "OK"
