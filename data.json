@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-05T22:07:19.233894",
+  "last_updated": "2026-05-07T13:12:28.352340",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -467,6 +467,18 @@
       "away": "Verodol CBD Pielle Livorno",
       "sh": 77,
       "sa": 71
+    },
+    {
+      "id": "v_po_r37",
+      "team": "virtus",
+      "phase": "playoff",
+      "round": 37,
+      "date": "2026-05-08",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Paffoni Fulgor Basket Omegna",
+      "sh": null,
+      "sa": null
     }
   ],
   "standings": {
