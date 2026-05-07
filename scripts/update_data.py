@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.8.1
+update_data.py — Roma Basket Casa — v8.8.2
 Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap.
 
 Fonte unica: legapallacanestro.com
@@ -895,10 +895,14 @@ def parse_upcoming_from_team_page(html, team_aliases, season=""):
     tm = re.search(r'h\s*(\d{2}:\d{2})', after_date[:100])
     if tm:
         time_str = tm.group(1)
+        after_time = after_date[tm.end():]
     else:
         tm2 = re.search(r'(\d{2}:\d{2})', after_date[:100])
         if tm2:
             time_str = tm2.group(1)
+            after_time = after_date[tm2.end():]
+        else:
+            after_time = after_date
 
     # Scarta se la data è nel passato
     try:
@@ -908,17 +912,17 @@ def parse_upcoming_from_team_page(html, team_aliases, season=""):
     except ValueError:
         return []
 
-    # Cerca nomi squadra: dopo la data, le prime due righe con ≥3 parole
-    # e ≥10 caratteri sono i nomi delle squadre (home, away)
-    lines = [ln.strip() for ln in after_date.split('\n') if ln.strip()]
+    # Cerca nomi squadra DOPO l'orario per non catturare frammenti time
+    lines = [ln.strip() for ln in after_time.split('\n') if ln.strip()]
     team_names = []
     for ln in lines:
-        # Filtra righe troppo corte o che sembrano etichette/date
+        # Filtra righe troppo corte o che sembrano etichette/date/orari
         if len(ln) < 8:
             continue
-        if re.match(r'^\d{1,2}[:/\-]', ln):
+        if re.match(r'^[\d\-–:/h]', ln):
             continue
-        if ln.lower().startswith(('h ', 'ore ', 'playoff', 'play-in', 'serie')):
+        if ln.lower().startswith(('ore ', 'playoff', 'play-in', 'serie',
+                                  'acquista', 'bigliett', 'prossim')):
             continue
         # Sembra un nome squadra
         team_names.append(ln)
@@ -1331,7 +1335,7 @@ def update_in_season(matches, config, standings):
         playoff_extra = fetch_playoff_matches(
             league_path, config.get("season", ""), aliases
         )
-        # v8.8.1: fallback — widget "Prossima partita" dalla pagina squadra
+        # v8.8.2: fallback — widget "Prossima partita" dalla pagina squadra
         if not playoff_extra:
             upcoming = parse_upcoming_from_team_page(
                 html, aliases, config.get("season", "")
@@ -1635,7 +1639,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.8.1 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.8.2 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
