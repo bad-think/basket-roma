@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.8
+update_data.py — Roma Basket Casa — v8.8.1
 Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap.
 
 Fonte unica: legapallacanestro.com
@@ -825,6 +825,133 @@ def fetch_playoff_matches(league_path, season, team_aliases):
     return playoff_matches
 
 
+_MONTHS_IT = {
+    'gen': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+    'mag': '05', 'giu': '06', 'lug': '07', 'ago': '08',
+    'set': '09', 'ott': '10', 'nov': '11', 'dic': '12',
+}
+
+
+def parse_upcoming_from_team_page(html, team_aliases, season=""):
+    """
+    Parsa il widget "Prossima partita" dalla pagina squadra LNP.
+    Questo widget è presente nell'HTML statico della pagina squadra e
+    mostra la prossima partita schedulata, incluse le partite playoff
+    che NON appaiono nella tabella calendario.
+
+    Formato tipico nel testo HTML:
+      "Prossima partita ... 8 Mag ... h20:30 ... Team A ... Team B"
+
+    Restituisce lista (0 o 1 match) di dict {date, time, home, away, sh, sa}.
+    La partita viene restituita SOLO se è successiva alla data odierna
+    e coinvolge una delle squadre tracked (verifica con aliases).
+    """
+    if not html:
+        return []
+
+    # Strip HTML, collassa spazi
+    text = re.sub(r'<[^>]+>', '\n', html)
+    text = re.sub(r'[ \t]+', ' ', text)
+
+    # Cerca "prossima partita"
+    lower = text.lower()
+    idx = lower.find('prossima partita')
+    if idx == -1:
+        return []
+
+    # Finestra di ricerca: 800 char dopo "prossima partita"
+    window = text[idx:idx + 800]
+
+    # Cerca pattern data: "D{1,2} Mmm" seguito opzionalmente da "h HH:MM"
+    date_pat = re.compile(
+        r'(\d{1,2})\s+'
+        r'(gen(?:naio)?|feb(?:braio)?|mar(?:zo)?|apr(?:ile)?|mag(?:gio)?|'
+        r'giu(?:gno)?|lug(?:lio)?|ago(?:sto)?|set(?:tembre)?|ott(?:obre)?|'
+        r'nov(?:embre)?|dic(?:embre)?)',
+        re.IGNORECASE,
+    )
+    dm = date_pat.search(window)
+    if not dm:
+        return []
+
+    day = int(dm.group(1))
+    month_key = dm.group(2).lower()[:3]
+    month = _MONTHS_IT.get(month_key)
+    if not month:
+        return []
+
+    # Anno: secondo anno della stagione (playoff = mag-giu)
+    try:
+        y1 = int(season.split("-")[0])
+        year = y1 + 1
+    except (ValueError, IndexError):
+        year = datetime.now().year
+
+    date_str = f"{year}-{month}-{day:02d}"
+
+    # Cerca orario dopo la data
+    time_str = "20:00"  # default
+    after_date = window[dm.end():]
+    tm = re.search(r'h\s*(\d{2}:\d{2})', after_date[:100])
+    if tm:
+        time_str = tm.group(1)
+    else:
+        tm2 = re.search(r'(\d{2}:\d{2})', after_date[:100])
+        if tm2:
+            time_str = tm2.group(1)
+
+    # Scarta se la data è nel passato
+    try:
+        match_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        if match_date < date.today() - timedelta(days=1):
+            return []
+    except ValueError:
+        return []
+
+    # Cerca nomi squadra: dopo la data, le prime due righe con ≥3 parole
+    # e ≥10 caratteri sono i nomi delle squadre (home, away)
+    lines = [ln.strip() for ln in after_date.split('\n') if ln.strip()]
+    team_names = []
+    for ln in lines:
+        # Filtra righe troppo corte o che sembrano etichette/date
+        if len(ln) < 8:
+            continue
+        if re.match(r'^\d{1,2}[:/\-]', ln):
+            continue
+        if ln.lower().startswith(('h ', 'ore ', 'playoff', 'play-in', 'serie')):
+            continue
+        # Sembra un nome squadra
+        team_names.append(ln)
+        if len(team_names) >= 2:
+            break
+
+    if len(team_names) < 2:
+        return []
+
+    home = team_names[0].strip()
+    away = team_names[1].strip()
+
+    # Verifica che almeno una sia la nostra squadra
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    h_n = normalise(home)
+    a_n = normalise(away)
+    is_ours = any(
+        (an in h_n or h_n in an or an in a_n or a_n in an)
+        for an in aliases_norm
+    )
+    if not is_ours:
+        return []
+
+    return [{
+        "date": date_str,
+        "time": time_str,
+        "home": home,
+        "away": away,
+        "sh": None,
+        "sa": None,
+    }]
+
+
 # ================================================================
 # BUILD ROUND MAP (FALLBACK BASATO SU DATE)
 # ================================================================
@@ -1204,6 +1331,15 @@ def update_in_season(matches, config, standings):
         playoff_extra = fetch_playoff_matches(
             league_path, config.get("season", ""), aliases
         )
+        # v8.8.1: fallback — widget "Prossima partita" dalla pagina squadra
+        if not playoff_extra:
+            upcoming = parse_upcoming_from_team_page(
+                html, aliases, config.get("season", "")
+            )
+            if upcoming:
+                playoff_extra = upcoming
+                print(f"  📡 [{team_key}] {len(upcoming)} partita/e "
+                      f"da widget 'Prossima partita'")
         if playoff_extra:
             existing_keys = {
                 (m["date"], normalise(m["home"]), normalise(m["away"]))
@@ -1499,7 +1635,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.8 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.8.1 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
