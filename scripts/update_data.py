@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.8.2
+update_data.py — Roma Basket Casa — v8.9
 Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap.
 
 Fonte unica: legapallacanestro.com
@@ -771,16 +771,15 @@ def fetch_domino_scores(league_path, girone_letter, season, rounds):
 def fetch_playoff_matches(league_path, season, team_aliases):
     """
     Fetcha le pagine playoff/play-in di LNP e restituisce le partite
-    che coinvolgono la squadra specificata (casa + trasferta).
+    che coinvolgono la squadra specificata.
 
-    Le pagine playoff sono separate dalle pagine squadra. LNP pubblica
-    i calendari postseason su URL dedicati:
-      /serie/{serie_id}/playoff-playout/{anno}/{codice}
+    Pipeline a due livelli:
+    1. Parsing tabella calendario <td> (per quando LNP pubblica il DOM).
+    2. Parsing TESTO tabellone + date → genera tutte le gare in casa
+       della serie corrente (best-of-5: CCFFC).
 
-    Tutti i tabelloni vengono controllati perché sono incrociati:
-    una squadra del girone B può essere nel tabellone 1 (codice _a_poff).
-
-    Restituisce lista di match dict compatibili con parse_lnp_calendar.
+    Le gare non disputate vengono poi pulite da
+    cleanup_unplayed_playoff_matches().
     """
     codes = PLAYOFF_PAGE_CODES.get(league_path, [])
     serie_id = LEAGUE_SERIE_IDS.get(league_path)
@@ -789,25 +788,26 @@ def fetch_playoff_matches(league_path, season, team_aliases):
 
     try:
         y1 = int(season.split("-")[0])
-        year = y1 + 1  # playoff nel secondo anno solare della stagione
+        year = y1 + 1
     except (ValueError, IndexError):
         return []
 
     aliases_norm = [normalise(a) for a in team_aliases if a]
     playoff_matches = []
-    pages_with_data = 0
+    pages_html = []
 
+    # === Livello 1: parsing tabella calendario ===
     for code in codes:
         url = (f"https://www.legapallacanestro.com/serie/{serie_id}"
                f"/playoff-playout/{year}/{code}")
         html = fetch(url)
         if not html or len(html) < 1000:
             continue
+        pages_html.append(html)
 
         page_matches = parse_lnp_calendar(html)
         if not page_matches:
             continue
-        pages_with_data += 1
 
         for m in page_matches:
             h_n = normalise(m.get("home", ""))
@@ -819,10 +819,170 @@ def fetch_playoff_matches(league_path, season, team_aliases):
             if is_ours:
                 playoff_matches.append(m)
 
-    if pages_with_data:
-        print(f"  📡 {pages_with_data} pagine playoff/play-in con calendario")
+    if playoff_matches:
+        print(f"  📡 {len(playoff_matches)} partite playoff da calendario LNP")
+        return playoff_matches
+
+    # === Livello 2: genera gare casa da testo tabellone + date ===
+    for html in pages_html:
+        generated = _generate_home_games_from_bracket(
+            html, aliases_norm, team_aliases, year
+        )
+        if generated:
+            print(f"  📡 {len(generated)} gare casa generate "
+                  f"da tabellone playoff (best-of-5)")
+            return generated
 
     return playoff_matches
+
+
+def _generate_home_games_from_bracket(html, aliases_norm, team_aliases_raw, year):
+    """
+    Parsa il testo descrittivo della pagina playoff per estrarre il matchup
+    e le date del turno, poi genera tutte le gare IN CASA della serie.
+
+    Formato LNP:
+      "Serie N - TeamA (1^ girone X) - TeamB (N^ girone Y, ...)"
+      TeamA = higher seed → casa G1, G2, G5
+      TeamB = lower seed  → casa G3, G4
+
+    Date:
+      "Quarti di Finale - Venerdì 8, domenica 10, ..."
+    """
+    text = re.sub(r'<[^>]+>', '\n', html)
+    text = re.sub(r'[ \t]+', ' ', text)
+
+    # --- Cerca matchup della nostra squadra ---
+    serie_pat = re.compile(
+        r'Serie\s+\d+\s*[-–]\s*'
+        r'(.+?)\s*\(\d+\^[^)]*\)\s*[-–]\s*'
+        r'(.+?)\s*\(\d+\^[^)]*\)',
+        re.IGNORECASE,
+    )
+
+    our_team_raw = None
+    opponent_raw = None
+    is_higher_seed = None
+    match_pos = None
+
+    for m in serie_pat.finditer(text):
+        team_a = m.group(1).strip()
+        team_b = m.group(2).strip()
+        ta_n = normalise(team_a)
+        tb_n = normalise(team_b)
+
+        for an in aliases_norm:
+            if an in ta_n or ta_n in an:
+                our_team_raw = team_a
+                opponent_raw = team_b
+                is_higher_seed = True
+                match_pos = m.start()
+                break
+            if an in tb_n or tb_n in an:
+                our_team_raw = team_b
+                opponent_raw = team_a
+                is_higher_seed = False
+                match_pos = m.start()
+                break
+        if our_team_raw:
+            break
+
+    if not our_team_raw or not opponent_raw:
+        return []
+
+    # --- Determina il turno (QF/SF/F) ---
+    before = text[:match_pos].upper()
+    if 'SEMIFINAL' in before[-500:]:
+        round_key = 'semifinali'
+    elif 'FINAL' in before[-300:] and 'SEMIFINAL' not in before[-300:]:
+        round_key = 'finali'
+    else:
+        round_key = 'quarti'
+
+    # --- Parsa date del turno ---
+    dates = _parse_round_dates(text, round_key, year)
+    if len(dates) < 3:
+        return []
+
+    # --- Genera gare in casa ---
+    # Best-of-5: CASA-CASA-FUORI-FUORI-CASA (higher seed)
+    # G1-G3 sempre disputate. G4 tentativa (se non 3-0). G5 tentativa (se 2-2).
+    # Tupla: (indice_data, numero_gara, tentativa)
+    if is_higher_seed:
+        home_specs = [(0, 1, False), (1, 2, False), (4, 5, True)]
+    else:
+        home_specs = [(2, 3, False), (3, 4, True)]
+
+    matches = []
+    for date_idx, game_num, tentative in home_specs:
+        if date_idx < len(dates):
+            m = {
+                "date": dates[date_idx],
+                "time": "20:00",
+                "home": our_team_raw,
+                "away": opponent_raw,
+                "sh": None,
+                "sa": None,
+                "game_num": game_num,
+            }
+            if tentative:
+                m["tentative"] = True
+            matches.append(m)
+
+    return matches
+
+
+def _parse_round_dates(text, round_key, year):
+    """
+    Estrae le 5 date di un turno playoff dal testo della pagina LNP.
+    "Quarti di Finale - Venerdì 8, domenica 10, ... maggio"
+    → ["2026-05-08", "2026-05-10", ...]
+    """
+    ROUND_PATTERNS = {
+        'quarti': r'Quarti\s+di\s+Finale\s*[-–]\s*(.+?)(?:\n|Semifinal)',
+        'semifinali': r'Semifinali\s*[-–]\s*(.+?)(?:\n|Final[^i])',
+        'finali': r'Finali\s*[-–]\s*(.+?)(?:\n|NOTE|$)',
+    }
+    pat = ROUND_PATTERNS.get(round_key)
+    if not pat:
+        return []
+    m = re.search(pat, text, re.IGNORECASE | re.DOTALL)
+    if not m:
+        return []
+    line = m.group(1).strip()
+
+    month_match = re.search(
+        r'(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|'
+        r'agosto|settembre|ottobre|novembre|dicembre)',
+        line, re.IGNORECASE,
+    )
+    if not month_match:
+        return []
+    month = _MONTHS_IT.get(month_match.group(1).lower()[:3])
+    if not month:
+        return []
+
+    days = [int(d) for d in re.findall(r'\b(\d{1,2})\b', line)]
+    return [f"{year}-{month}-{d:02d}" for d in days]
+
+
+def cleanup_unplayed_playoff_matches(matches):
+    """
+    Rimuove partite playoff/play-in con sh=None la cui data è passata
+    da più di 2 giorni (serie finita prima di G5).
+    """
+    cutoff = (date.today() - timedelta(days=2)).strftime("%Y-%m-%d")
+    to_remove = []
+    for i, m in enumerate(matches):
+        if m.get("phase") in ("playoff", "playin") \
+                and m.get("sh") is None \
+                and m.get("date", "9") < cutoff:
+            to_remove.append(i)
+            print(f"  🗑️  Rimossa {m.get('phase')} non disputata: "
+                  f"{m.get('date')} vs {m.get('away')}")
+    for i in reversed(to_remove):
+        matches.pop(i)
+    return len(to_remove)
 
 
 _MONTHS_IT = {
@@ -1249,6 +1409,11 @@ def auto_insert_new_home_matches(matches, team_key, team_aliases,
             "sh": lm.get("sh"),
             "sa": lm.get("sa"),
         }
+        # Campi playoff opzionali (v8.9)
+        if lm.get("game_num"):
+            new_match["game_num"] = lm["game_num"]
+        if lm.get("tentative"):
+            new_match["tentative"] = True
         matches.append(new_match)
         existing_by_date_away.add((lm["date"], lm_away_n))
         existing_by_away.setdefault(lm_away_n, []).append(lm["date"])
@@ -1273,6 +1438,11 @@ def update_in_season(matches, config, standings):
     classifica_cache = {}
     teams_total = len(TRACKED_TEAMS)
     teams_safety_skipped = 0
+
+    # Cleanup: rimuovi gare playoff passate non disputate (serie finite in <5)
+    removed = cleanup_unplayed_playoff_matches(matches)
+    if removed:
+        updated += removed
 
     for team_key, team_info in TRACKED_TEAMS.items():
         slug = team_info["slug"]
@@ -1335,7 +1505,7 @@ def update_in_season(matches, config, standings):
         playoff_extra = fetch_playoff_matches(
             league_path, config.get("season", ""), aliases
         )
-        # v8.8.2: fallback — widget "Prossima partita" dalla pagina squadra
+        # v8.9: fallback — widget "Prossima partita" dalla pagina squadra
         if not playoff_extra:
             upcoming = parse_upcoming_from_team_page(
                 html, aliases, config.get("season", "")
@@ -1639,7 +1809,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.8.2 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.9 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
