@@ -1523,6 +1523,17 @@ def update_in_season(matches, config, standings):
                 playoff_extra = upcoming
                 print(f"  📡 [{team_key}] {len(upcoming)} partita/e "
                       f"da widget 'Prossima partita'")
+        else:
+            # Bracket parser ha orari placeholder (20:00). Il widget ha
+            # l'orario reale della prossima gara: usalo per affinare.
+            upcoming = parse_upcoming_from_team_page(
+                html, aliases, config.get("season", "")
+            )
+            if upcoming:
+                for w_m in upcoming:
+                    for p_m in playoff_extra:
+                        if p_m["date"] == w_m["date"] and p_m["time"] != w_m["time"]:
+                            p_m["time"] = w_m["time"]
         if playoff_extra:
             existing_keys = {
                 (m["date"], normalise(m["home"]), normalise(m["away"]))
