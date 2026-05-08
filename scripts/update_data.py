@@ -1268,7 +1268,10 @@ def update_home_matches(matches, team_key, team_aliases, lnp_matches):
             if lm["date"] == m["date"]:
                 target = lm
                 break
-        if not target and m_away_n:
+        if not target and m_away_n and m.get("phase", "regular") == "regular":
+            # Fallback per nome avversario — SOLO regular season.
+            # In playoff/playin lo stesso avversario appare in tutte le gare
+            # della serie: il fallback corromperebbe le date.
             for lm in lnp_home:
                 lm_away_n = normalise(lm.get("away", ""))
                 if lm_away_n and (m_away_n in lm_away_n or lm_away_n in m_away_n):
