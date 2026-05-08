@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-08T20:04:02.722867",
+  "last_updated": "2026-05-08T20:45:21.676706",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -26,14 +26,14 @@
           "luiss",
           "luiss basketball"
         ],
-        "serie": "A2",
+        "serie": "B Nazionale",
         "girone": "B",
         "venue_name": "PalaTiziano – Palazzetto dello Sport",
         "venue_address": "Piazza Apollodoro 10, 00196 Roma",
         "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
       }
     },
-    "classifica_url": "https://www.legapallacanestro.com/serie/1/classifica"
+    "classifica_url": "https://www.legapallacanestro.com/serie/4/classifica"
   },
   "matches": [
     {
@@ -474,7 +474,7 @@
       "phase": "playoff",
       "round": 37,
       "date": "2026-05-08",
-      "time": "20:30",
+      "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Paffoni Fulgor Basket Omegna",
       "sh": null,
@@ -487,7 +487,7 @@
       "phase": "playoff",
       "round": 38,
       "date": "2026-05-10",
-      "time": "20:00",
+      "time": "18:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Paffoni Fulgor Basket Omegna",
       "sh": null,
