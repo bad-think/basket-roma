@@ -891,11 +891,17 @@ def _generate_home_games_from_bracket(html, aliases_norm, team_aliases_raw, year
         return []
 
     # --- Determina il turno (QF/SF/F) ---
-    before = text[:match_pos].upper()
-    if 'SEMIFINAL' in before[-500:]:
-        round_key = 'semifinali'
-    elif 'FINAL' in before[-300:] and 'SEMIFINAL' not in before[-300:]:
-        round_key = 'finali'
+    # Cerca la heading di sezione PIÙ VICINA al matchup (rfind = ultima occorrenza).
+    # La pagina ha le date ("Semifinali - ...") PRIMA del tabellone ("QUARTI DI FINALE"),
+    # quindi la semplice presenza di "SEMIFINAL" nel testo precedente non è affidabile.
+    before_upper = text[:match_pos].upper()
+    candidates = [
+        (before_upper.rfind('QUARTI'), 'quarti'),
+        (before_upper.rfind('SEMIFINAL'), 'semifinali'),
+    ]
+    candidates = [(pos, key) for pos, key in candidates if pos >= 0]
+    if candidates:
+        round_key = max(candidates, key=lambda x: x[0])[1]
     else:
         round_key = 'quarti'
 
