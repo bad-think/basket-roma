@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-08T07:11:59.664760",
+  "last_updated": "2026-05-08T20:04:02.722867",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -26,14 +26,14 @@
           "luiss",
           "luiss basketball"
         ],
-        "serie": "B Nazionale",
+        "serie": "A2",
         "girone": "B",
         "venue_name": "PalaTiziano – Palazzetto dello Sport",
         "venue_address": "Piazza Apollodoro 10, 00196 Roma",
         "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
       }
     },
-    "classifica_url": "https://www.legapallacanestro.com/serie/4/classifica"
+    "classifica_url": "https://www.legapallacanestro.com/serie/1/classifica"
   },
   "matches": [
     {
