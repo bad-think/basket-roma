@@ -481,6 +481,16 @@ header{
   font-size:11px;letter-spacing:1px;
   border:2px solid var(--black);
 }
+.gc-tentative{
+  background:var(--yellow);color:var(--black);
+  padding:3px 7px;
+  font-family:'Archivo Black',sans-serif;
+  font-size:8px;letter-spacing:.8px;
+  border:2px solid var(--black);
+  box-shadow:2px 2px 0 var(--red);
+  transform:skewX(-6deg);
+  white-space:nowrap;
+}
 .gc-score{
   font-family:'Archivo Black',sans-serif;
   font-size:18px;letter-spacing:-.5px;
@@ -1325,7 +1335,8 @@ function renderHero(m) {
   const tlabel = TEAM_LABEL[m.team] || (m.team==='virtus'?'VIRTUS ROMA':'LUISS ROMA');
   const v = VENUES[m.team] || {};
   const tod = isToday(m.date) ? `<span class="sb-tag">★ OGGI ★</span>` : '';
-  const phaseTxt = phShort(m.phase) + (m.round ? ' · G'+m.round : '');
+  const phaseTxt = phShort(m.phase) + (m.game_num ? ' · G'+m.game_num : (m.round ? ' · G'+m.round : ''));
+  const tentHero = m.tentative ? `<span class="gc-tentative" style="margin-left:8px">G${m.game_num||'?'} · DA CONFERMARE</span>` : '';
 
   return `<div class="scoreboard">
     <div class="sb-topbar ${tcls}">
@@ -1363,7 +1374,7 @@ function renderHero(m) {
       </div>
     </div>
     <div class="sb-bottom ${tcls}">
-      <span>★ ${escHtml(phaseTxt)} ★</span>
+      <span>★ ${escHtml(phaseTxt)} ★${tentHero}</span>
       <span>${escHtml(tlabel.toUpperCase())}</span>
     </div>
   </div>`;
@@ -1408,8 +1419,9 @@ function renderCard(m, idx, isPastCard) {
   const v = VENUES[m.team] || {};
   const today_ = isToday(m.date);
   const dateTxt = fmtUpper(m.date);
-  const phaseRound = m.round ? `G${String(m.round).padStart(2,'0')}` : phShort(m.phase);
+  const phaseRound = m.game_num ? `G${m.game_num}` : (m.round ? `G${String(m.round).padStart(2,'0')}` : phShort(m.phase));
   const topRight = isPastCard ? 'FINAL · '+dateTxt : (m.time?dateTxt+' · '+m.time:dateTxt);
+  const tentBadge = m.tentative ? `<div class="gc-tentative">G${m.game_num||'?'} · DA CONFERMARE</div>` : '';
 
   let rightSide;
   if (m.sh!=null && m.sa!=null) {
@@ -1423,9 +1435,9 @@ function renderCard(m, idx, isPastCard) {
       <div class="gc-wl ${win?'w':'l'}">${win?'W':'L'}</div>
     </div>`;
   } else if (today_) {
-    rightSide = `<div class="gc-right"><div class="gc-chip gc-today"><span class="gc-chip-dot"></span>OGGI</div></div>`;
+    rightSide = `<div class="gc-right">${tentBadge}<div class="gc-chip gc-today"><span class="gc-chip-dot"></span>OGGI</div></div>`;
   } else if (!isPast(m.date)) {
-    rightSide = `<div class="gc-right"><div class="gc-chip"><span class="gc-chip-dot"></span>SOON</div></div>`;
+    rightSide = `<div class="gc-right">${tentBadge}<div class="gc-chip"><span class="gc-chip-dot"></span>SOON</div></div>`;
   } else {
     rightSide = `<div class="gc-right"><div class="gc-tbd">—</div></div>`;
   }
