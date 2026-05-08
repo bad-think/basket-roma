@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-08T07:01:06.975823",
+  "last_updated": "2026-05-08T07:09:25.723493",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -112,7 +112,7 @@
       "id": "v13",
       "team": "virtus",
       "phase": "regular",
-      "round": 13,
+      "round": 14,
       "date": "2025-11-22",
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
@@ -172,7 +172,7 @@
       "id": "v22",
       "team": "virtus",
       "phase": "regular",
-      "round": 23,
+      "round": 26,
       "date": "2026-01-24",
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
@@ -424,7 +424,7 @@
       "id": "l29",
       "team": "luiss",
       "phase": "regular",
-      "round": 31,
+      "round": 34,
       "date": "2026-03-08",
       "time": "17:00",
       "home": "Luiss Roma",
@@ -460,7 +460,7 @@
       "id": "l35",
       "team": "luiss",
       "phase": "regular",
-      "round": 37,
+      "round": 41,
       "date": "2026-04-18",
       "time": "18:30",
       "home": "Luiss Roma",
@@ -544,7 +544,7 @@
       "l": 7
     },
     "luiss": {
-      "pos": 6,
+      "pos": 4,
       "pts": 42,
       "w": 21,
       "l": 15
