@@ -764,6 +764,121 @@ def fetch_domino_scores(league_path, girone_letter, season, rounds):
     return results
 
 
+def _fetch_playoff_scores_domino(league_path, season):
+    """
+    Prova Domino API con codici playoff per recuperare risultati postseason.
+    Tenta ogni codice con round 1-5 (best-of-5). Se round 1 non risponde,
+    salta il codice intero (ottimizzazione: evita 4 request inutili).
+    """
+    codes = PLAYOFF_PAGE_CODES.get(league_path, [])
+    year = domino_season_code(season)
+    if not year or not codes:
+        return {}
+
+    results = {}
+    for code in codes:
+        for rnd in range(1, 6):
+            url = (f"https://lnpstat.domino.it/getstatisticsfiles"
+                   f"?task=schedule&year={year}&league={code}&round={rnd}")
+            raw = fetch(url, timeout=5)
+            if not raw:
+                if rnd == 1:
+                    break  # codice non valido, salta i round successivi
+                continue
+            try:
+                games = json.loads(raw)
+            except (json.JSONDecodeError, TypeError):
+                if rnd == 1:
+                    break
+                continue
+            for g in games:
+                if g.get("game_status") != "finished":
+                    continue
+                try:
+                    sh = int(g["score_home"])
+                    sa = int(g["score_away"])
+                except (ValueError, KeyError, TypeError):
+                    continue
+                hn = normalise(g.get("teamname_home", ""))
+                an = normalise(g.get("teamname_away", ""))
+                if hn and an:
+                    results[(hn, an)] = (sh, sa)
+    return results
+
+
+def _parse_last_result(html, team_aliases):
+    """
+    Parsa l'ultimo risultato dalla pagina squadra LNP.
+    Cerca pattern di punteggio (es. "92 - 76") vicino ai nomi delle squadre
+    nella zona "ultima partita" o "risultat" della pagina.
+    Restituisce dict {date, home, away, sh, sa} o None.
+    """
+    if not html:
+        return None
+
+    text = re.sub(r'<[^>]+>', '\n', html)
+    text = re.sub(r'[ \t]+', ' ', text)
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+
+    # Cerca "ultima partita" o "risultat"
+    lower = text.lower()
+    idx = lower.find('ultima partita')
+    if idx == -1:
+        idx = lower.find('risultat')
+    if idx == -1:
+        return None
+
+    window = text[idx:idx + 600]
+
+    # Cerca data italiana: "D{1,2} Mmm"
+    date_pat = re.compile(
+        r'(\d{1,2})\s+'
+        r'(gen(?:\w*)?|feb(?:\w*)?|mar(?:\w*)?|apr(?:\w*)?|mag(?:\w*)?|'
+        r'giu(?:\w*)?|lug(?:\w*)?|ago(?:\w*)?|set(?:\w*)?|ott(?:\w*)?|'
+        r'nov(?:\w*)?|dic(?:\w*)?)',
+        re.IGNORECASE,
+    )
+    dm = date_pat.search(window)
+    if not dm:
+        return None
+
+    day = int(dm.group(1))
+    month = _MONTHS_IT.get(dm.group(2).lower()[:3])
+    if not month:
+        return None
+    year = datetime.now().year
+    date_str = f"{year}-{month}-{day:02d}"
+
+    # Cerca punteggio: "NN - NN" o "NN – NN"
+    score_m = re.search(r'(\d{2,3})\s*[-–]\s*(\d{2,3})', window)
+    if not score_m:
+        return None
+    sh, sa = int(score_m.group(1)), int(score_m.group(2))
+    if sh == 0 and sa == 0:
+        return None
+
+    # Cerca nomi squadra vicino al punteggio
+    around = window[max(0, score_m.start()-200):score_m.end()+200]
+    lines = [ln.strip() for ln in around.split('\n') if len(ln.strip()) >= 8]
+
+    home = away = None
+    for ln in lines:
+        ln_n = normalise(ln)
+        if any(an in ln_n or ln_n in an for an in aliases_norm):
+            if not home:
+                home = ln.strip()
+            continue
+        if home and not away and len(ln.strip()) >= 8:
+            if not re.match(r'^[\d\-–:/]', ln.strip()):
+                away = ln.strip()
+                break
+
+    if not home:
+        return None
+
+    return {"date": date_str, "home": home, "away": away or "", "sh": sh, "sa": sa}
+
+
 # ================================================================
 # PLAYOFF/PLAY-IN — FETCH DA PAGINE DEDICATE LNP (v8.8)
 # ================================================================
@@ -1671,6 +1786,45 @@ def update_in_season(matches, config, standings):
                             m["sh"], m["sa"] = score
                             print(f"  ⚡ [{team_key}] {m['away']}: "
                                   f"{score[0]}-{score[1]} (Domino API)")
+                            updated += 1
+
+        # Fill punteggi playoff — Domino API con codici playoff (v8.9)
+        missing_po = [m for m in matches
+                      if m.get("team") == team_key and m.get("sh") is None
+                      and m.get("phase") in ("playoff", "playin")
+                      and m.get("date", "9") < datetime.now().strftime("%Y-%m-%d")]
+        if missing_po:
+            po_scores = _fetch_playoff_scores_domino(
+                league_path, config.get("season", "")
+            )
+            if po_scores:
+                for m in missing_po:
+                    key = (normalise(m.get("home", "")), normalise(m.get("away", "")))
+                    score = po_scores.get(key)
+                    if not score:
+                        for (dh, da), s in po_scores.items():
+                            if _teams_match(key[0], dh) and _teams_match(key[1], da):
+                                score = s
+                                break
+                    if score:
+                        m["sh"], m["sa"] = score
+                        print(f"  ⚡ [{team_key}] {m['away']}: "
+                              f"{score[0]}-{score[1]} (Domino playoff)")
+                        updated += 1
+                        missing_po = [x for x in missing_po if x.get("sh") is None]
+
+        # Fill punteggi playoff — fallback pagina squadra (ultimo risultato)
+        if missing_po:
+            last = _parse_last_result(html, aliases)
+            if last:
+                for m in missing_po:
+                    if m["date"] == last["date"]:
+                        h_n = normalise(m.get("home", ""))
+                        l_h = normalise(last.get("home", ""))
+                        if _teams_match(h_n, l_h):
+                            m["sh"], m["sa"] = last["sh"], last["sa"]
+                            print(f"  ✅ [{team_key}] {m['away']}: "
+                                  f"{last['sh']}-{last['sa']} (pagina squadra)")
                             updated += 1
 
         # Fill punteggi — girone completo
