@@ -890,7 +890,113 @@ def _fetch_scores_from_lnp_calendar(league_path, team_aliases):
     return results
 
 
-def _parse_last_result(html, team_aliases):
+def _fetch_playoff_scores_from_rss(team_aliases, season):
+    """
+    Fonte primaria per punteggi playoff via RSS.
+
+    Fonti in ordine di priorità:
+    1. legapallacanestro.com — ufficiale LNP, copre tutte le leghe
+    2. sportando.basketball  — testata professionale, copre A/A2/B Nazionale
+
+    Entrambe le fonti seguono automaticamente la squadra in caso di
+    cambio categoria (promozione in A2/A), a differenza di blog regionali.
+
+    Cerca negli ultimi 7 giorni articoli playoff/play-in e parsa punteggi
+    nel formato: "TeamA-TeamB NN-NN" o "TeamA NN-NN TeamB"
+    """
+    RSS_SOURCES = [
+        "https://www.legapallacanestro.com/feed/",
+        "https://sportando.basketball/feed/",
+    ]
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    results = []
+    today = datetime.now().date()
+
+    for rss_url in RSS_SOURCES:
+        raw = fetch(rss_url, timeout=8)
+        if not raw or len(raw) < 500:
+            continue
+        # Accetta sia RSS che Atom
+        if "<rss" not in raw.lower() and "<feed" not in raw.lower():
+            continue
+
+        items = re.findall(r'<item>(.*?)</item>', raw, re.DOTALL)
+        if not items:
+            items = re.findall(r'<entry>(.*?)</entry>', raw, re.DOTALL)
+
+        for item in items:
+            # Filtra per data (ultimi 7 giorni)
+            pub_m = re.search(r'<pubDate>(.*?)</pubDate>|<updated>(.*?)</updated>', item)
+            if pub_m:
+                try:
+                    from email.utils import parsedate
+                    raw_date = (pub_m.group(1) or pub_m.group(2) or "").strip()
+                    pt = parsedate(raw_date)
+                    if pt and (today - datetime(*pt[:6]).date()).days > 7:
+                        continue
+                except Exception:
+                    pass
+
+            # Estrai titolo + corpo
+            title_m = re.search(r'<title[^>]*>(.*?)</title>', item, re.DOTALL)
+            body_m = (re.search(r'<content:encoded>(.*?)</content:encoded>', item, re.DOTALL)
+                      or re.search(r'<description>(.*?)</description>', item, re.DOTALL)
+                      or re.search(r'<summary[^>]*>(.*?)</summary>', item, re.DOTALL))
+            if not body_m:
+                continue
+            title = re.sub(r'<[^>]+>|<!\[CDATA\[|\]\]>', '', title_m.group(1) if title_m else "").lower()
+            body = re.sub(r'<!\[CDATA\[|\]\]>', '', body_m.group(1))
+            body = re.sub(r'<[^>]+>', ' ', body)
+            body = re.sub(r'\s+', ' ', body)
+
+            # Solo articoli playoff/play-in
+            keywords = ['playoff', 'play-off', 'quarti', 'semifinal',
+                        'gara 1', 'gara 2', 'gara 3', 'gara 4', 'gara 5',
+                        'gara-1', 'gara-2', 'gara-3']
+            if not any(kw in title + body[:300].lower() for kw in keywords):
+                continue
+
+            # Estrai punteggi: "TeamA-TeamB NN-NN" con separatori vari
+            score_pat = re.compile(
+                r'([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\d\'\.]{3,45}?)\s*[-–]\s*'
+                r'([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\d\'\.]{3,45}?)\s+'
+                r'(\d{2,3})\s*[-–]\s*(\d{2,3})'
+            )
+            for m in score_pat.finditer(body):
+                h_raw = m.group(1).strip()
+                a_raw = m.group(2).strip()
+                sh, sa = int(m.group(3)), int(m.group(4))
+                if sh == 0 and sa == 0:
+                    continue
+                h_n = normalise(h_raw)
+                a_n = normalise(a_raw)
+                is_ours = any(
+                    an in h_n or h_n in an or an in a_n or a_n in an
+                    for an in aliases_norm
+                )
+                if not is_ours:
+                    continue
+                # Cerca data nell'articolo (DD/MM/YYYY o YYYY-MM-DD)
+                date_str = None
+                for dp in (r'(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})',
+                           r'(\d{4})-(\d{2})-(\d{2})'):
+                    dm = re.search(dp, body)
+                    if dm:
+                        g = dm.groups()
+                        if len(g[0]) == 4:
+                            date_str = f"{g[0]}-{g[1]}-{g[2]}"
+                        else:
+                            date_str = f"{g[2]}-{g[1].zfill(2)}-{g[0].zfill(2)}"
+                        break
+                results.append({
+                    "home": h_raw, "away": a_raw,
+                    "sh": sh, "sa": sa, "date": date_str,
+                })
+
+        if results:
+            break
+
+    return results
     """
     Parsa l'ultimo risultato dalla pagina squadra LNP.
     Cerca data + punteggio vicino ai nomi squadra nella sezione
@@ -2073,6 +2179,34 @@ def update_in_season(matches, config, standings):
 
         missing_po = get_missing_po()
         if missing_po:
+
+            # 0. Feed RSS (reggioacanestro / sportando) — entro ~12h dalla partita
+            rss_results = _fetch_playoff_scores_from_rss(
+                aliases, config.get("season", "")
+            )
+            for rss in rss_results:
+                for m in missing_po:
+                    h_n = normalise(m.get("home", ""))
+                    a_n = normalise(m.get("away", ""))
+                    if _teams_match(h_n, normalise(rss["home"])) and \
+                            _teams_match(a_n, normalise(rss["away"])):
+                        # La data nell'RSS può essere imprecisa: accetta se entro ±1 gg
+                        date_ok = True
+                        if rss.get("date") and m.get("date"):
+                            try:
+                                d1 = datetime.strptime(m["date"], "%Y-%m-%d").date()
+                                d2 = datetime.strptime(rss["date"], "%Y-%m-%d").date()
+                                date_ok = abs((d1 - d2).days) <= 1
+                            except Exception:
+                                pass
+                        if date_ok:
+                            m["sh"], m["sa"] = rss["sh"], rss["sa"]
+                            print(f"  📰 [{team_key}] {m['away']}: "
+                                  f"{rss['sh']}-{rss['sa']} (RSS)")
+                            updated += 1
+                            break
+
+            missing_po = get_missing_po()
 
             # 1. Match pages LNP (fonte più affidabile: HTML statico, aggiornate in minuti)
             mp_results = _fetch_playoff_match_page_scores(
