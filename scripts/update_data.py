@@ -766,16 +766,20 @@ def fetch_domino_scores(league_path, girone_letter, season, rounds):
 
 def _fetch_playoff_scores_domino(league_path, season):
     """
-    Prova Domino API con codici playoff per recuperare risultati postseason.
-    Tenta ogni codice con round 1-5 (best-of-5). Se round 1 non risponde,
-    salta il codice intero (ottimizzazione: evita 4 request inutili).
+    Prova Domino API per recuperare risultati playoff.
+    Due strategie:
+    1. Codici playoff dedicati (ita3_b_poff, etc.) con round 1-5
+    2. Codice regular (ita3_b) con round 39-50 (continuazione numerazione)
+    Se round 1 di un codice non risponde, salta i round successivi.
     """
-    codes = PLAYOFF_PAGE_CODES.get(league_path, [])
     year = domino_season_code(season)
-    if not year or not codes:
+    if not year:
         return {}
 
     results = {}
+
+    # Strategia 1: codici playoff dedicati
+    codes = PLAYOFF_PAGE_CODES.get(league_path, [])
     for code in codes:
         for rnd in range(1, 6):
             url = (f"https://lnpstat.domino.it/getstatisticsfiles"
@@ -783,10 +787,14 @@ def _fetch_playoff_scores_domino(league_path, season):
             raw = fetch(url, timeout=5)
             if not raw:
                 if rnd == 1:
-                    break  # codice non valido, salta i round successivi
+                    break
                 continue
             try:
                 games = json.loads(raw)
+                if not isinstance(games, list):
+                    if rnd == 1:
+                        break
+                    continue
             except (json.JSONDecodeError, TypeError):
                 if rnd == 1:
                     break
@@ -803,10 +811,221 @@ def _fetch_playoff_scores_domino(league_path, season):
                 an = normalise(g.get("teamname_away", ""))
                 if hn and an:
                     results[(hn, an)] = (sh, sa)
+
+    if results:
+        return results
+
+    # Strategia 2: codice regular con round > 38 (playoff come continuazione)
+    girone_codes = {
+        "serie-b": ["ita3_b", "ita3_a"],
+        "serie-a2": ["ita2"],
+    }
+    for code in girone_codes.get(league_path, []):
+        found_any = False
+        for rnd in range(39, 51):
+            url = (f"https://lnpstat.domino.it/getstatisticsfiles"
+                   f"?task=schedule&year={year}&league={code}&round={rnd}")
+            raw = fetch(url, timeout=5)
+            if not raw:
+                if not found_any:
+                    break
+                continue
+            try:
+                games = json.loads(raw)
+                if not isinstance(games, list) or not games:
+                    if not found_any:
+                        break
+                    continue
+            except (json.JSONDecodeError, TypeError):
+                if not found_any:
+                    break
+                continue
+            found_any = True
+            for g in games:
+                if g.get("game_status") != "finished":
+                    continue
+                try:
+                    sh = int(g["score_home"])
+                    sa = int(g["score_away"])
+                except (ValueError, KeyError, TypeError):
+                    continue
+                hn = normalise(g.get("teamname_home", ""))
+                an = normalise(g.get("teamname_away", ""))
+                if hn and an:
+                    results[(hn, an)] = (sh, sa)
+
     return results
 
 
-def _parse_last_result(html, team_aliases):
+def _fetch_scores_from_lnp_calendar(league_path, team_aliases):
+    """
+    Recupera risultati dal calendario centrale LNP (/serie/{id}/calendario).
+    Questa pagina mostra TUTTE le partite della lega e potrebbe includere
+    i playoff prima che le pagine squadra siano aggiornate.
+    """
+    serie_id = LEAGUE_SERIE_IDS.get(league_path)
+    if not serie_id:
+        return []
+    url = f"https://www.legapallacanestro.com/serie/{serie_id}/calendario"
+    html = fetch(url, timeout=10)
+    if not html or len(html) < 1000:
+        return []
+    all_matches = parse_lnp_calendar(html)
+    if not all_matches:
+        return []
+    # Filtra solo le partite della nostra squadra con risultato
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    results = []
+    for m in all_matches:
+        if m.get("sh") is None:
+            continue
+        h_n = normalise(m.get("home", ""))
+        a_n = normalise(m.get("away", ""))
+        is_ours = any(
+            (an in h_n or h_n in an or an in a_n or a_n in an)
+            for an in aliases_norm
+        )
+        if is_ours:
+            results.append(m)
+    return results
+
+
+def _parse_match_page_score(html):
+    """
+    Parsa data, home, away, score da una match page LNP.
+    Formato: "Data: DD/MM/YYYY" + "Casa · TeamA · NN — NN · Ospite · TeamB"
+    Restituisce dict {date, home, away, sh, sa} o None.
+    """
+    if not html or "Data:" not in html:
+        return None
+
+    dm = re.search(r'Data:\s*(\d{2}/\d{2}/\d{4})', html)
+    if not dm:
+        return None
+    dd, mm, yyyy = dm.group(1).split('/')
+    date_str = f"{yyyy}-{mm}-{dd}"
+
+    # Punteggio: "NN — NN" o "NN – NN" o "NN - NN"
+    sm = re.search(r'(\d{2,3})\s*[—–\-]\s*(\d{2,3})', html)
+    if not sm:
+        return None
+    sh, sa = int(sm.group(1)), int(sm.group(2))
+    if sh == 0 and sa == 0:
+        return None
+
+    # Squadre: "Casa" e "Ospite" nei tag adiacenti
+    text = re.sub(r'<[^>]+>', ' ', html)
+    text = re.sub(r'\s+', ' ', text)
+    home_m = re.search(r'Casa\s*[·•]\s*([A-Za-z\s\d\'\.]+?)\s*(?:[·•]|\d{2,3}\s*[—–\-])', text)
+    away_m = re.search(r'Ospite\s*[·•]\s*([A-Za-z\s\d\'\.]+?)(?:\s*[·•]|$|\s{2,})', text)
+    if not home_m or not away_m:
+        return None
+
+    return {
+        "date": date_str,
+        "home": home_m.group(1).strip(),
+        "away": away_m.group(1).strip(),
+        "sh": sh,
+        "sa": sa,
+    }
+
+
+def _fetch_playoff_match_page_scores(league_path, season, team_aliases):
+    """
+    Soluzione definitiva per punteggi playoff.
+    Le match page LNP (/wp/match/...) contengono il punteggio in HTML statico
+    e si aggiornano entro minuti dalla fine della partita.
+
+    Strategia di discovery del match ID (2 fasi):
+    1. SCAN della pagina playoff: cerca link /wp/match/ direttamente nell'HTML
+    2. BRUTE FORCE: prova URL sequenziali (codice playoff _1.._20, poi regular _343.._380)
+
+    Una volta trovato l'URL della match page, il parsing è immediato e robusto.
+    """
+    codes = PLAYOFF_PAGE_CODES.get(league_path, [])
+    serie_id = LEAGUE_SERIE_IDS.get(league_path)
+    if not codes or not serie_id:
+        return []
+
+    try:
+        y1 = int(season.split("-")[0])
+        year = y1 + 1
+        season_code = f"x{str(y1)[-2:]}{season.split('-')[1]}"  # "x2526"
+    except (ValueError, IndexError):
+        return []
+
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    found_urls = set()
+
+    # --- Fase 1: scan pagine playoff per link /wp/match/ ---
+    for code in codes:
+        url = (f"https://www.legapallacanestro.com/serie/{serie_id}"
+               f"/playoff-playout/{year}/{code}")
+        html = fetch(url)
+        if not html:
+            continue
+        for m in re.finditer(r'/wp/match/([^/"\'>\s]+)/([^/"\'>\s]+)/([^/"\'>\s]+)', html):
+            full_url = f"https://www.legapallacanestro.com{m.group(0)}"
+            found_urls.add(full_url)
+
+    # --- Fase 2: brute force se Fase 1 non ha trovato nulla ---
+    if not found_urls:
+        # Codici playoff dedicati (ita3_b_poff_1..20)
+        for code in codes:
+            consecutive_404 = 0
+            for n in range(1, 21):
+                url = (f"https://www.legapallacanestro.com/wp/match"
+                       f"/{code}_{n}/{code}/{season_code}")
+                html = fetch(url, timeout=5)
+                if not html or len(html) < 500 or "Data:" not in html:
+                    consecutive_404 += 1
+                    if consecutive_404 >= 3:
+                        break
+                    continue
+                consecutive_404 = 0
+                found_urls.add(url)
+
+        # Continuazione regular (ita3_b_343..380)
+        if not found_urls:
+            regular_codes = {"serie-b": ["ita3_b", "ita3_a"],
+                             "serie-a2": ["ita2"]}.get(league_path, [])
+            for code in regular_codes:
+                # Stima: regular arriva a ~342, playoff inizia da 343
+                consecutive_404 = 0
+                for n in range(343, 381):
+                    url = (f"https://www.legapallacanestro.com/wp/match"
+                           f"/{code}_{n}/{code}/{season_code}")
+                    html = fetch(url, timeout=5)
+                    if not html or len(html) < 500 or "Data:" not in html:
+                        consecutive_404 += 1
+                        if consecutive_404 >= 5:
+                            break
+                        continue
+                    consecutive_404 = 0
+                    found_urls.add(url)
+
+    if not found_urls:
+        return []
+
+    # --- Parsing di ogni match page trovata ---
+    results = []
+    for url in found_urls:
+        html = fetch(url, timeout=5)
+        if not html:
+            continue
+        m_data = _parse_match_page_score(html)
+        if not m_data or m_data.get("sh") is None:
+            continue
+        h_n = normalise(m_data["home"])
+        a_n = normalise(m_data["away"])
+        is_ours = any(
+            (an in h_n or h_n in an or an in a_n or a_n in an)
+            for an in aliases_norm
+        )
+        if is_ours:
+            results.append(m_data)
+
+    return results
     """
     Parsa l'ultimo risultato dalla pagina squadra LNP.
     Cerca pattern di punteggio (es. "92 - 76") vicino ai nomi delle squadre
@@ -1788,40 +2007,82 @@ def update_in_season(matches, config, standings):
                                   f"{score[0]}-{score[1]} (Domino API)")
                             updated += 1
 
-        # Fill punteggi playoff — Domino API con codici playoff (v8.9)
-        missing_po = [m for m in matches
-                      if m.get("team") == team_key and m.get("sh") is None
-                      and m.get("phase") in ("playoff", "playin")
-                      and m.get("date", "9") < datetime.now().strftime("%Y-%m-%d")]
-        if missing_po:
-            po_scores = _fetch_playoff_scores_domino(
-                league_path, config.get("season", "")
-            )
-            if po_scores:
-                for m in missing_po:
-                    key = (normalise(m.get("home", "")), normalise(m.get("away", "")))
-                    score = po_scores.get(key)
-                    if not score:
-                        for (dh, da), s in po_scores.items():
-                            if _teams_match(key[0], dh) and _teams_match(key[1], da):
-                                score = s
-                                break
-                    if score:
-                        m["sh"], m["sa"] = score
-                        print(f"  ⚡ [{team_key}] {m['away']}: "
-                              f"{score[0]}-{score[1]} (Domino playoff)")
-                        updated += 1
-                        missing_po = [x for x in missing_po if x.get("sh") is None]
+        # Fill punteggi playoff — cascade a 4 fonti
+        # Priorità: match pages > Domino playoff > calendario LNP > pagina squadra
+        def get_missing_po():
+            return [m for m in matches
+                    if m.get("team") == team_key and m.get("sh") is None
+                    and m.get("phase") in ("playoff", "playin")
+                    and m.get("date", "9") < datetime.now().strftime("%Y-%m-%d")]
 
-        # Fill punteggi playoff — fallback pagina squadra (ultimo risultato)
+        missing_po = get_missing_po()
         if missing_po:
-            last = _parse_last_result(html, aliases)
-            if last:
+
+            # 1. Match pages LNP (fonte più affidabile: HTML statico, aggiornate in minuti)
+            mp_results = _fetch_playoff_match_page_scores(
+                league_path, config.get("season", ""), aliases
+            )
+            for mp in mp_results:
                 for m in missing_po:
-                    if m["date"] == last["date"]:
-                        h_n = normalise(m.get("home", ""))
-                        l_h = normalise(last.get("home", ""))
-                        if _teams_match(h_n, l_h):
+                    if m["date"] == mp["date"] and \
+                            _teams_match(normalise(m["home"]), normalise(mp["home"])) and \
+                            _teams_match(normalise(m["away"]), normalise(mp["away"])):
+                        m["sh"], m["sa"] = mp["sh"], mp["sa"]
+                        print(f"  ⚡ [{team_key}] {m['away']}: "
+                              f"{mp['sh']}-{mp['sa']} (match page LNP)")
+                        updated += 1
+                        break
+
+            missing_po = get_missing_po()
+
+            # 2. Domino API con codici playoff + round 39+
+            if missing_po:
+                po_scores = _fetch_playoff_scores_domino(
+                    league_path, config.get("season", "")
+                )
+                if po_scores:
+                    for m in missing_po:
+                        key = (normalise(m.get("home", "")), normalise(m.get("away", "")))
+                        score = po_scores.get(key)
+                        if not score:
+                            for (dh, da), s in po_scores.items():
+                                if _teams_match(key[0], dh) and _teams_match(key[1], da):
+                                    score = s
+                                    break
+                        if score:
+                            m["sh"], m["sa"] = score
+                            print(f"  ⚡ [{team_key}] {m['away']}: "
+                                  f"{score[0]}-{score[1]} (Domino playoff)")
+                            updated += 1
+
+            missing_po = get_missing_po()
+
+            # 3. Calendario centrale LNP
+            if missing_po:
+                cal_matches = _fetch_scores_from_lnp_calendar(league_path, aliases)
+                for m in missing_po:
+                    m_h = normalise(m.get("home", ""))
+                    m_a = normalise(m.get("away", ""))
+                    for cm in cal_matches:
+                        if cm["date"] == m["date"] and \
+                                _teams_match(m_h, normalise(cm["home"])) and \
+                                _teams_match(m_a, normalise(cm["away"])):
+                            m["sh"], m["sa"] = cm["sh"], cm["sa"]
+                            print(f"  ✅ [{team_key}] {m['away']}: "
+                                  f"{cm['sh']}-{cm['sa']} (calendario LNP)")
+                            updated += 1
+                            break
+
+            missing_po = get_missing_po()
+
+            # 4. Pagina squadra — ultimo risultato
+            if missing_po:
+                last = _parse_last_result(html, aliases)
+                if last:
+                    for m in missing_po:
+                        if m["date"] == last["date"] and \
+                                _teams_match(normalise(m.get("home", "")),
+                                             normalise(last.get("home", ""))):
                             m["sh"], m["sa"] = last["sh"], last["sa"]
                             print(f"  ✅ [{team_key}] {m['away']}: "
                                   f"{last['sh']}-{last['sa']} (pagina squadra)")
