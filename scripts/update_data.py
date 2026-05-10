@@ -890,6 +890,62 @@ def _fetch_scores_from_lnp_calendar(league_path, team_aliases):
     return results
 
 
+def _parse_last_result(html, team_aliases):
+    """
+    Parsa l'ultimo risultato dalla pagina squadra LNP.
+    Cerca data + punteggio vicino ai nomi squadra nella sezione
+    'ultima partita' o 'risultat'. Restituisce {date, home, away, sh, sa} o None.
+    """
+    if not html:
+        return None
+    text = re.sub(r'<[^>]+>', '\n', html)
+    text = re.sub(r'[ \t]+', ' ', text)
+    aliases_norm = [normalise(a) for a in team_aliases if a]
+    lower = text.lower()
+    idx = lower.find('ultima partita')
+    if idx == -1:
+        idx = lower.find('risultat')
+    if idx == -1:
+        return None
+    window = text[idx:idx + 600]
+    date_pat = re.compile(
+        r'(\d{1,2})\s+'
+        r'(gen(?:\w*)?|feb(?:\w*)?|mar(?:\w*)?|apr(?:\w*)?|mag(?:\w*)?|'
+        r'giu(?:\w*)?|lug(?:\w*)?|ago(?:\w*)?|set(?:\w*)?|ott(?:\w*)?|'
+        r'nov(?:\w*)?|dic(?:\w*)?)',
+        re.IGNORECASE,
+    )
+    dm = date_pat.search(window)
+    if not dm:
+        return None
+    day = int(dm.group(1))
+    month = _MONTHS_IT.get(dm.group(2).lower()[:3])
+    if not month:
+        return None
+    date_str = f"{datetime.now().year}-{month}-{day:02d}"
+    score_m = re.search(r'(\d{2,3})\s*[-–]\s*(\d{2,3})', window)
+    if not score_m:
+        return None
+    sh, sa = int(score_m.group(1)), int(score_m.group(2))
+    if sh == 0 and sa == 0:
+        return None
+    around = window[max(0, score_m.start()-200):score_m.end()+200]
+    lines = [ln.strip() for ln in around.split('\n') if len(ln.strip()) >= 8]
+    home = away = None
+    for ln in lines:
+        ln_n = normalise(ln)
+        if any(an in ln_n or ln_n in an for an in aliases_norm):
+            if not home:
+                home = ln.strip()
+            continue
+        if home and not away and not re.match(r'^[\d\-–:/]', ln.strip()):
+            away = ln.strip()
+            break
+    if not home:
+        return None
+    return {"date": date_str, "home": home, "away": away or "", "sh": sh, "sa": sa}
+
+
 def _parse_match_page_score(html):
     """
     Parsa data, home, away, score da una match page LNP.
