@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-10T19:52:39.105769",
+  "last_updated": "2026-05-11T05:56:01.972548",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -280,7 +280,7 @@
       "id": "l07",
       "team": "luiss",
       "phase": "regular",
-      "round": 10,
+      "round": 9,
       "date": "2025-11-02",
       "time": "18:30",
       "home": "Luiss Roma",
@@ -469,19 +469,6 @@
       "sa": 71
     },
     {
-      "id": "v_po_r37",
-      "team": "virtus",
-      "phase": "playoff",
-      "round": 37,
-      "date": "2026-05-08",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Paffoni Fulgor Basket Omegna",
-      "sh": null,
-      "sa": null,
-      "game_num": 1
-    },
-    {
       "id": "v_po_r38",
       "team": "virtus",
       "phase": "playoff",
@@ -534,6 +521,19 @@
       "sa": null,
       "game_num": 4,
       "tentative": true
+    },
+    {
+      "id": "v_po_r37",
+      "team": "virtus",
+      "phase": "playoff",
+      "round": 37,
+      "date": "2026-05-08",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Paffoni Fulgor Basket Omegna",
+      "sh": null,
+      "sa": null,
+      "game_num": 1
     }
   ],
   "standings": {
