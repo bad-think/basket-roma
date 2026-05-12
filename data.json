@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-12T05:36:24.103937",
+  "last_updated": "2026-05-11T05:56:01.972548",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -280,7 +280,7 @@
       "id": "l07",
       "team": "luiss",
       "phase": "regular",
-      "round": 10,
+      "round": 9,
       "date": "2025-11-02",
       "time": "18:30",
       "home": "Luiss Roma",
@@ -477,8 +477,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Paffoni Fulgor Basket Omegna",
-      "sh": null,
-      "sa": null,
+      "sh": 98,
+      "sa": 79,
       "game_num": 2
     },
     {
@@ -531,8 +531,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Paffoni Fulgor Basket Omegna",
-      "sh": null,
-      "sa": null,
+      "sh": 94,
+      "sa": 71,
       "game_num": 1
     }
   ],
