@@ -1517,22 +1517,23 @@ def _parse_round_dates(text, round_key, year):
 
 def cleanup_unplayed_playoff_matches(matches):
     """
-    Rimuove partite playoff/play-in con sh=None la cui data è passata
-    da più di 2 giorni (serie finita prima di G5).
+    Rimuove SOLO partite playoff/play-in TENTATIVE (G4/G5) con sh=None
+    la cui data è passata da più di 2 giorni (serie finita prima).
+    G1/G2/G3 non vengono mai rimosse anche se sh=None.
     """
     cutoff = (date.today() - timedelta(days=2)).strftime("%Y-%m-%d")
     to_remove = []
     for i, m in enumerate(matches):
         if m.get("phase") in ("playoff", "playin") \
+                and m.get("tentative") == True \
                 and m.get("sh") is None \
                 and m.get("date", "9") < cutoff:
             to_remove.append(i)
-            print(f"  🗑️  Rimossa {m.get('phase')} non disputata: "
+            print(f"  🗑️  Rimossa {m.get('phase')} tentative: "
                   f"{m.get('date')} vs {m.get('away')}")
     for i in reversed(to_remove):
         matches.pop(i)
     return len(to_remove)
-
 
 _MONTHS_IT = {
     'gen': '01', 'feb': '02', 'mar': '03', 'apr': '04',
