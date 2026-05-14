@@ -1082,6 +1082,9 @@ if (savedMatches && Array.isArray(savedMatches)) {
 let standings = JSON.parse(localStorage.getItem('brc_s') || 'null') || {...STANDINGS};
 let lastUpdate = localStorage.getItem('brc_lu') || null;
 let classificaUrl = localStorage.getItem('brc_cu') || null;
+// v8.9.2: stato serie chiuse + config squadre per detection awaiting/eliminated
+let seriesClosed = JSON.parse(localStorage.getItem('brc_sc') || '[]');
+let teamsConfig = JSON.parse(localStorage.getItem('brc_tc') || '{}');
 let currentTab = 'all';
 let notifEnabled = localStorage.getItem('brc_n') === '1';
 let cdTimer = null;
@@ -1193,6 +1196,19 @@ function doRefresh(manual) {
       if (data.config && data.config.classifica_url) {
         classificaUrl = data.config.classifica_url;
         localStorage.setItem('brc_cu', classificaUrl);
+      }
+      // v8.9.2: carico series_closed e teams per detection awaiting/eliminated
+      if (data.config && Array.isArray(data.config.series_closed)) {
+        seriesClosed = data.config.series_closed;
+        localStorage.setItem('brc_sc', JSON.stringify(seriesClosed));
+      } else {
+        // se data.json non ha più series_closed, pulisco (nuova stagione)
+        seriesClosed = [];
+        localStorage.removeItem('brc_sc');
+      }
+      if (data.config && data.config.teams && typeof data.config.teams === 'object') {
+        teamsConfig = data.config.teams;
+        localStorage.setItem('brc_tc', JSON.stringify(teamsConfig));
       }
       // Supporto a campionati separati per stagione futura
       if (data.config && data.config.team_labels) {
@@ -1606,8 +1622,46 @@ function renderSeasonBanners() {
       [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]));
   }
 
+  // SCENARIO C-bis (v8.9.2): post-serie chiusa, in attesa nuovo turno LNP
+  // Squadre che hanno vinto l'ultima serie (team_advances:true in series_closed)
+  // ma non hanno ancora gare future in `matches`. Tipicamente: serie playoff
+  // chiusa, in attesa che LNP pubblichi il tabellone del turno successivo.
+  const teamKeys = Object.keys(teamsConfig || {});
+  const awaitingTeams = teamKeys.filter(tk => {
+    const advances = seriesClosed.some(s => s.team === tk && s.team_advances === true);
+    if (!advances) return false;
+    const hasFuture = matches.some(m =>
+      m.team === tk && toDate(m.date).getTime() >= today().getTime()
+    );
+    return !hasFuture;
+  });
+  const hasAwaiting = awaitingTeams.length > 0;
+
+  if (forceAll || dbg === 'awaiting' || (!dbg && hasAwaiting && now > w.seasonEnd.getTime())) {
+    const teamNames = awaitingTeams.map(tk => {
+      const t = teamsConfig[tk] || {};
+      const n = (t.name || tk).toUpperCase();
+      return n.split(' ').slice(0, 2).join(' ');
+    }).join(' · ');
+    const inner = `
+      <div class="sbnr-text">Serie precedente vinta. <em>${escHtml(teamNames)}</em> attend${awaitingTeams.length>1?'ono':'e'} il tabellone del turno successivo: appena LNP lo pubblica, gli orari compaiono qui in automatico.</div>
+      <div class="bnr-testpat">
+        <div class="tp-1"></div><div class="tp-2"></div><div class="tp-3"></div>
+        <div class="tp-4"></div><div class="tp-5"></div><div class="tp-6"></div><div class="tp-7"></div>
+      </div>
+      <div class="bnr-tp-label">
+        <span class="tp-bounce">🏀</span>
+        IN ATTESA TABELLONE LNP
+        <span class="tp-bounce" style="animation-delay:.2s">🏀</span>
+      </div>`;
+    banners.push(makeRichBanner('action', '★ NEXT ROUND ★',
+      `${escHtml(teamNames)} — AL TURNO SUCCESSIVO`, inner,
+      [{label:'CALENDARIO LNP', url:'https://www.legapallacanestro.com/serie/4/calendario'}]));
+  }
+
   // SCENARIO D: stagione conclusa — "FINAL BUZZER" star burst
-  if (forceAll || dbg === 'buzzer' || (!dbg && now > w.seasonEnd.getTime() && now < w.newSeasonStart.getTime())) {
+  // v8.9.2: bloccato se hasAwaiting (almeno una squadra avanza a turno futuro).
+  if (forceAll || dbg === 'buzzer' || (!dbg && !hasAwaiting && now > w.seasonEnd.getTime() && now < w.newSeasonStart.getTime())) {
     const daysToNew = Math.max(1, Math.ceil((w.newSeasonStart.getTime() - now) / 86400000)) || 47;
     const lblSeason = `${w.seasonEnd.getFullYear()-1}-${String(w.seasonEnd.getFullYear()).slice(2)}`;
     const inner = `
