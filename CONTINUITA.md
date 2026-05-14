@@ -1,8 +1,9 @@
-[CONTINUITA.md](https://github.com/user-attachments/files/27749985/CONTINUITA.md)
+[CONTINUITA.md](https://github.com/user-attachments/files/27750360/CONTINUITA.md)
 # BASKET ROMA: DOCUMENTO DI CONTINUITÀ
 
-**Versione doc:** v8.9.1
-**Versione script:** v8.9.1 (rewrite v9.0 pianificato)
+**Versione doc:** v8.9.2
+**Versione script:** v8.9.1
+**Versione frontend:** v8.9.2
 **Data:** 14 maggio 2026
 **Repo:** github.com/bad-think/basket-roma
 
@@ -57,8 +58,53 @@
 **Workflow per future serie chiuse:**
 1. Confermare esito serie da fonte affidabile (sito LNP o testate)
 2. Rimuovere G4/G5 tentative manualmente da `data.json` se ancora presenti
-3. Aggiungere entry in `config.series_closed`
-4. Push → cron successivi non re-inseriranno
+3. Aggiungere entry in `config.series_closed` con `team_advances: true/false`
+4. Push → cron successivi non re-inseriranno, frontend mostra stato corretto
+
+---
+
+## PATCH v8.9.2 — Frontend awaiting state
+
+**Problema risolto:** dopo cleanup G4/G5, il frontend mostrava "FINAL BUZZER · STAGIONE ARCHIVIATA" anche se Virtus passa alle semifinali. Causa: logica `seasonEnd = lastMatch` (max data in matches), con cleanup l'ultima data era G3 LUISS (13/5) → frontend pensava stagione finita.
+
+**Soluzione lato frontend (`index.html`):**
+
+1. Nuove variabili globali `seriesClosed` e `teamsConfig` con persistenza localStorage (`brc_sc`, `brc_tc`).
+
+2. Caricamento da `data.config.series_closed` e `data.config.teams` in `fetch()`.
+
+3. **Nuovo SCENARIO C-bis "NEXT ROUND"** in `renderSeasonBanners()`:
+   - Calcola `awaitingTeams` = squadre con `team_advances:true` in `series_closed` ma senza partite future in `matches`
+   - Si attiva quando `now > seasonEnd` E `hasAwaiting`
+   - Banner: *"VIRTUS — AL TURNO SUCCESSIVO · IN ATTESA TABELLONE LNP"*
+   - Debug URL: `?banner=awaiting`
+
+4. **SCENARIO D modificato**: condizione aggiunta `!hasAwaiting`. Il final buzzer scatta solo se NESSUNA squadra avanza.
+
+**Soluzione lato backend (`data.json`):**
+Schema `series_closed` arricchito con campo `team_advances` (boolean) e `round_name`:
+```json
+{
+  "team": "virtus",
+  "opponent": "Paffoni Fulgor Basket Omegna",
+  "phase": "playoff",
+  "round_name": "QF",
+  "result": "3-0",
+  "team_advances": true,
+  "note": "Vincente QF, passa a SF"
+}
+```
+
+**Comportamento atteso (oggi 14/05/2026 post-quarti):**
+- LUISS: `team_advances:false` → considerata eliminata
+- Virtus: `team_advances:true`, no partite future → in `awaitingTeams`
+- Banner mostrato: ★ NEXT ROUND ★ — VIRTUS GVM AL TURNO SUCCESSIVO
+- Banner NON mostrato: FINAL BUZZER
+
+**Quando LNP pubblicherà SF Virtus:**
+- Run script aggiunge partite SF in `matches`
+- `hasFuture` diventa true per Virtus → esce da `awaitingTeams`
+- Banner "NEXT ROUND" scompare automaticamente, calendario gare appare
 
 ---
 
