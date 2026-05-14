@@ -1,4 +1,4 @@
-[CONTINUITA.md](https://github.com/user-attachments/files/27750360/CONTINUITA.md)
+[Uploading CONTINUITA.md…]()
 # BASKET ROMA: DOCUMENTO DI CONTINUITÀ
 
 **Versione doc:** v8.9.2
@@ -223,3 +223,60 @@ basket-roma/
 - Verifiche pre-consegna script: `python3 -c "import ast; ast.parse(open('update_data.py').read())"` + `grep -c "def _parse_last_result"`
 - Inizio rewrite v9.0: utente conferma quando.
 - Transcript sessione cleanup: `/mnt/transcripts/2026-05-14-basket-roma-cleanup-v8-9-1.txt`
+
+---
+
+## ROADMAP — REWRITE v9.0
+
+**Trigger di avvio:** dopo SF Virtus (qualunque esito, 21/5 - inizio giugno).
+
+**Decisione strategica:** v8.9.x è "good enough" per chiudere la stagione. Il bracket parser auto-magico per turni successivi viene progettato bene **una volta sola** in v9.0, invece di patcharlo su v8.9 sapendo già che il file monolitico va deprecato.
+
+**Specs raccolte da questa sessione:**
+
+| Area | Requisito |
+|---|---|
+| Categorie | B Nazionale, A2, Serie A, Coppa Italia LNP, EuroCup/Champions League |
+| Fasi | regular, playoff, playout, coppa, europe (simmetriche) |
+| Multi-stagione | config separata per stagione, cambio categoria auto |
+| Multi-team | configurabile, oggi 2 (Virtus + LUISS), espandibile a N |
+| Frontend | autoconfigurante da `data.json`, zero hardcode |
+| Architettura | modulare (file ~200 righe max), AST pre-commit hook |
+| Cron | 3 run/giorno (giù da 8) |
+
+**Feature critiche da progettare in v9.0:**
+
+1. **Bracket DOM parser** + tabella formule playoff/playout per categoria/anno → auto-rilevamento turni successivi senza intervento manuale
+2. **Match model unificato** con `series_id`, `competition_id`, `sources[]` (provenance)
+3. **Series state machine** esplicita: `open` → `concluded(advances|eliminated)`
+4. **Override layer** per casi non rilevabili automaticamente (mantenere `series_closed` come escape valve)
+
+**Struttura proposta (già definita in sessione):**
+```
+basket-roma/
+├── config/seasons/2025-26.json + sources.json
+├── scripts/
+│   ├── main.py (orchestrator ~150 righe)
+│   ├── core/{models,state,cleanup}.py
+│   ├── fetchers/{lnp,lba,fiba,rss_news}.py
+│   ├── parsers/{bracket,pdf_calendar,match_score}.py
+│   └── tests/
+└── public/{index.html, app.js, style.css}
+```
+
+**Fasi implementazione:**
+1. Foundation: config + models + state (parità funzionale v8.9.x)
+2. Fetchers modulari LNP + bracket DOM parser
+3. Frontend data-driven (multi-team, multi-competition tabs)
+4. LBA/FIBA on-demand
+5. Hardening: test parser, AST hook, alert RSS non-capture
+
+---
+
+## STATO FINE SESSIONE (14/05/2026)
+
+**Backend:** v8.9.1 — series closure detection (override + euristica) ✅
+**Frontend:** v8.9.2 — banner NEXT ROUND per squadre awaiting ✅
+**Data:** post-QF clean (39 partite), `series_closed` popolato per 2 serie ✅
+**In attesa:** LNP aggiorna testo SEMIFINALI con team reali (~18-20/5)
+**Prossimo step:** rewrite v9.0 post-SF Virtus
