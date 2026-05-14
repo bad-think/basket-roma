@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_data.py — Roma Basket Casa — v8.9
+update_data.py — Roma Basket Casa — v8.9.1
 Architettura LNP-only con auto-discovery, auto-insert, auto-bootstrap.
 
 Fonte unica: legapallacanestro.com
@@ -16,6 +16,12 @@ Fonte unica: legapallacanestro.com
 - Deduplica robusta: match per nome avversario + tolleranza data ±10 giorni
 - Correzione retroattiva round (auto-fix dei round sbagliati a ogni run)
 - Zero hardcoded round URLs, zero pianetabasket, zero intervento manuale
+
+v8.9.1 — Series closure detection:
+- _is_series_concluded(): impedisce re-inserzione di G4/G5 tentative
+  dal bracket parser quando una serie è già chiusa.
+- Override manuale via config.series_closed in data.json (preciso).
+- Euristica temporale come fallback (auto-rilevazione future serie).
 """
 
 import json
@@ -1535,6 +1541,102 @@ def cleanup_unplayed_playoff_matches(matches):
         matches.pop(i)
     return len(to_remove)
 
+
+def _is_series_concluded(matches, team_key, opponent_raw, config=None):
+    """
+    v8.9.1 — Rileva se una serie playoff/playin è chiusa per prevenire
+    re-inserzione di gare tentative G4/G5 dal bracket parser quando la
+    serie è già finita 3-0/3-1/3-2.
+
+    Due strategie complementari:
+
+    1. OVERRIDE MANUALE (config.series_closed):
+       Lista esplicita {team, opponent, phase} marcate come chiuse.
+       Massima precisione, richiede aggiornamento utente quando una
+       serie chiude. Casi non rilevabili automaticamente (es. lower
+       seed eliminata 0-3 con sola G3 in casa visibile in data.json).
+
+    2. EURISTICA TEMPORALE:
+       Higher seed: 2+ vittorie casa registrate (G1+G2 vinte) → 3-0
+       likely, attiva se last_home_game_date < today-2.
+       Generico: se almeno una gara non-tentative ha data > today-3 e
+       le tentative future non hanno score, assume chiusa.
+
+    Ritorna True solo con prova forte (evita falsi positivi).
+    """
+    opp_n = normalise(opponent_raw)
+    if not opp_n:
+        return False
+
+    # === Strategia 1: override manuale via config ===
+    if config:
+        for closed in config.get("series_closed", []) or []:
+            if closed.get("team") != team_key:
+                continue
+            closed_opp_n = normalise(closed.get("opponent", ""))
+            if not closed_opp_n:
+                continue
+            if opp_n in closed_opp_n or closed_opp_n in opp_n:
+                return True
+
+    # === Strategia 2: euristica su data.json ===
+    today = date.today()
+    today_str = today.strftime("%Y-%m-%d")
+
+    series = []
+    for m in matches:
+        if m.get("team") != team_key:
+            continue
+        if m.get("phase") not in ("playoff", "playin"):
+            continue
+        a_n = normalise(m.get("away", ""))
+        h_n = normalise(m.get("home", ""))
+        if (opp_n in a_n or a_n in opp_n
+                or opp_n in h_n or h_n in opp_n):
+            series.append(m)
+
+    if not series:
+        return False
+
+    # Sotto-check A: higher seed con 2+ vittorie casa note + tempo trascorso
+    home_wins = sum(
+        1 for m in series
+        if m.get("sh") is not None and m.get("sa") is not None
+        and m["sh"] > m["sa"]
+    )
+
+    confirmed_past = [
+        m["date"] for m in series
+        if not m.get("tentative")
+        and m.get("date", "9") < today_str
+        and m.get("sh") is not None
+    ]
+
+    if not confirmed_past:
+        return False
+
+    last_confirmed = max(confirmed_past)
+    try:
+        days_since = (today - datetime.strptime(
+            last_confirmed, "%Y-%m-%d").date()).days
+    except ValueError:
+        return False
+
+    # Higher seed: 2 wins casa (G1+G2) + ≥2 gg da ultima gara → 3-0 likely
+    if home_wins >= 2 and days_since >= 2:
+        return True
+
+    # Generico: ≥3 gare nella serie + ≥3 gg dall'ultima e tentative senza score
+    if len(series) >= 3 and days_since >= 3:
+        tentative_without_score = [
+            m for m in series
+            if m.get("tentative") and m.get("sh") is None
+        ]
+        if tentative_without_score:
+            return True
+
+    return False
+
 _MONTHS_IT = {
     'gen': '01', 'feb': '02', 'mar': '03', 'apr': '04',
     'mag': '05', 'giu': '06', 'lug': '07', 'ago': '08',
@@ -2058,6 +2160,21 @@ def update_in_season(matches, config, standings):
         playoff_extra = fetch_playoff_matches(
             league_path, config.get("season", ""), aliases
         )
+        # v8.9.1: filtro gare di serie già chiuse per prevenire
+        # re-inserzione di G4/G5 tentative dal bracket parser quando
+        # la serie è conclusa 3-0/3-1/3-2.
+        if playoff_extra:
+            before_filter = len(playoff_extra)
+            playoff_extra = [
+                pm for pm in playoff_extra
+                if not _is_series_concluded(
+                    matches, team_key, pm.get("away", ""), config
+                )
+            ]
+            skipped = before_filter - len(playoff_extra)
+            if skipped:
+                print(f"  🚫 [{team_key}] {skipped} gara/e playoff "
+                      f"saltate (serie chiusa)")
         # v8.9: fallback — widget "Prossima partita" dalla pagina squadra
         if not playoff_extra:
             upcoming = parse_upcoming_from_team_page(
@@ -2482,7 +2599,7 @@ def bootstrap_new_season(config, current_season):
 # ================================================================
 
 def main():
-    print(f"\n🏀 Roma Basket Updater v8.9 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print(f"\n🏀 Roma Basket Updater v8.9.1 — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 55)
 
     data_path = Path("data.json")
