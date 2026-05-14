@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-14T05:44:53.936655",
+  "last_updated": "2026-05-14T09:35:00.000000",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -33,7 +33,23 @@
         "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
       }
     },
-    "classifica_url": "https://www.legapallacanestro.com/serie/4/classifica"
+    "classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
+    "series_closed": [
+      {
+        "team": "luiss",
+        "opponent": "Logiman Orzinuovi",
+        "phase": "playoff",
+        "result": "0-3",
+        "note": "Eliminata QF 2025-26 (G3 casa 72-89)"
+      },
+      {
+        "team": "virtus",
+        "opponent": "Paffoni Fulgor Basket Omegna",
+        "phase": "playoff",
+        "result": "3-0",
+        "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF"
+      }
+    ]
   },
   "matches": [
     {
@@ -469,6 +485,19 @@
       "sa": 71
     },
     {
+      "id": "v_po_r37",
+      "team": "virtus",
+      "phase": "playoff",
+      "round": 37,
+      "date": "2026-05-08",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Paffoni Fulgor Basket Omegna",
+      "sh": 94,
+      "sa": 71,
+      "game_num": 1
+    },
+    {
       "id": "v_po_r38",
       "team": "virtus",
       "phase": "playoff",
@@ -482,20 +511,6 @@
       "game_num": 2
     },
     {
-      "id": "v_po_r39",
-      "team": "virtus",
-      "phase": "playoff",
-      "round": 39,
-      "date": "2026-05-18",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Paffoni Fulgor Basket Omegna",
-      "sh": null,
-      "sa": null,
-      "game_num": 5,
-      "tentative": true
-    },
-    {
       "id": "l_po_r37",
       "team": "luiss",
       "phase": "playoff",
@@ -504,36 +519,9 @@
       "time": "20:00",
       "home": "Luiss Roma",
       "away": "Logiman Orzinuovi",
-      "sh": null,
-      "sa": null,
+      "sh": 72,
+      "sa": 89,
       "game_num": 3
-    },
-    {
-      "id": "l_po_r38",
-      "team": "luiss",
-      "phase": "playoff",
-      "round": 38,
-      "date": "2026-05-15",
-      "time": "20:00",
-      "home": "Luiss Roma",
-      "away": "Logiman Orzinuovi",
-      "sh": null,
-      "sa": null,
-      "game_num": 4,
-      "tentative": true
-    },
-    {
-      "id": "v_po_r37",
-      "team": "virtus",
-      "phase": "playoff",
-      "round": 37,
-      "date": "2026-05-08",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Paffoni Fulgor Basket Omegna",
-      "sh": 94,
-      "sa": 71,
-      "game_num": 1
     }
   ],
   "standings": {
