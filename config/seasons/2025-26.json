@@ -1,0 +1,117 @@
+{
+  "$schema_version": "1.0",
+  "season": "2025-26",
+  "next_season": "2026-27",
+  "league_classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
+
+  "rss_feeds": [
+    {
+      "url": "https://sportando.basketball/feed/",
+      "categories": ["all"],
+      "enabled": true
+    },
+    {
+      "url": "https://www.basketinside.com/feed/",
+      "categories": ["all"],
+      "enabled": true
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=38",
+      "categories": ["B Nazionale"],
+      "enabled": true
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=43",
+      "categories": ["A2"],
+      "enabled": false
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=2",
+      "categories": ["A"],
+      "enabled": false
+    }
+  ],
+
+  "teams": [
+    {
+      "key": "virtus",
+      "display_name": "Virtus GVM Roma",
+      "short_name": "Virtus",
+      "color_primary": "#FFD700",
+      "color_secondary": "#000000",
+      "aliases": [
+        "virtus gvm roma",
+        "virtus roma",
+        "virtus gvm roma 1960",
+        "pallacanestro virtus roma"
+      ],
+      "venue": {
+        "name": "PalaTiziano – Palazzetto dello Sport",
+        "address": "Piazza Apollodoro 10, 00196 Roma",
+        "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      },
+      "active_competitions": [
+        {
+          "id": "b_naz_2526",
+          "type": "championship",
+          "category": "B Nazionale",
+          "girone": "B",
+          "fetcher": "lnp",
+          "source_slug": "serie-b",
+          "phases": ["regular", "playoff", "playout"]
+        }
+      ]
+    },
+    {
+      "key": "luiss",
+      "display_name": "Luiss Roma",
+      "short_name": "Luiss",
+      "color_primary": "#003366",
+      "color_secondary": "#FFFFFF",
+      "aliases": [
+        "luiss roma",
+        "luiss",
+        "luiss basketball"
+      ],
+      "venue": {
+        "name": "PalaTiziano – Palazzetto dello Sport",
+        "address": "Piazza Apollodoro 10, 00196 Roma",
+        "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      },
+      "active_competitions": [
+        {
+          "id": "b_naz_2526",
+          "type": "championship",
+          "category": "B Nazionale",
+          "girone": "B",
+          "fetcher": "lnp",
+          "source_slug": "serie-b",
+          "phases": ["regular", "playoff", "playout"]
+        }
+      ]
+    }
+  ],
+
+  "series_closed": [
+    {
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "round_name": "QF",
+      "opponent": "Logiman Orzinuovi",
+      "result": "0-3",
+      "team_advances": false,
+      "note": "Eliminata QF 2025-26 (G3 casa 72-89)"
+    },
+    {
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "round_name": "QF",
+      "opponent": "Paffoni Fulgor Basket Omegna",
+      "result": "3-0",
+      "team_advances": true,
+      "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF"
+    }
+  ]
+}
