@@ -1,33 +1,26 @@
 """
-scripts/core — Modelli dati e gestione stato per Basket Roma v9.0.
+scripts/fetchers — Plugin per il recupero dati da fonti esterne.
 
-Esporta le classi pubbliche utilizzabili da main.py e dai fetcher:
-- Match, Team, Competition, Venue, SeriesClosed, Standing, Season, State
+Ogni fetcher è una classe con interfaccia minima:
+    class XxxFetcher:
+        def __init__(self, competition: Competition, team: Team): ...
+        def fetch_schedule(self) -> list[Match]: ...
+        def fetch_scores(self, matches: list[Match]) -> list[Match]: ...
+
+Il REGISTRY mappa stringa fetcher_type → classe, usato da main.py.
+
+Stato Fase 1: registry vuoto. I fetcher concreti arrivano in Fase 2:
+- lnp.py            — LNP (Serie B/A2/A + Coppa Italia LNP)
+- rss_pool.py       — Pool RSS (sportando + basketinside + PianetaBasket)
+- pianetabasket.py  — PianetaBasket article parser per europee
 """
-from .models import (
-    Match,
-    Team,
-    Competition,
-    Venue,
-    SeriesClosed,
-    Standing,
-    Season,
-    RssFeed,
-    Phase,
-    CompetitionType,
-)
-from .state import State
+from typing import Any
 
-__all__ = [
-    "Match",
-    "Team",
-    "Competition",
-    "Venue",
-    "SeriesClosed",
-    "Standing",
-    "Season",
-    "RssFeed",
-    "Phase",
-    "CompetitionType",
-    "State",
-]
+# Registry vuoto in Fase 1. Verrà popolato in Fase 2.
+# Esempio target: REGISTRY = {"lnp": LNPFetcher, "rss_pool": RssPoolFetcher, ...}
+REGISTRY: dict[str, Any] = {}
+
+
+def get_fetcher(fetcher_type: str):
+    """Ritorna la classe fetcher per il tipo, o None se non registrato."""
+    return REGISTRY.get(fetcher_type)
