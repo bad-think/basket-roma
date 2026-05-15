@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-14T08:12:47.096908",
+  "last_updated": "2026-05-15T17:49:12.423533",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -144,7 +144,7 @@
       "id": "v15",
       "team": "virtus",
       "phase": "regular",
-      "round": 15,
+      "round": 17,
       "date": "2025-12-07",
       "time": "18:00",
       "home": "Virtus GVM Roma 1960",
@@ -300,7 +300,7 @@
       "id": "l07",
       "team": "luiss",
       "phase": "regular",
-      "round": 9,
+      "round": 10,
       "date": "2025-11-02",
       "time": "18:30",
       "home": "Luiss Roma",
