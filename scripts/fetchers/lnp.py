@@ -1,68 +1,51 @@
 """
-lnp.py — Fetcher per Lega Nazionale Pallacanestro.
+lnp.py — Fetcher per Lega Nazionale Pallacanestro (Hybrid mode).
 
-Copre:
-- Serie B Nazionale
-- Serie A2
-- Serie A (LNP gestisce solo B/A2; per A serve LBA, ma struttura URL è simile)
-- Coppa Italia LNP (futuro: stesso parser bracket)
+STRATEGIA v9.0 HYBRID:
+v9 NON re-implementa il parser calendario regular season LNP. Quella logica
+è in v8.9 update_data.py (~2000 righe raffinate negli anni) e gira già su
+main: produce data.json affidabile per regular season + score.
 
-Fonti usate:
-1. Pagina squadra LNP: calendario + score regular season
-   URL: legapallacanestro.com/squadra/{slug}
-2. PDF calendario ufficiale: round numbering autoritativo
-   URL: static.legapallacanestro.com/sites/default/files/editor/calendario_*.pdf
-3. Pagina tabellone playoff: matchup + date G1-G5
-   URL: legapallacanestro.com/serie/{N}/playoff-playout/{anno}/{codice}
+v9 si limita a:
+1. Bracket playoff parser — generazione automatica gare SF/F/Playout quando
+   LNP pubblica il testo strutturato del tabellone (regex pattern stabile).
+2. Score widget refresh — letture occasionali della pagina squadra LNP per
+   score di gare playoff (delay <12h vs RSS).
+3. Filter series_closed — impedisce re-inserzione di gare obsolete.
 
-Strategie eliminate da v8.9 (codice morto):
-- Domino API playoff codes (mai funzionato)
-- LNP match pages brute force (404 sistematici)
-- LNP calendario centrale per playoff (troppo lento)
+Quando in futuro servirà fetcher per Coppa Italia LNP, riusiamo questa
+stessa classe (stesso dominio, formato bracket simile).
 """
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import Iterator
 
-from core.models import Competition, Match, Season, SeriesClosed, Team
+from core.models import Competition, Match, Season, Team
 from ._http import http_get_text
 from ._text import normalize, team_name_matches, strip_html
 
 
 LNP_BASE = "https://www.legapallacanestro.com"
 
-# Mappa categoria → codice serie URL LNP (i numeri sono nei URL playoff)
 CATEGORY_TO_SERIE_NUM = {
     "B Nazionale": 4,
     "A2": 3,
-    "A": 2,
 }
 
-# Codici pagina playoff per categoria/tabellone
 PLAYOFF_PAGE_CODES = {
-    "B Nazionale": ["ita3_b_poff", "ita3_b_poff_t1", "ita3_b_poff_t2"],
+    "B Nazionale": ["ita3_a_poff", "ita3_b_poff"],
     "A2": ["ita2_a2_poff"],
 }
 
 
 class LNPFetcher:
     """
-    Fetcher per una singola competizione LNP di una squadra.
-
-    Args:
-        competition: la Competition da gestire (es. B Nazionale girone B)
-        team: la Team owner (per matching nomi e alias)
-        season: l'intera Season (per accesso a series_closed)
+    Fetcher LNP focalizzato su playoff/bracket (modalità Hybrid).
     """
 
-    def __init__(
-        self,
-        competition: Competition,
-        team: Team,
-        season: Season,
-    ):
+    def __init__(self, competition: Competition, team: Team, season: Season):
         self.comp = competition
         self.team = team
         self.season = season
@@ -72,154 +55,63 @@ class LNPFetcher:
     # ==================================================================
     def fetch_schedule(self) -> list[Match]:
         """
-        Recupera tutte le partite IN CASA della squadra per questa competizione.
-        Combina: calendario regular + playoff bracket (se applicabile).
+        Ritorna nuove partite IN CASA dalla pagina playoff LNP.
+
+        Regular season NON gestita qui: competenza di v8.9 update_data.py
+        che gira su main. Le partite regular esistono già in data.json
+        (caricate da state.load).
         """
-        out: list[Match] = []
-
-        # 1. Calendario regular season da pagina squadra LNP
-        team_slug = self._guess_team_slug()
-        regular = self._fetch_team_calendar(team_slug)
-        out.extend(regular)
-
-        # 2. Playoff bracket (solo se la competition include "playoff" tra le fasi)
-        if "playoff" in self.comp.phases:
-            playoff = self._fetch_playoff_bracket()
-            # Filtra serie chiuse via override manuale
-            playoff = self._filter_closed_series(playoff)
-            out.extend(playoff)
-
-        return out
+        if "playoff" not in self.comp.phases:
+            return []
+        playoff = self._fetch_playoff_bracket()
+        return self._filter_closed_series(playoff)
 
     def fetch_scores(self, matches: list[Match]) -> list[Match]:
         """
-        Aggiorna sh/sa per le partite di questa competizione che ne sono prive.
-        Fonte: pagina squadra LNP (widget risultati).
+        Aggiorna sh/sa per gare playoff della squadra senza score.
+        Strategia Hybrid: solo per gare playoff (regular gestite da v8.9).
         """
+        targets = [
+            m for m in matches
+            if m.team_key == self.team.key
+            and m.competition_id == self.comp.id
+            and m.phase in ("playoff", "playout")
+            and (m.sh is None or m.sa is None)
+        ]
+        if not targets:
+            return matches
+
         team_slug = self._guess_team_slug()
-        results = self._fetch_team_results(team_slug)
+        html = http_get_text(f"{LNP_BASE}/squadra/{team_slug}")
+        if not html:
+            return matches
 
-        # Indicizza per data: dict[date_str] = (sh, sa)
-        by_date: dict[str, tuple[int, int]] = {}
-        for m_data, sh, sa in results:
-            by_date[m_data] = (sh, sa)
-
+        text = strip_html(html)
         updated = 0
-        for m in matches:
-            if m.team_key != self.team.key:
-                continue
-            if m.competition_id != self.comp.id:
-                continue
-            if m.sh is not None and m.sa is not None:
-                continue
-            if m.date in by_date:
-                m.sh, m.sa = by_date[m.date]
-                if "lnp_team_page" not in m.sources:
-                    m.sources.append("lnp_team_page")
+        for m in targets:
+            sh_sa = self._find_score_in_team_page(text, m)
+            if sh_sa:
+                m.sh, m.sa = sh_sa
+                if "lnp_widget" not in m.sources:
+                    m.sources.append("lnp_widget")
                 updated += 1
         if updated:
-            print(f"  📊 [{self.team.key}] {updated} score aggiornati da LNP team page")
+            print(f"  📊 [{self.team.key}] {updated} score playoff da LNP widget")
         return matches
 
     # ==================================================================
-    # DISCOVERY: team slug + league slug
-    # ==================================================================
-    def _guess_team_slug(self) -> str:
-        """
-        Costruisce lo slug LNP del team dalla configurazione.
-        Es: "Virtus GVM Roma 1960" → "virtus-gvm-roma-1960"
-        """
-        # In v8.9 si usava un discovery a cascade; qui usiamo direct mapping
-        # da alias più lunga (più specifica) → slug
-        candidate = max(
-            self.team.aliases or [self.team.display_name],
-            key=len,
-        )
-        s = normalize(candidate)
-        return s.replace(" ", "-")
-
-    def _team_page_url(self, team_slug: str) -> str:
-        return f"{LNP_BASE}/squadra/{team_slug}"
-
-    # ==================================================================
-    # FETCH: pagina squadra LNP
-    # ==================================================================
-    def _fetch_team_calendar(self, team_slug: str) -> list[Match]:
-        """Estrae partite future + recenti dalla pagina squadra."""
-        url = self._team_page_url(team_slug)
-        html = http_get_text(url)
-        if not html:
-            return []
-
-        out: list[Match] = []
-        # La pagina LNP ha tabella partite con righe "casa - data - ospite - risultato"
-        # Pattern (semplificato, v8.9 ha versione più robusta):
-        # Cerchiamo blocchi di partite in casa della squadra (home == self.team.display_name)
-        team_aliases = [self.team.display_name] + self.team.aliases
-
-        # Estrae blocchi <tr> della tabella calendario
-        for date_str, home, away, score in _iter_lnp_calendar_rows(html):
-            if not team_name_matches(home, team_aliases):
-                continue  # ci interessano solo partite IN CASA
-            sh, sa = score if score else (None, None)
-            mid = f"{self.team.key[0]}{date_str.replace('-', '')[-4:]}"
-            out.append(Match(
-                id=mid,
-                team_key=self.team.key,
-                competition_id=self.comp.id,
-                phase="regular",
-                date=date_str,
-                home=home,
-                away=away,
-                sh=sh,
-                sa=sa,
-                sources=["lnp_team_page"],
-            ))
-        return out
-
-    def _fetch_team_results(self, team_slug: str) -> list[tuple[str, int, int]]:
-        """
-        Variante focalizzata sui risultati (solo partite GIOCATE con score).
-        Ritorna lista di tuple (data ISO, sh, sa).
-        """
-        url = self._team_page_url(team_slug)
-        html = http_get_text(url)
-        if not html:
-            return []
-
-        out = []
-        team_aliases = [self.team.display_name] + self.team.aliases
-        for date_str, home, away, score in _iter_lnp_calendar_rows(html):
-            if not score:
-                continue
-            if not team_name_matches(home, team_aliases):
-                continue
-            out.append((date_str, score[0], score[1]))
-        return out
-
-    # ==================================================================
-    # FETCH: tabellone playoff
+    # BRACKET PARSER (cuore del fetcher Hybrid)
     # ==================================================================
     def _fetch_playoff_bracket(self) -> list[Match]:
-        """
-        Genera partite playoff dal tabellone LNP (testo della pagina dedicata).
-        Pattern atteso:
-            "Serie N - TeamA (X^girone) - TeamB (Y^girone)"
-            "Quarti di Finale - Venerdì 8, domenica 10, mercoledì 13..."
-        """
         serie_num = CATEGORY_TO_SERIE_NUM.get(self.comp.category)
         if serie_num is None:
             return []
-        anno = self.season.season.split("-")[-1]  # "2025-26" → "26"
-        if len(anno) == 2:
-            anno = f"20{anno}"  # "26" → "2026"
+        anno = self._infer_year()
         codes = PLAYOFF_PAGE_CODES.get(self.comp.category, [])
         if not codes:
             return []
 
         team_aliases = [self.team.display_name] + self.team.aliases
-        all_games: list[Match] = []
-
         for code in codes:
             url = f"{LNP_BASE}/serie/{serie_num}/playoff-playout/{anno}/{code}"
             html = http_get_text(url)
@@ -228,27 +120,25 @@ class LNPFetcher:
             text = strip_html(html)
             games = list(self._parse_bracket_for_team(text, team_aliases))
             if games:
-                print(f"  📡 [{self.team.key}] {len(games)} gare casa playoff dal codice {code}")
-                all_games.extend(games)
-                break  # un solo tabellone è quello giusto
+                print(f"  📡 [{self.team.key}] {len(games)} gare casa playoff "
+                      f"dal codice {code}")
+                return games
 
-        return all_games
+        print(f"  · [{self.team.key}] nessuna gara playoff parsabile "
+              f"(LNP non ha ancora pubblicato turno corrente)")
+        return []
 
     def _parse_bracket_for_team(
         self,
         text: str,
         team_aliases: list[str],
     ) -> Iterator[Match]:
-        """Estrae matchup + date dal testo della pagina playoff."""
-        # Pattern matchup: "Serie N - TeamA (X^girone Y) - TeamB (Z^girone W)"
         serie_pat = re.compile(
             r"Serie\s+(\d+)\s*[-–]\s*"
             r"(.+?)\s*\(\s*(\d+)\s*\^\s*[^)]+\)\s*[-–]\s*"
             r"(.+?)\s*\(\s*(\d+)\s*\^\s*[^)]+\)",
             re.IGNORECASE | re.DOTALL,
         )
-
-        # Trova il round corrente (cerca heading più vicino al matchup)
         round_pat = re.compile(
             r"(Quarti di Finale|Semifinali|Finale|Play-In|Playout)\s*"
             r"[-–]\s*([^\n]*)",
@@ -262,7 +152,6 @@ class LNPFetcher:
             team_b = m.group(4).strip()
             seed_b = int(m.group(5))
 
-            # Verifica se il nostro team è in questo matchup
             is_us_a = team_name_matches(team_a, team_aliases)
             is_us_b = team_name_matches(team_b, team_aliases)
             if not (is_us_a or is_us_b):
@@ -271,36 +160,36 @@ class LNPFetcher:
             opponent = team_b if is_us_a else team_a
             our_seed = seed_a if is_us_a else seed_b
             opp_seed = seed_b if is_us_a else seed_a
-            higher_seed = our_seed < opp_seed  # seed più basso = più forte
+            higher_seed = our_seed < opp_seed
 
-            # Trova heading round PRIMA del matchup (usa rfind)
+            # Trova heading round PIÙ VICINA prima del matchup
             before = text[: m.start()]
-            round_match = None
+            last_round_match = None
             for rm in round_pat.finditer(before):
-                round_match = rm  # tieni l'ultimo (il più vicino)
-            if not round_match:
+                last_round_match = rm
+            if not last_round_match:
                 continue
 
-            round_name = round_match.group(1)
-            dates_text = round_match.group(2)
-
-            # Estrai date dal testo
+            round_name = last_round_match.group(1)
+            dates_text = last_round_match.group(2)
             dates = _extract_dates(dates_text, self.season.season)
             if len(dates) < 3:
-                continue  # LNP non ha ancora pubblicato date complete
+                continue
 
-            # Genera le 3 gare in casa per higher seed (CCFFC pattern),
-            # o 2 per lower seed (FFCCF: G3, G4 casa)
+            # Pattern CCFFC higher seed, FFCCF lower seed
             if higher_seed:
                 home_games = [(1, dates[0], False), (2, dates[1], False)]
                 if len(dates) >= 5:
-                    home_games.append((5, dates[4], True))  # tentative
+                    home_games.append((5, dates[4], True))
             else:
                 home_games = [(3, dates[2], False)]
                 if len(dates) >= 4:
-                    home_games.append((4, dates[3], True))  # tentative
+                    home_games.append((4, dates[3], True))
 
-            series_id = f"{round_name.lower().replace(' ', '_')}_{serie_no}_{normalize(opponent)[:20]}"
+            series_id = (
+                f"{round_name.lower().replace(' ', '_')}_"
+                f"{serie_no}_{normalize(opponent)[:20]}"
+            )
 
             for gnum, d_str, tentative in home_games:
                 yield Match(
@@ -312,7 +201,7 @@ class LNPFetcher:
                     time="20:00",
                     home=team_a if is_us_a else team_b,
                     away=opponent,
-                    round=int(d_str.replace("-", ""))%100 + 36,  # ~round 37+ per playoff
+                    round=39 + (gnum - 1),
                     game_num=gnum,
                     series_id=series_id,
                     tentative=tentative,
@@ -320,10 +209,9 @@ class LNPFetcher:
                 )
 
     # ==================================================================
-    # FILTER: series_closed
+    # FILTER series_closed
     # ==================================================================
     def _filter_closed_series(self, matches: list[Match]) -> list[Match]:
-        """Rimuove gare di serie già chiuse (override config.series_closed)."""
         kept: list[Match] = []
         skipped = 0
         for m in matches:
@@ -333,11 +221,10 @@ class LNPFetcher:
             kept.append(m)
         if skipped:
             print(f"  🚫 [{self.team.key}] {skipped} gara/e playoff saltate "
-                  f"(serie chiusa via series_closed)")
+                  f"(serie chiusa)")
         return kept
 
     def _is_series_closed(self, m: Match) -> bool:
-        """True se la partita appartiene a una serie marcata come chiusa."""
         opp_n = normalize(m.away)
         for sc in self.season.series_closed:
             if sc.team_key != self.team.key:
@@ -351,9 +238,61 @@ class LNPFetcher:
                 return True
         return False
 
+    # ==================================================================
+    # SCORE WIDGET (semplice ma efficace)
+    # ==================================================================
+    def _find_score_in_team_page(
+        self, text: str, match: Match,
+    ) -> tuple[int, int] | None:
+        """
+        Cerca nel testo della pagina LNP un pattern "NN-NN" vicino al
+        nome dell'avversario (entro 120 caratteri).
+        """
+        opp_n = normalize(match.away)
+        if not opp_n:
+            return None
+        opp_tokens = [t for t in opp_n.split() if len(t) >= 5]
+        if not opp_tokens:
+            return None
+
+        score_pat = re.compile(r"(\d{2,3})\s*[-–]\s*(\d{2,3})")
+        text_n = normalize(text)
+
+        for m in score_pat.finditer(text_n):
+            try:
+                sh = int(m.group(1))
+                sa = int(m.group(2))
+                if not (30 <= sh <= 200 and 30 <= sa <= 200):
+                    continue
+            except ValueError:
+                continue
+            window_start = max(0, m.start() - 120)
+            window_end = min(len(text_n), m.end() + 120)
+            window = text_n[window_start:window_end]
+            if any(t in window for t in opp_tokens):
+                return (sh, sa)
+        return None
+
+    # ==================================================================
+    # HELPERS
+    # ==================================================================
+    def _guess_team_slug(self) -> str:
+        candidate = max(
+            self.team.aliases or [self.team.display_name],
+            key=len,
+        )
+        return normalize(candidate).replace(" ", "-")
+
+    def _infer_year(self) -> str:
+        parts = self.season.season.split("-")
+        end_str = parts[1] if len(parts) > 1 else parts[0]
+        if len(end_str) == 2:
+            return f"20{end_str}"
+        return end_str
+
 
 # ============================================================================
-# HELPER PRIVATI
+# DATE HELPER
 # ============================================================================
 _MONTH_IT = {
     "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4, "maggio": 5,
@@ -365,28 +304,7 @@ _MONTH_IT = {
 
 
 def _extract_dates(text: str, season: str) -> list[str]:
-    """
-    Estrae date in formato ISO da testo italiano tipo "8, 10, 13, 15, 18 maggio".
-    Usa l'anno della stagione (es. "2025-26" → 2026 per maggio).
-    """
-    # Pattern: numero(/, e) ... mese
-    # "Venerdì 8, domenica 10, mercoledì 13 maggio"
-    parts = re.split(r"\bmaggio|\bgiugno|\baprile|\bmarzo|\bfebbraio|\bgennaio"
-                     r"|\bdicembre|\bnovembre|\bottobre|\bsettembre|\bagosto|\bluglio\b",
-                     text, flags=re.IGNORECASE)
-    if len(parts) < 2:
-        return []
-
-    out: list[str] = []
-    # Cerca tutti i match "<day> <month>"
-    pat = re.compile(
-        r"(\d{1,2})\s*[°,e\s]*[a-z\s,]*?\s+"
-        r"(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|"
-        r"agosto|settembre|ottobre|novembre|dicembre)",
-        re.IGNORECASE,
-    )
-
-    # Strategia più solida: trova prima il mese, poi i giorni prima del mese
+    """Estrae date ISO da testo italiano tipo "8, 10, 13, 15, 18 maggio"."""
     month_match = re.search(
         r"\b(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|"
         r"agosto|settembre|ottobre|novembre|dicembre)\b",
@@ -394,28 +312,25 @@ def _extract_dates(text: str, season: str) -> list[str]:
     )
     if not month_match:
         return []
-    month_name = month_match.group(1).lower()
-    month_num = _MONTH_IT.get(month_name)
+    month_num = _MONTH_IT.get(month_match.group(1).lower())
     if not month_num:
         return []
 
-    # Estrai giorni prima del mese
     before = text[: month_match.start()]
     days = re.findall(r"\b(\d{1,2})\b", before)
     if not days:
         return []
 
-    # Determina anno: se mese è gen-giu → anno fine stagione (2026), altrimenti inizio
     year_start, year_end = _years_from_season(season)
     year = year_end if month_num <= 7 else year_start
 
+    out: list[str] = []
     for d_str in days:
         try:
             d_num = int(d_str)
             if not (1 <= d_num <= 31):
                 continue
-            d_obj = date(year, month_num, d_num)
-            out.append(d_obj.isoformat())
+            out.append(date(year, month_num, d_num).isoformat())
         except (ValueError, TypeError):
             continue
     return out
@@ -436,36 +351,3 @@ def _years_from_season(season: str) -> tuple[int, int]:
         return start, end
     except Exception:
         return 2025, 2026
-
-
-def _iter_lnp_calendar_rows(html: str) -> Iterator[tuple[str, str, str, tuple[int, int] | None]]:
-    """
-    Itera sulle righe del calendario LNP estraendo (data_iso, home, away, score|None).
-
-    Implementazione semplificata. La pagina LNP ha struttura tabella con celle:
-    [data, ora, casa, ospite, risultato].
-    """
-    # Pattern: estrae righe di tabella con data + due nomi squadra + opzionale score
-    # Cerca pattern tipo "DD/MM/YYYY ... TeamA ... TeamB ... NN-NN"
-    row_pat = re.compile(
-        r"(\d{1,2}/\d{1,2}/\d{4})"   # data DD/MM/YYYY
-        r"\s+\d{1,2}:\d{2}"           # orario
-        r"\s+([A-Z][^|]{3,60}?)"      # home team (parte da maiuscola)
-        r"\s+(?:vs|-)?\s*"
-        r"([A-Z][^|]{3,60}?)"         # away team
-        r"(?:\s+(\d{2,3})\s*-\s*(\d{2,3}))?",  # score opzionale
-        re.MULTILINE,
-    )
-
-    text = strip_html(html)
-    for m in row_pat.finditer(text):
-        try:
-            d, mo, y = m.group(1).split("/")
-            date_iso = f"{y}-{int(mo):02d}-{int(d):02d}"
-            home = m.group(2).strip()
-            away = m.group(3).strip()
-            sh_s, sa_s = m.group(4), m.group(5)
-            score = (int(sh_s), int(sa_s)) if sh_s and sa_s else None
-            yield date_iso, home, away, score
-        except Exception:
-            continue
