@@ -6,14 +6,10 @@
 
   "rss_feeds": [
     {
-      "url": "https://sportando.basketball/feed/",
-      "categories": ["all"],
-      "enabled": true
-    },
-    {
-      "url": "https://www.basketinside.com/feed/",
-      "categories": ["all"],
-      "enabled": true
+      "url": "https://sportando.basketball/category/europa/italia/serie-b/feed/",
+      "categories": ["B Nazionale"],
+      "enabled": true,
+      "note": "Feed Serie B specifico: alto tasso di articoli score-rich"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=38",
@@ -21,14 +17,40 @@
       "enabled": true
     },
     {
+      "url": "https://sportando.basketball/feed/",
+      "categories": ["all"],
+      "enabled": false,
+      "note": "Feed generale: deprecato, troppo rumore. Usare /category/.../serie-b/feed/"
+    },
+    {
+      "url": "https://www.basketinside.com/feed/",
+      "categories": ["all"],
+      "enabled": false,
+      "note": "WordPress restituisce HTML invece di XML, da investigare"
+    },
+    {
       "url": "https://www.pianetabasket.com/rss/?section=43",
       "categories": ["A2"],
-      "enabled": false
+      "enabled": false,
+      "note": "Attivare quando una squadra tracciata sale in A2"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=2",
       "categories": ["A"],
-      "enabled": false
+      "enabled": false,
+      "note": "Attivare quando una squadra tracciata sale in A"
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=35",
+      "categories": ["EuroCup"],
+      "enabled": false,
+      "note": "Attivare se qualificazione EuroCup"
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=48",
+      "categories": ["Champions League"],
+      "enabled": false,
+      "note": "Attivare se qualificazione Basketball Champions League"
     }
   ],
 
