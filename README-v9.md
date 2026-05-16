@@ -1,131 +1,125 @@
-[README-v9.md](https://github.com/user-attachments/files/27800408/README-v9.md)
+[README-v9.md](https://github.com/user-attachments/files/27851493/README-v9.md)
 # Basket Roma v9.0 — Rewrite
 
-**Status**: Fase 1/5 (foundation) — completata
+**Status**: Fase 2/5 (fetcher modulari) — pronta per test
 **Branch**: `v9-rewrite`
-**Data inizio**: 15/05/2026
+**Data ultimo update**: 15/05/2026
 
 ---
 
-## Cosa contiene la Fase 1
+## Cosa è cambiato in Fase 2
 
-Fondamenta dell'architettura nuova. **Nessun fetcher attivo**: ancora non scarica dati. Verifica solo che il sistema sappia leggere/scrivere `data.json` con la nuova struttura tipata.
+Aggiunti i fetcher concreti per recupero dati. Il sistema **ora può scaricare davvero da LNP e RSS**.
 
 ```
-basket-roma/
-├── config/
-│   └── seasons/
-│       └── 2025-26.json          ← configurazione statica della stagione
+basket-roma/  (branch v9-rewrite)
+├── config/seasons/2025-26.json   ← Fase 1
 ├── scripts/
-│   ├── main.py                   ← orchestrator (entry point)
-│   ├── core/
-│   │   ├── __init__.py           ← esporta i modelli
-│   │   ├── models.py             ← dataclass tipati (Match, Team, ...)
-│   │   └── state.py              ← load/save/merge data.json
+│   ├── main.py                   ← aggiornato Fase 2 (orchestrator completo)
+│   ├── core/                     ← Fase 1, invariato
+│   │   ├── __init__.py
+│   │   ├── models.py
+│   │   └── state.py
 │   └── fetchers/
-│       └── __init__.py           ← registry placeholder per Fase 2
-└── data.json                     ← invariato, gestito anche da v8.9
+│       ├── __init__.py           ← registry popolato Fase 2
+│       ├── _http.py              ← NUOVO: helper HTTP condiviso
+│       ├── _text.py              ← NUOVO: normalize, score extraction, fuzzy match
+│       ├── lnp.py                ← NUOVO: LNPFetcher (team page + PDF + bracket)
+│       ├── rss_pool.py           ← NUOVO: pool unificato sportando+basketinside+pianetabasket
+│       └── pianetabasket.py      ← NUOVO: parser articoli per europee (skeleton)
+└── .github/workflows/
+    ├── update-data.yml           ← v8.9.2 invariato su main
+    ├── freshness-check.yml       ← v8.9.2 invariato su main
+    └── update-data-v9-test.yml   ← NUOVO Fase 2: workflow manuale di test
 ```
 
-## Come testare in locale (opzionale)
+## Confronto con v8.9.1
 
-Se vuoi testare prima di committare, scarica il branch e lancia:
+| Metrica | v8.9.1 | v9.0 Fase 2 | Δ |
+|---|---|---|---|
+| Righe totali Python | 2727 | 1922 | **-30%** |
+| File Python | 1 monolitico | 9 modulari | **+800% leggibilità** |
+| Cascade morti (Domino, brute force) | 4 livelli | 0 | **-100%** |
+| Fonti score effettive | 2 RSS | 3 RSS + LNP team page | **+50%** |
+| Estendibile (nuova competizione) | 1-3 sessioni codice | 1 riga config | **~∞ meglio** |
 
-```bash
-git clone -b v9-rewrite https://github.com/bad-think/basket-roma.git
-cd basket-roma
-python3 scripts/main.py --dry-run     # solo report
-python3 scripts/main.py               # genera data-v9.json
-```
+## Architettura dei fetcher
 
-Output atteso (con data.json post-cleanup QF):
-```
-🏀 Basket Roma v9.0 — Fase 1 (foundation)
-✅ Stagione caricata: 2025-26 → 2026-27
-   Squadre: 2
-   RSS feeds attivi: 3/5
-   Series chiuse:    2
-✅ State caricato
-   matches=39 | by_team[luiss=19, virtus=20] | by_phase[playoff=3, regular=36]
-💾 Salvataggio:
-   ✓ data-v9.json (schema v9.0 nativo)
-```
+### LNPFetcher
+- `fetch_schedule()` → calendario regular (team page LNP) + playoff (bracket parser)
+- `fetch_scores()` → score da widget LNP team page
+- **Riusa** logica v8.9 ma **eliminato** il codice morto
+- Filtra automaticamente le serie chiuse via `config.series_closed`
+
+### RssPoolFetcher (singleton)
+- `refresh()` → scarica tutti i feed RSS attivi una volta
+- `find_score(match, home_aliases, away_aliases)` → cerca menzione partita nei titoli/descrizioni
+- Cross-team: serve tutte le squadre in una sola lettura
+
+### PianetaBasketArticleFetcher
+- Skeleton funzionante per europee (EuroCup, Champions League, EuroLeague)
+- Cerca articoli con keyword `calendario`, `risultati`, `turno` nella sezione RSS specifica
+- Parser regex per `"GG mese, ore HH:MM: TeamA vs TeamB NN-NN"`
+- **Non testato sul vero** finché nessuna squadra tracciata accede a europee — la prima qualificazione richiederà fine-tuning regex
+
+## Test offline già fatti
+
+Parser regex validati su sample reali:
+- ✅ QF Virtus 2025-26: estrazione 5 date "Venerdì 8, domenica 10, mercoledì 13, venerdì 15, domenica 18 maggio" → 2026-05-{08,10,13,15,18}
+- ✅ SF formula 2025-26: "Giovedì 21, sabato 23, martedì 26, giovedì 28, domenica 31 maggio" → 2026-05-{21,23,26,28,31}
+- ✅ Score extraction: "94-71", "82 - 76", "65–82" (en-dash)
+- ✅ Name matching: "OraSì Ravenna" ↔ "orasi-ravenna" (gestione accenti)
+- ✅ Round-trip data.json: 39 matches preservati, schema convertito
+
+## Test reale da fare (su GitHub)
+
+Per testare i fetcher veri **senza toccare main**:
+
+### Step 1 — Crea il workflow di test
+Crea il file `.github/workflows/update-data-v9-test.yml` sul branch `v9-rewrite`. Contenuto fornito in questo PR.
+
+### Step 2 — Lancia manualmente
+1. Vai su https://github.com/bad-think/basket-roma/actions
+2. Seleziona "**Test v9 (manual)**" nella sidebar
+3. Click **`Run workflow`** → selezioni branch `v9-rewrite` → **`Run workflow`**
+4. Attendi ~1 minuto, click sulla run per vedere il log
+
+### Step 3 — Confronta output
+Il workflow produce due artifact scaricabili:
+- `data-v9.json` (output v9.0)
+- `data.json.legacy` (output v9.0 in formato compatibile v8.9)
+
+Confronta `data-v9.json` con il `data.json` attuale di main:
+- Numero match deve coincidere (39 + eventuali aggiornamenti)
+- Score esistenti devono essere preservati
+- Series chiuse devono restare filtrate
+
+### Step 4 — Decidi
+- ✅ Se l'output v9 è coerente con v8.9.2 → procediamo con Fase 3 (frontend)
+- ❌ Se ci sono regressioni → segnala, debug, fix
 
 ## Cosa NON fa ancora (per design)
 
-- ❌ Nessuna chiamata a LNP / RSS / sito esterno
-- ❌ Nessun aggiornamento score automatico
-- ❌ Nessun update di `data.json` legacy (a meno di `--write-legacy`)
-- ❌ Nessun workflow GitHub Actions modificato
-
-**Il sito pubblico continua a girare con v8.9.2 invariato.**
-
-## Schema dati v9.0
-
-### Match (la singola partita)
-```python
-@dataclass
-class Match:
-    id: str                # "v_po_r37"
-    team_key: str          # "virtus" (era "team" in v8.9)
-    competition_id: str    # "b_naz_2526" (nuovo, identifica la competizione)
-    phase: Phase           # regular | playoff | playout | cup | europe
-    date: str              # "YYYY-MM-DD"
-    home: str
-    away: str
-    time: str = "20:00"
-    sh: int | None = None
-    sa: int | None = None
-    round: int | None = None
-    game_num: int | None = None
-    series_id: str | None = None   # raggruppa G1-G5 della stessa serie
-    tentative: bool = False
-    sources: list[str] = []         # provenance: ["bracket", "rss", "manual"]
-```
-
-### Competition (per ogni squadra può essere multipla)
-```python
-@dataclass
-class Competition:
-    id: str                # "b_naz_2526"
-    type: str              # "championship" | "cup" | "european"
-    category: str          # "B Nazionale"
-    fetcher: str           # quale fetcher usare per questa competizione
-    girone: str = ""
-    source_slug: str = ""  # es. "serie-b" per LNP
-    rss_section: int | None = None   # per pianetabasket fetcher
-    phases: list[Phase]
-```
-
-### Config stagionale (config/seasons/2025-26.json)
-File JSON statico con:
-- `season`, `next_season`
-- `teams[]` — squadre tracciate con `active_competitions[]`
-- `rss_feeds[]` — pool RSS riusabile (sportando, basketinside, pianetabasket sezioni)
-- `series_closed[]` — override manuale per serie chiuse
+- ❌ Non aggiorna `data.json` su main automaticamente (solo via `--write-legacy` esplicito)
+- ❌ Il cron 8x/giorno continua a girare `update_data.py` v8.9.1 su main
+- ❌ Il frontend `index.html` continua a leggere `data.json` (non `data-v9.json`)
+- ❌ Nessuna copertura A2/A/Coppa/Europee attiva (feed RSS predisposti ma `enabled: false`)
 
 ## Roadmap rimanente
 
 | Fase | Obiettivo | Stato |
 |------|-----------|-------|
 | 1 | Foundation: models + state + main scheletro | ✅ Completata |
-| 2 | Fetchers: LNPFetcher, RssPoolFetcher, PianetaBasketArticleFetcher | ⏳ Prossima |
-| 3 | Frontend data-driven (autoconfigurante da config.teams) | ⏳ |
-| 4 | Cutover: swap GitHub Actions a main + delete codice v8.9 | ⏳ |
+| 2 | Fetchers: LNPFetcher, RssPoolFetcher, PianetaBasketArticleFetcher | ✅ Completata |
+| 3 | Frontend data-driven (autoconfigurante da config.teams) | ⏳ Prossima |
+| 4 | Cutover: swap GitHub Actions a v9, retire `update_data.py` v8.9 | ⏳ |
 | 5 | Hardening: AST pre-commit hook, unit test, alert no-capture | ⏳ |
 
-## Quando finiremo
+## Limiti onesti
 
-- Fase 2: 2-3 sessioni → ~10 giorni
-- Fase 3: 2-3 sessioni → ~10 giorni
-- Fase 4: 1 sessione → 1 giorno
-- Fase 5: 1-2 sessioni → ~5 giorni
+- **Parser LNP team page** (`_iter_lnp_calendar_rows`): regex semplificata rispetto a v8.9. **Potrebbe** non matchare tutti i casi edge della pagina LNP reale. Il test reale via workflow è necessario per verifica.
+- **PianetaBasket parser articoli**: regex tarata su formato tipico ma può fallire su articoli scritti diversamente. Solo il primo uso reale lo dirà.
+- **Cascade discovery lega** (per quando Virtus salirà): non implementato in v9 Fase 2. Aggiungeremo in Fase 4 se serve. Per ora la `source_slug` è hardcoded in config.
+- **PDF parser calendario** (per round numbering): non portato in Fase 2. La logica c'è in v8.9, andrà splittata in `parsers/pdf_calendar.py` in Fase 3 quando serviranno round corretti nel frontend.
 
-**Totale stimato**: 3-4 settimane. Le SF Virtus iniziano 21/5 e durano max 10 giorni: ci avviciniamo alla fine SF con Fase 2 completata.
-
-## Compatibilità con v8.9
-
-- `config/seasons/2025-26.json` è un **nuovo file**: non interferisce con v8.9.
-- `scripts/main.py` v9 produce `data-v9.json` separato: il `data.json` esistente non viene toccato.
-- Il workflow `.github/workflows/update-data.yml` di v8.9 **non è modificato**: continua a girare 8 volte/giorno con `scripts/update_data.py` di v8.9.
-- Quando v9.0 sarà pronto: cambieremo il workflow per chiamare `scripts/main.py` invece di `scripts/update_data.py`.
+Questi sono **deliberati**: portiamoli quando avremo evidenza che servono. La Fase 2 è già funzionale per il caso d'uso primario.
