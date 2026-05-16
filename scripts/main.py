@@ -88,9 +88,13 @@ def run_fetchers(state: State) -> None:
             # Schedule
             try:
                 new_matches = fetcher.fetch_schedule()
-                print(f"  📋 Schedule: {len(new_matches)} match recuperati")
-                changed = state.merge_matches(new_matches)
-                print(f"  ✏️  Merge: {changed} match modificati/aggiunti")
+                if new_matches:
+                    print(f"  📋 Schedule: {len(new_matches)} match recuperati")
+                    changed = state.merge_matches(new_matches)
+                    print(f"  ✏️  Merge: {changed} match modificati/aggiunti")
+                else:
+                    print(f"  · Schedule: nessuna nuova partita "
+                          f"(regular gestita da v8.9, playoff: in attesa LNP)")
             except Exception as e:
                 print(f"  ⚠️  fetch_schedule fallito: {type(e).__name__}: {e}")
 
@@ -155,7 +159,7 @@ def _apply_rss_pool(state: State, pool: RssPoolFetcher) -> int:
 # ============================================================================
 def main() -> int:
     args = parse_args()
-    print(f"\n🏀 Basket Roma v9.0 — Fase 2 (fetchers) — "
+    print(f"\n🏀 Basket Roma v9.0 — Fase 2.1 (Hybrid) — "
           f"{datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 72)
 
