@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-18T22:07:51.546516",
+  "last_updated": "2026-05-20T06:03:13.874261",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -526,6 +526,18 @@
       "sh": 72,
       "sa": 89,
       "game_num": 3
+    },
+    {
+      "id": "v_po_r37_2",
+      "team": "virtus",
+      "phase": "playoff",
+      "round": 37,
+      "date": "2026-05-21",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Rucker San Vendemiano",
+      "sh": null,
+      "sa": null
     }
   ],
   "standings": {
@@ -536,7 +548,7 @@
       "l": 7
     },
     "luiss": {
-      "pos": 6,
+      "pos": 7,
       "pts": 42,
       "w": 21,
       "l": 15
