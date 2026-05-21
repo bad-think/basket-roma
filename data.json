@@ -1,545 +1,163 @@
-{
-  "last_updated": "2026-05-14T08:12:47.096908",
-  "season": "2025-26",
-  "config": {
-    "season": "2025-26",
-    "next_season": "2026-27",
-    "teams": {
-      "virtus": {
-        "name": "Virtus GVM Roma",
-        "name_aliases": [
-          "virtus gvm roma",
-          "virtus roma",
-          "virtus gvm roma 1960",
-          "pallacanestro virtus roma"
-        ],
-        "serie": "B Nazionale",
-        "girone": "B",
-        "venue_name": "PalaTiziano – Palazzetto dello Sport",
-        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
-      },
-      "luiss": {
-        "name": "Luiss Roma",
-        "name_aliases": [
-          "luiss roma",
-          "luiss",
-          "luiss basketball"
-        ],
-        "serie": "B Nazionale",
-        "girone": "B",
-        "venue_name": "PalaTiziano – Palazzetto dello Sport",
-        "venue_address": "Piazza Apollodoro 10, 00196 Roma",
-        "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
-      }
-    },
-    "classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
-    "series_closed": [
-      {
-        "team": "luiss",
-        "opponent": "Logiman Orzinuovi",
-        "phase": "playoff",
-        "round_name": "QF",
-        "result": "0-3",
-        "team_advances": false,
-        "note": "Eliminata QF 2025-26 (G3 casa 72-89)"
-      },
-      {
-        "team": "virtus",
-        "opponent": "Paffoni Fulgor Basket Omegna",
-        "phase": "playoff",
-        "round_name": "QF",
-        "result": "3-0",
-        "team_advances": true,
-        "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF"
-      }
-    ]
-  },
-  "matches": [
-    {
-      "id": "v02",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 2,
-      "date": "2025-09-26",
-      "time": "20:30",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Consultinvest Loreto Pesaro",
-      "sh": 76,
-      "sa": 69
-    },
-    {
-      "id": "v04",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 4,
-      "date": "2025-10-11",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Solbat Golfo Piombino",
-      "sh": 91,
-      "sa": 64
-    },
-    {
-      "id": "v06",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 6,
-      "date": "2025-10-19",
-      "time": "18:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "General Contractor Jesi",
-      "sh": 78,
-      "sa": 72
-    },
-    {
-      "id": "v08",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 8,
-      "date": "2025-10-29",
-      "time": "20:30",
-      "home": "Virtus GVM Roma 1960",
-      "away": "UP Andrea Costa Imola",
-      "sh": 76,
-      "sa": 58
-    },
-    {
-      "id": "v09",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 9,
-      "date": "2025-11-01",
-      "time": "18:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Adamant Ferrara",
-      "sh": 84,
-      "sa": 72
-    },
-    {
-      "id": "v11",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 11,
-      "date": "2025-11-12",
-      "time": "20:30",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Virtus Imola",
-      "sh": 89,
-      "sa": 58
-    },
-    {
-      "id": "v13",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 13,
-      "date": "2025-11-22",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Verodol CBD Pielle Livorno",
-      "sh": 70,
-      "sa": 68
-    },
-    {
-      "id": "v15",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 15,
-      "date": "2025-12-07",
-      "time": "18:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "OraSì Ravenna",
-      "sh": 69,
-      "sa": 60
-    },
-    {
-      "id": "v16",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 16,
-      "date": "2025-12-13",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Paperdi Juvecaserta 2021",
-      "sh": 99,
-      "sa": 63
-    },
-    {
-      "id": "v17",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 18,
-      "date": "2025-12-20",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Luiss Roma",
-      "sh": 71,
-      "sa": 72
-    },
-    {
-      "id": "v20",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 21,
-      "date": "2026-01-10",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Malvin PSA Basket Casoria",
-      "sh": 72,
-      "sa": 63
-    },
-    {
-      "id": "v22",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 23,
-      "date": "2026-01-24",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Allianz Pazienza San Severo",
-      "sh": 95,
-      "sa": 61
-    },
-    {
-      "id": "v24",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 25,
-      "date": "2026-02-08",
-      "time": "18:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Power Basket Nocera",
-      "sh": 78,
-      "sa": 67
-    },
-    {
-      "id": "v27",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 28,
-      "date": "2026-02-21",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Tema Sinergie Faenza",
-      "sh": 74,
-      "sa": 81
-    },
-    {
-      "id": "v30",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 32,
-      "date": "2026-03-21",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Ristopro Fabriano",
-      "sh": 94,
-      "sa": 69
-    },
-    {
-      "id": "v32",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 34,
-      "date": "2026-04-04",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Benacquista Assicurazioni Latina",
-      "sh": 69,
-      "sa": 42
-    },
-    {
-      "id": "v33",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 35,
-      "date": "2026-04-11",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Consorzio Leonardo Dany Quarrata",
-      "sh": 82,
-      "sa": 60
-    },
-    {
-      "id": "v36",
-      "team": "virtus",
-      "phase": "regular",
-      "round": 38,
-      "date": "2026-04-26",
-      "time": "18:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Umana San Giobbe Chiusi",
-      "sh": 92,
-      "sa": 76
-    },
-    {
-      "id": "l03",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 5,
-      "date": "2025-10-15",
-      "time": "20:30",
-      "home": "Luiss Roma",
-      "away": "Malvin PSA Basket Casoria",
-      "sh": 67,
-      "sa": 51
-    },
-    {
-      "id": "l05",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 7,
-      "date": "2025-10-25",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Power Basket Nocera",
-      "sh": 80,
-      "sa": 70
-    },
-    {
-      "id": "l07",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 9,
-      "date": "2025-11-02",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "OraSì Ravenna",
-      "sh": 84,
-      "sa": 76
-    },
-    {
-      "id": "l08",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 10,
-      "date": "2025-11-08",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Ristopro Fabriano",
-      "sh": 80,
-      "sa": 71
-    },
-    {
-      "id": "l10",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 12,
-      "date": "2025-11-15",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "General Contractor Jesi",
-      "sh": 66,
-      "sa": 82
-    },
-    {
-      "id": "l12",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 1,
-      "date": "2025-11-26",
-      "time": "20:00",
-      "home": "Luiss Roma",
-      "away": "Umana San Giobbe Chiusi",
-      "sh": 82,
-      "sa": 66
-    },
-    {
-      "id": "l13",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 14,
-      "date": "2025-11-29",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Solbat Golfo Piombino",
-      "sh": 89,
-      "sa": 73
-    },
-    {
-      "id": "l16",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 17,
-      "date": "2025-12-17",
-      "time": "20:00",
-      "home": "Luiss Roma",
-      "away": "Consorzio Leonardo Dany Quarrata",
-      "sh": 89,
-      "sa": 74
-    },
-    {
-      "id": "l19",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 20,
-      "date": "2026-01-03",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Benacquista Assicurazioni Latina",
-      "sh": 91,
-      "sa": 86
-    },
-    {
-      "id": "l21",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 22,
-      "date": "2026-01-17",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Consultinvest Loreto Pesaro",
-      "sh": 66,
-      "sa": 53
-    },
-    {
-      "id": "l23",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 24,
-      "date": "2026-01-31",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Adamant Ferrara",
-      "sh": 65,
-      "sa": 75
-    },
-    {
-      "id": "l24",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 26,
-      "date": "2026-02-14",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Virtus Imola",
-      "sh": 73,
-      "sa": 77
-    },
-    {
-      "id": "l25",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 27,
-      "date": "2026-02-18",
-      "time": "20:00",
-      "home": "Luiss Roma",
-      "away": "Paperdi Juvecaserta 2021",
-      "sh": 69,
-      "sa": 80
-    },
-    {
-      "id": "l27",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 29,
-      "date": "2026-02-28",
-      "time": "18:00",
-      "home": "Luiss Roma",
-      "away": "UP Andrea Costa Imola",
-      "sh": 63,
-      "sa": 53
-    },
-    {
-      "id": "l29",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 31,
-      "date": "2026-03-08",
-      "time": "17:00",
-      "home": "Luiss Roma",
-      "away": "Allianz Pazienza San Severo",
-      "sh": 68,
-      "sa": 70
-    },
-    {
-      "id": "l31",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 33,
-      "date": "2026-03-28",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Virtus GVM Roma 1960",
-      "sh": 45,
-      "sa": 80
-    },
-    {
-      "id": "l34",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 36,
-      "date": "2026-04-15",
-      "time": "20:00",
-      "home": "Luiss Roma",
-      "away": "Tema Sinergie Faenza",
-      "sh": 87,
-      "sa": 75
-    },
-    {
-      "id": "l35",
-      "team": "luiss",
-      "phase": "regular",
-      "round": 37,
-      "date": "2026-04-18",
-      "time": "18:30",
-      "home": "Luiss Roma",
-      "away": "Verodol CBD Pielle Livorno",
-      "sh": 77,
-      "sa": 71
-    },
-    {
-      "id": "v_po_r37",
-      "team": "virtus",
-      "phase": "playoff",
-      "round": 37,
-      "date": "2026-05-08",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Paffoni Fulgor Basket Omegna",
-      "sh": 94,
-      "sa": 71,
-      "game_num": 1
-    },
-    {
-      "id": "v_po_r38",
-      "team": "virtus",
-      "phase": "playoff",
-      "round": 38,
-      "date": "2026-05-10",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Paffoni Fulgor Basket Omegna",
-      "sh": 98,
-      "sa": 79,
-      "game_num": 2
-    },
-    {
-      "id": "l_po_r37",
-      "team": "luiss",
-      "phase": "playoff",
-      "round": 37,
-      "date": "2026-05-13",
-      "time": "20:00",
-      "home": "Luiss Roma",
-      "away": "Logiman Orzinuovi",
-      "sh": 72,
-      "sa": 89,
-      "game_num": 3
-    }
-  ],
-  "standings": {
-    "virtus": {
-      "pos": 1,
-      "pts": 58,
-      "w": 29,
-      "l": 7
-    },
-    "luiss": {
-      "pos": 6,
-      "pts": 42,
-      "w": 21,
-      "l": 15
-    }
-  }
-}
+test-v9
+succeeded now in 10s
+Search logs
+1s
+Current runner version: '2.334.0'
+Runner Image Provisioner
+Operating System
+Runner Image
+GITHUB_TOKEN Permissions
+Secret source: Actions
+Prepare workflow directory
+Prepare all required actions
+Getting action download info
+Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Complete job name: test-v9
+0s
+Run actions/checkout@v4
+Syncing repository: bad-think/basket-roma
+Getting Git version info
+Temporarily overriding HOME='/home/runner/work/_temp/6470bd04-5287-45c9-bb63-8e07286b20e2' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/basket-roma/basket-roma
+Deleting the contents of '/home/runner/work/basket-roma/basket-roma'
+Initializing the repository
+Disabling automatic garbage collection
+Setting up auth
+Fetching the repository
+Determining the checkout info
+/usr/bin/git sparse-checkout disable
+/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Checking out the ref
+/usr/bin/git log -1 --format=%H
+831b17399718142a904263306131c763e1d697ff
+0s
+Run actions/setup-python@v5
+Installed versions
+0s
+Run echo "=== File v9 attesi ==="
+=== File v9 attesi ===
+✅ config
+✅ main.py
+✅ models
+✅ lnp fetcher
+4s
+Run python scripts/main.py --out-v9 data-v9.json
+
+🏀 Basket Roma v9.0 — Fase 2.1 (Hybrid) — 21/05/2026 17:20
+========================================================================
+📂 Config: /home/runner/work/basket-roma/basket-roma/config/seasons/2025-26.json
+📂 Data:   /home/runner/work/basket-roma/basket-roma/data.json
+
+✅ Stagione: 2025-26 | Squadre: 2 | RSS attivi: 2/8 | Series chiuse: 2
+   matches=39 | by_team[luiss=19, virtus=20] | by_phase[playoff=3, regular=36]
+
+🔍 [virtus] B Nazionale via lnp
+  · [virtus] nessuna gara playoff parsabile (LNP non ha ancora pubblicato turno corrente)
+  · Schedule: nessuna nuova partita (regular gestita da v8.9, playoff: in attesa LNP)
+
+🔍 [luiss] B Nazionale via lnp
+  · [luiss] nessuna gara playoff parsabile (LNP non ha ancora pubblicato turno corrente)
+  · Schedule: nessuna nuova partita (regular gestita da v8.9, playoff: in attesa LNP)
+
+🌐 RSS Pool: 2 feed attivi
+  · RSS https://sportando.basketball/category/europa/italia/serie-b/feed/: nessuno score nelle ultime entry
+  📰 RSS https://www.pianetabasket.com/rss/?section=38: 1 menzioni con score
+  · RSS pool: nessuno score nuovo trovato
+
+📊 Stato finale: matches=39 | by_team[luiss=19, virtus=20] | by_phase[playoff=3, regular=36]
+
+💾 Salvataggio:
+   ✓ data-v9.json (schema v9.0)
+   ⊘ /home/runner/work/basket-roma/basket-roma/data.json non toccato (usa --write-legacy per cutover)
+
+✅ Completato.
+2s
+Run python scripts/main.py --out-v9 /tmp/skip.json --write-legacy --data data.json.legacy || true
+
+🏀 Basket Roma v9.0 — Fase 2.1 (Hybrid) — 21/05/2026 17:20
+========================================================================
+📂 Config: /home/runner/work/basket-roma/basket-roma/config/seasons/2025-26.json
+📂 Data:   data.json.legacy
+
+✅ Stagione: 2025-26 | Squadre: 2 | RSS attivi: 2/8 | Series chiuse: 2
+   matches=0 | by_team[] | by_phase[]
+
+🔍 [virtus] B Nazionale via lnp
+  · [virtus] nessuna gara playoff parsabile (LNP non ha ancora pubblicato turno corrente)
+  · Schedule: nessuna nuova partita (regular gestita da v8.9, playoff: in attesa LNP)
+
+🔍 [luiss] B Nazionale via lnp
+  · [luiss] nessuna gara playoff parsabile (LNP non ha ancora pubblicato turno corrente)
+  · Schedule: nessuna nuova partita (regular gestita da v8.9, playoff: in attesa LNP)
+
+🌐 RSS Pool: 2 feed attivi
+  · RSS https://sportando.basketball/category/europa/italia/serie-b/feed/: nessuno score nelle ultime entry
+  📰 RSS https://www.pianetabasket.com/rss/?section=38: 1 menzioni con score
+  · RSS pool: nessuno score nuovo trovato
+
+📊 Stato finale: matches=0 | by_team[] | by_phase[]
+
+💾 Salvataggio:
+   ✓ /tmp/skip.json (schema v9.0)
+   ✓ data.json.legacy (schema legacy v8.9)
+
+✅ Completato.
+0s
+Run # Scarica data.json corrente da main
+=== Confronto numero match ===
+main (v8.9): 40 matches
+v9:          39 matches
+delta:       -1
+0s
+Run echo "=== Riepilogo run v9 ==="
+=== Riepilogo run v9 ===
+Schema:      9.0
+Stagione:    2025-26
+Matches:     39
+Standings:   ['virtus', 'luiss']
+Series chiuse: 2
+  - luiss vs Logiman Orzinuovi (QF): 0-3 → eliminata
+  - virtus vs Paffoni Fulgor Basket Omegna (QF): 3-0 → avanza
+1s
+Run actions/upload-artifact@v4
+(node:2301) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Multiple search paths detected. Calculating the least common ancestor of all paths
+The least common ancestor is /home/runner/work/basket-roma/basket-roma. This will be the root directory of the artifact
+With the provided path, there will be 2 files uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+(node:2301) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Uploaded bytes 3156
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is ff1d373ea6b9fb5311d23b12d66634355bf2b95ffe534ba1e71bb0fb07048a61
+Finalizing artifact upload
+Artifact v9-output-26241748049.zip successfully finalized. Artifact ID 7142565867
+Artifact v9-output-26241748049 has been successfully uploaded! Final size is 3156 bytes. Artifact ID is 7142565867
+Artifact download URL: https://github.com/bad-think/basket-roma/actions/runs/26241748049/artifacts/7142565867
+0s
+Post job cleanup.
+(node:2313) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+0s
+Post job cleanup.
+/usr/bin/git version
+git version 2.54.0
+Temporarily overriding HOME='/home/runner/work/_temp/fabc6acb-2c73-440a-aa91-19bbd09a7559' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/basket-roma/basket-roma
+/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+0s
+Cleaning up orphan processes
+Warning: Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
