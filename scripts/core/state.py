@@ -9,8 +9,9 @@ State è il contenitore di tutti i dati dinamici:
 Responsabilità:
 1. Caricare config (Season) da config/seasons/{season}.json
 2. Caricare state da data.json (con backward compat v8.9)
-3. Mergeare nuovi match preservando dati esistenti (sh/sa non null)
-4. Salvare in formato v8.9 (legacy) e/o v9.0 (nativo)
+3. Applicare match_id_overrides da config (Fase 2.3a→b transition)
+4. Mergeare nuovi match preservando dati esistenti (sh/sa non null)
+5. Salvare in formato v8.9 (legacy) e/o v9.0 (nativo)
 """
 from __future__ import annotations
 
@@ -84,6 +85,14 @@ class State:
                 season.series_closed = [
                     SeriesClosed.from_dict(s) for s in legacy_series_closed
                 ]
+
+        # 3. Applica match_id_overrides (Fase 2.3a→b transition)
+        # Popola external_id su Match esistenti quando il config specifica un mapping.
+        # Usato per: (a) validazione Fase 2.3a senza discovery, (b) edge case
+        # dove Fase 2.3b discovery fallisce.
+        applied = _apply_match_id_overrides(matches, season.match_id_overrides)
+        if applied:
+            print(f"  🔗 Applicati {applied} match_id_overrides da config")
 
         return cls(
             season=season,
@@ -188,6 +197,8 @@ class State:
             existing = self.matches[idx]
             if self._update_match(existing, nm):
                 changed += 1
+        # Riapplica match_id_overrides anche ai nuovi Match aggiunti
+        _apply_match_id_overrides(self.matches, self.season.match_id_overrides)
         return changed
 
     def _find_match_index(self, m: Match) -> int | None:
@@ -233,6 +244,14 @@ class State:
         if new.game_num is not None and existing.game_num is None:
             existing.game_num = new.game_num
             changed = True
+        # external_id: imposta se nuovo specificato e esistente vuoto
+        if new.external_id and not existing.external_id:
+            existing.external_id = new.external_id
+            changed = True
+        # Periods: imposta se esistente vuoto
+        if new.periods and not existing.periods:
+            existing.periods = new.periods
+            changed = True
         return changed
 
     # ------------------------------------------------------------------
@@ -268,3 +287,40 @@ def _normalize(s: str) -> str:
     if not s:
         return ""
     return " ".join(s.lower().strip().split())
+
+
+def _apply_match_id_overrides(
+    matches: list[Match],
+    overrides: list[dict[str, str]],
+) -> int:
+    """
+    Applica override manuali di external_id su Match esistenti.
+
+    Ogni override è un dict con keys: team_key, date, away, external_id.
+    Match matchata se (team_key, date, normalize(away)) corrispondono.
+    Non sovrascrive external_id già popolato.
+
+    Returns: numero di Match aggiornate.
+    """
+    if not overrides:
+        return 0
+    applied = 0
+    for ov in overrides:
+        ov_team = ov.get("team_key", "")
+        ov_date = ov.get("date", "")
+        ov_away_n = _normalize(ov.get("away", ""))
+        ov_id = ov.get("external_id", "")
+        if not (ov_team and ov_date and ov_away_n and ov_id):
+            continue
+        for m in matches:
+            if m.team_key != ov_team:
+                continue
+            if m.date != ov_date:
+                continue
+            if _normalize(m.away) != ov_away_n:
+                continue
+            if not m.external_id:
+                m.external_id = ov_id
+                applied += 1
+            break  # un override → al massimo una Match
+    return applied
