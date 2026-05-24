@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-20T06:03:13.874261",
+  "last_updated": "2026-05-22T17:59:33.888265",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -534,6 +534,18 @@
       "round": 37,
       "date": "2026-05-21",
       "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Rucker San Vendemiano",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "v_po_r37_3",
+      "team": "virtus",
+      "phase": "playoff",
+      "round": 37,
+      "date": "2026-05-23",
+      "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Rucker San Vendemiano",
       "sh": null,
