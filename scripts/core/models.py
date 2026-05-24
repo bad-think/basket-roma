@@ -360,6 +360,10 @@ class Season:
     rss_feeds: list[RssFeed] = field(default_factory=list)
     series_closed: list[SeriesClosed] = field(default_factory=list)
     league_classifica_url: str = ""
+    # Manual override Match.external_id quando discovery automatica (Fase 2.3b)
+    # non disponibile o fallisce. Lista di dict con keys: team_key, date, away,
+    # external_id. Match matchata se (team_key, date, normalize(away)) coincide.
+    match_id_overrides: list[dict[str, str]] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "Season":
@@ -370,6 +374,7 @@ class Season:
             rss_feeds=[RssFeed.from_dict(r) for r in d.get("rss_feeds", [])],
             series_closed=[SeriesClosed.from_dict(s) for s in d.get("series_closed", [])],
             league_classifica_url=d.get("league_classifica_url", ""),
+            match_id_overrides=d.get("match_id_overrides", []),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -380,6 +385,7 @@ class Season:
             "teams": [t.to_dict() for t in self.teams],
             "rss_feeds": [r.to_dict() for r in self.rss_feeds],
             "series_closed": [s.to_dict() for s in self.series_closed],
+            "match_id_overrides": self.match_id_overrides,
         }
 
     def get_team(self, key: str) -> Team | None:
