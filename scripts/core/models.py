@@ -238,6 +238,11 @@ class SeriesClosed:
     """
     Marca esplicita che una serie playoff/playout è chiusa.
     Usata da fetcher e cleanup per impedire re-inserzione di gare obsolete.
+
+    Campi `next_opponent` e `next_opponent_seed` sono usati dal fetcher
+    LNPFetcher per dedurre automaticamente le gare del turno successivo
+    quando team_advances=True. Popolati manualmente in Fase 2.2 (Opzione A);
+    saranno auto-popolati dal tabellino LNP in Fase 2.3 (Opzione B).
     """
     team_key: str
     competition_id: str
@@ -247,6 +252,8 @@ class SeriesClosed:
     team_advances: bool               # True = vince e passa al turno successivo
     round_name: str = ""              # "QF" | "SF" | "F" | "P-OUT-R1" ...
     note: str = ""
+    next_opponent: str = ""           # nome completo avversario nel round successivo
+    next_opponent_seed: int | None = None  # seed dell'avversario nel round successivo
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "SeriesClosed":
@@ -261,6 +268,8 @@ class SeriesClosed:
             team_advances=d.get("team_advances", False),
             round_name=d.get("round_name", ""),
             note=d.get("note", ""),
+            next_opponent=d.get("next_opponent", ""),
+            next_opponent_seed=d.get("next_opponent_seed"),
         )
 
     def to_dict(self) -> dict[str, Any]:
