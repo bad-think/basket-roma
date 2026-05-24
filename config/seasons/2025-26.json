@@ -137,5 +137,15 @@
       "next_opponent_seed": 4,
       "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF vs Rucker (vincente Serie 4)"
     }
+  ],
+
+  "match_id_overrides": [
+    {
+      "team_key": "virtus",
+      "date": "2026-05-21",
+      "away": "Rucker San Vendemiano",
+      "external_id": "ita3_b_ply_75",
+      "note": "Validation Fase 2.3a: G1 SF Virtus vs Rucker, tabellino LNP confermato 75-59"
+    }
   ]
 }
