@@ -43,6 +43,19 @@ PLAYOFF_PAGE_CODES = {
     "A2": ["ita2_a2_poff"],
 }
 
+# Phase_id prefix per match_id LNP (es. "ita3_b_ply_75" → phase_id "ita3_b_ply").
+# Usato per costruire URL tabellino e per pattern di discovery via pagina avversario.
+PLAYOFF_PHASE_IDS = {
+    "B Nazionale": "ita3_b_ply",
+    "A2": "ita2_a2_ply",
+}
+
+# Source slug per costruire URL pagina squadra LNP (es. /serie-b/{team_slug}).
+CATEGORY_TO_SOURCE_SLUG = {
+    "B Nazionale": "serie-b",
+    "A2": "serie-a2",
+}
+
 # Ordine round playoff per deduzione next-round.
 # QF → SF → F. Per Coppa Italia LNP (Final Four) si parte da SF.
 PLAYOFF_ROUND_ORDER = ["QF", "SF", "F"]
@@ -86,10 +99,14 @@ class LNPFetcher:
         Aggiorna sh/sa per gare playoff senza score.
 
         Ordine di tentativo (dal più accurato al meno):
-        1. Tabellino LNP diretto (Fase 2.3a) — per Match con external_id
-        2. Widget pagina squadra LNP — fallback regex su testo
+        1. Discovery automatica external_id (Fase 2.3b) — via pagina avversario
+        2. Tabellino LNP diretto (Fase 2.3a) — per Match con external_id
+        3. Widget pagina squadra LNP — fallback regex su testo
         """
-        # 1. Tabellino diretto (priorità: più accurato + parziali)
+        # 1. Discovery external_id via pagina squadra avversario (Fase 2.3b)
+        self._discover_external_ids(matches)
+
+        # 2. Tabellino diretto (priorità: più accurato + parziali)
         self._fetch_scores_from_tabellini(matches)
 
         # 2. Widget pagina squadra (fallback per Match senza external_id)
@@ -428,6 +445,80 @@ class LNPFetcher:
                   f"tabellino")
         return updated
 
+
+    # ==================================================================
+    # DISCOVERY EXTERNAL_ID (Fase 2.3b) — via pagina squadra avversario
+    # ==================================================================
+    def _discover_external_ids(self, matches: list[Match]) -> int:
+        """
+        Discovery automatica external_id per Match playoff senza ID.
+
+        Strategia: fetch pagina squadra dell'avversario, estrai link tabellini
+        dalla tabella calendario, match per (date_iso, phase). Funziona perché
+        la pagina avversario (es. Rucker) elenca le sue partite playoff con
+        link diretti al tabellino LNP.
+
+        Limitazione: tabellone visibile nella pagina avversario dipende dal
+        suo "tab default" (di solito il round corrente / il primo turno
+        playoff). Per SF/F della NOSTRA squadra (dove l'avversario potrebbe
+        non mostrarle ancora) usare `match_id_overrides` nel config.
+
+        Returns: numero di Match aggiornati.
+        """
+        candidates = [
+            m for m in matches
+            if m.team_key == self.team.key
+            and m.competition_id == self.comp.id
+            and m.phase in ("playoff", "playout")
+            and not m.external_id
+        ]
+        if not candidates:
+            return 0
+
+        phase_id = PLAYOFF_PHASE_IDS.get(self.comp.category)
+        source_slug = CATEGORY_TO_SOURCE_SLUG.get(self.comp.category)
+        if not phase_id or not source_slug:
+            return 0
+
+        # Raggruppa Match per avversario normalizzato
+        by_opp: dict[str, list[Match]] = {}
+        for m in candidates:
+            by_opp.setdefault(normalize(m.away), []).append(m)
+
+        updated = 0
+        for opp_norm, opp_matches in by_opp.items():
+            opp_slug = self._opponent_to_slug(opp_norm)
+            if not opp_slug:
+                continue
+            url = f"{LNP_BASE}/{source_slug}/{opp_slug}"
+            html = http_get_text(url)
+            if not html:
+                continue
+            date_to_id = _extract_match_ids_from_team_page(html, phase_id)
+            if not date_to_id:
+                continue
+            for m in opp_matches:
+                if m.date in date_to_id:
+                    m.external_id = date_to_id[m.date]
+                    updated += 1
+
+        if updated:
+            print(f"  🔍 [{self.team.key}] {updated} external_id scoperti da "
+                  f"pagine avversario")
+        return updated
+
+    def _opponent_to_slug(self, opp_norm: str) -> str:
+        """
+        Converte nome avversario normalizzato in slug URL LNP.
+        Es: "rucker san vendemiano" → "rucker-san-vendemiano"
+
+        Slug LNP di solito = team_name lowercase con "-" al posto degli spazi.
+        Caratteri speciali/accenti già rimossi da normalize().
+        """
+        if not opp_norm:
+            return ""
+        return opp_norm.replace(" ", "-")
+
     # ==================================================================
     # FETCH PAGINA PLAYOFF (cached via http_get_text)
     # ==================================================================
@@ -672,6 +763,50 @@ def _build_tabellino_url(external_id: str, season_short: str) -> str:
         return ""
     phase_id = m.group(1)
     return f"{LNP_BASE}/wp/match/{external_id}/{phase_id}/x{season_short}/tabellino"
+
+
+def _extract_match_ids_from_team_page(html: str, phase_id: str) -> dict[str, str]:
+    """
+    Estrai mapping (date_iso → external_id) da una pagina squadra LNP.
+
+    La tabella calendario contiene righe tipo:
+        <td>21/05/2026 20:30</td> ... <a href="/wp/match/ita3_b_ply_75/...">75-59</a>
+
+    Pattern: data DD/MM/YYYY (con o senza ora) seguita entro N caratteri
+    da un link tabellino con `phase_id`. Lazy match per evitare cross-row.
+
+    Args:
+        html: HTML grezzo della pagina squadra LNP
+        phase_id: prefisso phase_id (es. "ita3_b_ply")
+
+    Returns:
+        Dict {date_iso: external_id}. Es: {"2026-05-08": "ita3_b_ply_51"}.
+    """
+    if not html or not phase_id:
+        return {}
+    pattern = re.compile(
+        r"(\d{2})/(\d{2})/(\d{4})(?:\s+\d{1,2}:\d{2})?"
+        # Lazy match ma SENZA consumare altri "/wp/match/" (evita cross-row drift)
+        r"(?:(?!/wp/match/).)*?"
+        r"/wp/match/" + re.escape(phase_id) + r"_(\d+)/",
+        re.DOTALL,
+    )
+    out: dict[str, str] = {}
+    for m in pattern.finditer(html):
+        try:
+            day = int(m.group(1))
+            month = int(m.group(2))
+            year = int(m.group(3))
+            match_n = m.group(4)
+            iso_date = f"{year:04d}-{month:02d}-{day:02d}"
+            external_id = f"{phase_id}_{match_n}"
+            # Prima occorrenza vince (in caso di duplicati nella pagina)
+            if iso_date not in out:
+                out[iso_date] = external_id
+        except (ValueError, IndexError):
+            continue
+    return out
+
 
 
 # ============================================================================
