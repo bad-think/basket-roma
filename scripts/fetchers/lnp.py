@@ -10,15 +10,15 @@ v9 si limita a:
 1. Bracket QF parser — generazione automatica gare Quarti di Finale dal
    testo strutturato pubblicato da LNP (regex pattern stabile).
 2. Next-round deducer (Fase 2.2) — per i round successivi (SF, F) LNP NON
-   sostituisce i placeholder "Vincente N vs vincente M". Quindi deduciamo
-   le gare dalla series_closed (con next_opponent valorizzato), riusando
-   le date dalla heading round nella pagina playoff.
-3. Score widget refresh — letture occasionali della pagina squadra LNP per
-   score di gare playoff (delay <12h vs RSS).
-4. Filter series_closed — impedisce re-inserzione di gare obsolete.
-
-Quando in futuro servirà fetcher per Coppa Italia LNP, riusiamo questa
-stessa classe (stesso dominio, formato bracket simile).
+   sostituisce i placeholder "Vincente N vs vincente M". Deduciamo le gare
+   da series_closed (con next_opponent valorizzato), riusando le date dalla
+   heading round.
+3. Tabellino parser (Fase 2.3a) — quando una Match ha `external_id` LNP
+   (es. "ita3_b_ply_75"), fetcha il tabellino e arricchisce score + parziali.
+   Discovery automatica del match_id è Fase 2.3b (TBD).
+4. Score widget refresh — letture occasionali della pagina squadra LNP per
+   score di gare playoff (fallback).
+5. Filter series_closed — impedisce re-inserzione di gare obsolete.
 """
 from __future__ import annotations
 
@@ -48,7 +48,6 @@ PLAYOFF_PAGE_CODES = {
 PLAYOFF_ROUND_ORDER = ["QF", "SF", "F"]
 
 # Mapping round_name → testo heading nella pagina LNP playoff.
-# Usato per estrarre le date del round target.
 ROUND_NAME_TO_HEADING = {
     "QF": "Quarti di Finale",
     "SF": "Semifinali",
@@ -56,7 +55,6 @@ ROUND_NAME_TO_HEADING = {
 }
 
 # Offset numero round per gare playoff generate (per ordering nel frontend).
-# Convenzione v8.9: regular 1..38, playoff 37+ (sovrapposizione tollerata).
 ROUND_NUM_OFFSET = {
     "QF": 39,
     "SF": 44,
@@ -65,9 +63,7 @@ ROUND_NUM_OFFSET = {
 
 
 class LNPFetcher:
-    """
-    Fetcher LNP focalizzato su playoff/bracket (modalità Hybrid).
-    """
+    """Fetcher LNP focalizzato su playoff/bracket (modalità Hybrid)."""
 
     def __init__(self, competition: Competition, team: Team, season: Season):
         self.comp = competition
@@ -78,18 +74,7 @@ class LNPFetcher:
     # API PUBBLICA
     # ==================================================================
     def fetch_schedule(self) -> list[Match]:
-        """
-        Ritorna nuove partite IN CASA dalla pagina playoff LNP.
-
-        Due sorgenti:
-        - QF (Quarti di Finale): testo bracket strutturato (regex serie_pat)
-        - SF/F: deduzione da series_closed con team_advances=True e
-          next_opponent valorizzato (LNP non popola placeholder oltre i QF)
-
-        Regular season NON gestita qui: competenza di v8.9 update_data.py
-        che gira su main. Le partite regular esistono già in data.json
-        (caricate da state.load).
-        """
+        """Schedule playoff: QF bracket + SF/F dedotti da advancement."""
         if "playoff" not in self.comp.phases:
             return []
         qf_games = self._fetch_playoff_bracket()
@@ -98,9 +83,16 @@ class LNPFetcher:
 
     def fetch_scores(self, matches: list[Match]) -> list[Match]:
         """
-        Aggiorna sh/sa per gare playoff della squadra senza score.
-        Strategia Hybrid: solo per gare playoff (regular gestite da v8.9).
+        Aggiorna sh/sa per gare playoff senza score.
+
+        Ordine di tentativo (dal più accurato al meno):
+        1. Tabellino LNP diretto (Fase 2.3a) — per Match con external_id
+        2. Widget pagina squadra LNP — fallback regex su testo
         """
+        # 1. Tabellino diretto (priorità: più accurato + parziali)
+        self._fetch_scores_from_tabellini(matches)
+
+        # 2. Widget pagina squadra (fallback per Match senza external_id)
         targets = [
             m for m in matches
             if m.team_key == self.team.key
@@ -130,7 +122,7 @@ class LNPFetcher:
         return matches
 
     # ==================================================================
-    # BRACKET PARSER QF (cuore del fetcher Hybrid, invariato da v9.0)
+    # BRACKET PARSER QF
     # ==================================================================
     def _fetch_playoff_bracket(self) -> list[Match]:
         """Parser del testo bracket QF per estrarre gare home della squadra."""
@@ -181,7 +173,6 @@ class LNPFetcher:
             opp_seed = seed_b if is_us_a else seed_a
             higher_seed = our_seed < opp_seed
 
-            # Trova heading round PIÙ VICINA prima del matchup (rfind-style)
             before = text[: m.start()]
             last_round_match = None
             for rm in round_pat.finditer(before):
@@ -195,7 +186,6 @@ class LNPFetcher:
             if len(dates) < 3:
                 continue
 
-            # Pattern CCFFC higher seed, FFCCF lower seed
             if higher_seed:
                 home_games = [(1, dates[0], False), (2, dates[1], False)]
                 if len(dates) >= 5:
@@ -228,24 +218,10 @@ class LNPFetcher:
                 )
 
     # ==================================================================
-    # NEXT-ROUND DEDUCER (Fase 2.2 — Opzione A)
+    # NEXT-ROUND DEDUCER (Fase 2.2)
     # ==================================================================
     def _fetch_next_rounds_from_advances(self) -> list[Match]:
-        """
-        Deduce gare home dei round successivi (SF, F) da series_closed.
-
-        Per ogni SeriesClosed della nostra squadra con team_advances=True
-        e next_opponent valorizzato, genera Match per il round successivo
-        usando:
-        - date dalla heading round della pagina playoff LNP
-        - pattern home CCFFC/FFCCF in base a (our_seed vs next_opponent_seed)
-        - seed nostro dedotto dal bracket QF (preservato nei round successivi)
-
-        Skippa se:
-        - next_opponent vuoto (impossibile dedurre senza dato esterno)
-        - round successivo già chiuso in series_closed
-        - non si trova testo bracket o date insufficienti
-        """
+        """Deduce gare home dei round successivi (SF, F) da series_closed."""
         advancing = [
             sc for sc in self.season.series_closed
             if sc.team_key == self.team.key
@@ -266,7 +242,6 @@ class LNPFetcher:
             next_round = self._next_round_name(sc.round_name)
             if not next_round:
                 continue
-            # Skip se il next round è già chiuso (es. SF già conclusa, F prossima)
             if self._is_round_closed(next_round):
                 continue
 
@@ -285,7 +260,6 @@ class LNPFetcher:
         return games
 
     def _next_round_name(self, current: str) -> str | None:
-        """Ritorna il round successivo a `current` nella playoff order."""
         if current in PLAYOFF_ROUND_ORDER:
             idx = PLAYOFF_ROUND_ORDER.index(current)
             if idx + 1 < len(PLAYOFF_ROUND_ORDER):
@@ -293,7 +267,6 @@ class LNPFetcher:
         return None
 
     def _is_round_closed(self, round_name: str) -> bool:
-        """True se esiste già una SeriesClosed per (team, comp, round_name)."""
         for sc in self.season.series_closed:
             if (sc.team_key == self.team.key
                     and sc.competition_id == self.comp.id
@@ -308,11 +281,9 @@ class LNPFetcher:
         opponent: str,
         opp_seed: int | None,
     ) -> list[Match]:
-        """Genera Match home per `next_round` contro `opponent`."""
         heading = ROUND_NAME_TO_HEADING.get(next_round)
         if not heading:
             return []
-
         dates = self._extract_round_dates(text, heading)
         if len(dates) < 3:
             return []
@@ -324,8 +295,6 @@ class LNPFetcher:
                   f"skip {next_round}")
             return []
 
-        # Senza opp_seed assumiamo opp_seed alto → noi higher seed (CCFFC).
-        # Conservativo: se il dato manca, prediligiamo home prima del lower seed.
         effective_opp_seed = opp_seed if opp_seed is not None else 99
         higher_seed = our_seed < effective_opp_seed
 
@@ -361,14 +330,6 @@ class LNPFetcher:
         return games
 
     def _extract_round_dates(self, text: str, round_heading: str) -> list[str]:
-        """
-        Estrae le date di un round specifico dal testo della pagina playoff.
-        Cerca: "{heading} - {date_list_text}".
-
-        Es: heading="Semifinali" trova
-            "Semifinali - Giovedì 21, sabato 23, martedì 26, giovedì 28, domenica 31 maggio"
-        e ritorna ['2026-05-21', '2026-05-23', '2026-05-26', '2026-05-28', '2026-05-31'].
-        """
         pattern = re.compile(
             rf"{re.escape(round_heading)}\s*[-–]\s*([^\n]*)",
             re.IGNORECASE,
@@ -381,11 +342,6 @@ class LNPFetcher:
     def _get_seed_from_bracket(
         self, text: str, team_aliases: list[str],
     ) -> int | None:
-        """
-        Trova lo seed della squadra nel testo bracket QF.
-        Cerca pattern "Serie N - {team} (S^ girone X) - ..." e ritorna lo
-        seed della squadra che matcha gli aliases.
-        """
         serie_pat = re.compile(
             r"Serie\s+\d+\s*[-–]\s*"
             r"(.+?)\s*\(\s*(\d+)\s*\^\s*[^)]+\)\s*[-–]\s*"
@@ -404,15 +360,78 @@ class LNPFetcher:
         return None
 
     # ==================================================================
+    # TABELLINO PARSER (Fase 2.3a)
+    # ==================================================================
+    def _fetch_scores_from_tabellini(self, matches: list[Match]) -> int:
+        """
+        Per ogni Match con external_id e senza score completo, fetcha il
+        tabellino LNP e arricchisce sh/sa + parziali.
+
+        Returns: numero di Match aggiornati.
+        """
+        targets = [
+            m for m in matches
+            if m.team_key == self.team.key
+            and m.competition_id == self.comp.id
+            and m.phase in ("playoff", "playout")
+            and m.external_id
+            and (m.sh is None or m.sa is None or not m.periods)
+        ]
+        if not targets:
+            return 0
+
+        season_short = self._season_short()
+        team_aliases = [self.team.display_name] + self.team.aliases
+        updated = 0
+
+        for m in targets:
+            url = _build_tabellino_url(m.external_id, season_short)
+            if not url:
+                continue
+            html = http_get_text(url)
+            if not html:
+                continue
+            parsed = parse_tabellino(html)
+            if not parsed:
+                print(f"  ⚠️  [{self.team.key}] parse fallito per "
+                      f"{m.external_id}")
+                continue
+
+            # Verifica che NOI siamo home (convention v8.9: data.json contiene
+            # solo gare casa delle squadre tracciate)
+            if not team_name_matches(parsed["home"], team_aliases):
+                print(f"  ⚠️  [{self.team.key}] external_id {m.external_id} non "
+                      f"corrisponde a gara in casa (home={parsed['home']!r})")
+                continue
+
+            changed = False
+            if m.sh is None or m.sh != parsed["sh"]:
+                m.sh = parsed["sh"]
+                changed = True
+            if m.sa is None or m.sa != parsed["sa"]:
+                m.sa = parsed["sa"]
+                changed = True
+            if parsed["periods"] and not m.periods:
+                m.periods = parsed["periods"]
+                changed = True
+            # Affina time se presente nel tabellino e diverso
+            if parsed.get("time") and parsed["time"] != m.time:
+                m.time = parsed["time"]
+                changed = True
+            if changed:
+                if "lnp_tabellino" not in m.sources:
+                    m.sources.append("lnp_tabellino")
+                updated += 1
+
+        if updated:
+            print(f"  📊 [{self.team.key}] {updated} match arricchiti da LNP "
+                  f"tabellino")
+        return updated
+
+    # ==================================================================
     # FETCH PAGINA PLAYOFF (cached via http_get_text)
     # ==================================================================
     def _fetch_playoff_page_text(self) -> str:
-        """
-        Fetch testo della pagina playoff contenente la nostra squadra.
-        Itera sui PLAYOFF_PAGE_CODES (Tabellone 1, 2) e ritorna il primo
-        che contiene un alias del team. http_get_text è cachato 5min, quindi
-        chiamate multiple nello stesso run sono economiche.
-        """
         serie_num = CATEGORY_TO_SERIE_NUM.get(self.comp.category)
         if serie_num is None:
             return ""
@@ -466,15 +485,11 @@ class LNPFetcher:
         return False
 
     # ==================================================================
-    # SCORE WIDGET (semplice ma efficace)
+    # SCORE WIDGET (fallback)
     # ==================================================================
     def _find_score_in_team_page(
         self, text: str, match: Match,
     ) -> tuple[int, int] | None:
-        """
-        Cerca nel testo della pagina LNP un pattern "NN-NN" vicino al
-        nome dell'avversario (entro 120 caratteri).
-        """
         opp_n = normalize(match.away)
         if not opp_n:
             return None
@@ -516,6 +531,147 @@ class LNPFetcher:
         if len(end_str) == 2:
             return f"20{end_str}"
         return end_str
+
+    def _season_short(self) -> str:
+        """'2025-26' → '2526'"""
+        parts = self.season.season.split("-")
+        start_short = parts[0][-2:] if len(parts[0]) >= 2 else parts[0]
+        end_short = parts[1] if len(parts) > 1 else parts[0][-2:]
+        return f"{start_short}{end_short}"
+
+
+# ============================================================================
+# TABELLINO PARSER — Funzione modulo (testabile in isolamento)
+# ============================================================================
+def parse_tabellino(html: str) -> dict | None:
+    """
+    Parse pagina tabellino LNP → dict con keys: date, time, home, away, sh, sa, periods.
+
+    Estrae da:
+    - meta og:title o <title> per nomi squadra (più affidabile)
+    - testo "Data: DD/MM/YYYY HH:MM" per data e ora
+    - riga summary "Home - Away NN-MM (NN-NN, NN-NN, ...)" per score + parziali
+
+    Returns None se il parsing fallisce su campi essenziali (nomi/score).
+    """
+    if not html:
+        return None
+
+    # 1. Nomi squadra: meta og:title preferito, fallback <title>
+    home_name, away_name = _parse_match_teams(html)
+    if not home_name or not away_name:
+        return None
+
+    # Strip HTML per pattern testuali (whitespace compatto)
+    text = strip_html(html)
+
+    # 2. Data + ora (formato italiano DD/MM/YYYY HH:MM)
+    date_match = re.search(
+        r"Data:\s*(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}:\d{2})",
+        text,
+    )
+    if not date_match:
+        return None
+    d, mo, y, time_s = date_match.groups()
+    try:
+        iso_date = f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+    except ValueError:
+        return None
+
+    # 3. Score + parziali dalla riga summary (più affidabile)
+    # Pattern: "NN-NN (NN-NN, NN-NN, NN-NN, NN-NN)"
+    # Score con hyphen (es. "75-59"), parziali con hyphen separati da virgola.
+    summary_pat = re.compile(
+        r"(\d{2,3})\s*[-–]\s*(\d{2,3})\s*"
+        r"\(\s*(\d+\s*[-–]\s*\d+(?:\s*,\s*\d+\s*[-–]\s*\d+){1,})\s*\)"
+    )
+    sm = summary_pat.search(text)
+    periods: list[tuple[int, int]] = []
+    if sm:
+        sh = int(sm.group(1))
+        sa = int(sm.group(2))
+        # Estrai parziali
+        for part_match in re.finditer(r"(\d+)\s*[-–]\s*(\d+)", sm.group(3)):
+            try:
+                periods.append((int(part_match.group(1)), int(part_match.group(2))))
+            except ValueError:
+                continue
+    else:
+        # Fallback: score em-dash "NN — NN" (presente sopra la tabella parziali)
+        em_pat = re.compile(r"(\d{2,3})\s*—\s*(\d{2,3})")
+        em_match = em_pat.search(text)
+        if not em_match:
+            return None
+        sh = int(em_match.group(1))
+        sa = int(em_match.group(2))
+
+    if not (30 <= sh <= 200 and 30 <= sa <= 200):
+        return None
+
+    # 4. Validazione score vs parziali (sanity check)
+    if periods:
+        period_sum_h = sum(p[0] for p in periods)
+        period_sum_a = sum(p[1] for p in periods)
+        # LNP a volte mostra parziali "Ospite | Casa" invertiti: tolleriamo entrambe
+        if period_sum_h == sh and period_sum_a == sa:
+            pass  # parziali h,a corretti
+        elif period_sum_a == sh and period_sum_h == sa:
+            # Parziali invertiti: scambia
+            periods = [(p[1], p[0]) for p in periods]
+        # Se non torna in nessuno dei due modi, lascia comunque (forse partita con OT)
+
+    return {
+        "date": iso_date,
+        "time": time_s,
+        "home": home_name,
+        "away": away_name,
+        "sh": sh,
+        "sa": sa,
+        "periods": periods,
+    }
+
+
+def _parse_match_teams(html: str) -> tuple[str | None, str | None]:
+    """
+    Estrai nomi (home, away) da meta og:title o <title> tag.
+    Pattern atteso: "{Home} VS {Away}".
+    """
+    # Meta og:title (più affidabile, è esplicito nel head)
+    meta_pat = re.compile(
+        r"""<meta[^>]*(?:property|name)\s*=\s*["']og:title["'][^>]*"""
+        r"""content\s*=\s*["']([^"']+?)\s+VS\s+([^"']+?)["']""",
+        re.IGNORECASE,
+    )
+    m = meta_pat.search(html)
+    if m:
+        return m.group(1).strip(), m.group(2).strip()
+
+    # Fallback: <title>X VS Y | Lega Nazionale Pallacanestro</title>
+    title_pat = re.compile(
+        r"<title>([^<]+?)\s+VS\s+([^<|]+?)(?:\s*\||\s*</title>)",
+        re.IGNORECASE,
+    )
+    m = title_pat.search(html)
+    if m:
+        return m.group(1).strip(), m.group(2).strip()
+
+    return None, None
+
+
+def _build_tabellino_url(external_id: str, season_short: str) -> str:
+    """
+    Costruisci URL tabellino da external_id come 'ita3_b_ply_75'.
+    Formato: LNP_BASE/wp/match/{external_id}/{phase_id}/x{season_short}/tabellino
+    dove phase_id è external_id senza il suffisso "_N".
+    """
+    if not external_id:
+        return ""
+    # Strip trailing "_N" per ottenere phase_id (es. "ita3_b_ply_75" → "ita3_b_ply")
+    m = re.match(r"^(.+?)_\d+$", external_id)
+    if not m:
+        return ""
+    phase_id = m.group(1)
+    return f"{LNP_BASE}/wp/match/{external_id}/{phase_id}/x{season_short}/tabellino"
 
 
 # ============================================================================
