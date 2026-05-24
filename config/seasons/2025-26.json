@@ -133,7 +133,9 @@
       "opponent": "Paffoni Fulgor Basket Omegna",
       "result": "3-0",
       "team_advances": true,
-      "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF"
+      "next_opponent": "Rucker San Vendemiano",
+      "next_opponent_seed": 4,
+      "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF vs Rucker (vincente Serie 4)"
     }
   ]
 }
