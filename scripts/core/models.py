@@ -131,6 +131,11 @@ class Match:
 
     Convenzione storica v8.9: data.json contiene solo gare IN CASA delle
     squadre tracciate (visto da team_key). v9.0 mantiene questa convenzione.
+
+    Campo `external_id` (Fase 2.3a): identificatore univoco LNP per la partita,
+    es. "ita3_b_ply_75". Quando presente, il fetcher può arricchire la Match
+    fetchando direttamente il tabellino LNP. Popolato manualmente in Fase 2.3a,
+    auto-popolato in Fase 2.3b (discovery via calendario LNP).
     """
     id: str                           # stable id: "v_po_r37"
     team_key: str                     # "virtus" | "luiss"
@@ -147,6 +152,8 @@ class Match:
     sa: int | None = None             # score away
     tentative: bool = False           # G4/G5 che potrebbero non disputarsi
     sources: list[str] = field(default_factory=list)  # provenance: ["bracket", "rss"]
+    external_id: str | None = None    # ID partita LNP (es. "ita3_b_ply_75")
+    periods: list[tuple[int, int]] = field(default_factory=list)  # parziali quarti
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "Match":
@@ -154,6 +161,15 @@ class Match:
         # Legacy v8.9 usa "team" invece di "team_key" e non ha competition_id
         team_key = d.get("team_key") or d.get("team", "")
         competition_id = d.get("competition_id") or _infer_competition_id(d)
+
+        # Periods possono essere serializzati come liste di liste (JSON non ha tuple)
+        periods_raw = d.get("periods", [])
+        periods: list[tuple[int, int]] = []
+        for p in periods_raw:
+            try:
+                periods.append((int(p[0]), int(p[1])))
+            except (IndexError, TypeError, ValueError):
+                continue
 
         return cls(
             id=d["id"],
@@ -171,6 +187,8 @@ class Match:
             sa=d.get("sa"),
             tentative=d.get("tentative", False),
             sources=d.get("sources", []),
+            external_id=d.get("external_id"),
+            periods=periods,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -197,12 +215,17 @@ class Match:
             out["tentative"] = True
         if self.sources:
             out["sources"] = self.sources
+        if self.external_id:
+            out["external_id"] = self.external_id
+        if self.periods:
+            out["periods"] = [list(p) for p in self.periods]
         return out
 
     def to_legacy_dict(self) -> dict[str, Any]:
         """
         Serializza nello schema legacy v8.9 per retrocompatibilità frontend.
         Differenze: 'team' invece di 'team_key', no 'competition_id'.
+        external_id e periods omessi (non supportati da frontend legacy).
         """
         out: dict[str, Any] = {
             "id": self.id,
@@ -242,7 +265,7 @@ class SeriesClosed:
     Campi `next_opponent` e `next_opponent_seed` sono usati dal fetcher
     LNPFetcher per dedurre automaticamente le gare del turno successivo
     quando team_advances=True. Popolati manualmente in Fase 2.2 (Opzione A);
-    saranno auto-popolati dal tabellino LNP in Fase 2.3 (Opzione B).
+    saranno auto-popolati dal tabellino LNP in Fase 2.3b (Opzione B).
     """
     team_key: str
     competition_id: str
