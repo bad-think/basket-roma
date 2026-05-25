@@ -1,105 +1,99 @@
 name: Test v9 (manual)
 
-# Workflow di test per Basket Roma v9.0 — eseguibile SOLO manualmente.
-# Non ha schedule cron, non scrive su data.json di main, non rompe v8.9.2.
-#
-# Produce due artifact:
-# - data-v9.json       : output schema v9.0 nativo
-# - data.json.legacy   : output v9.0 convertito in schema v8.9 (per cutover)
-#
-# Per lanciarlo:
-# 1. Vai su Actions
-# 2. Seleziona "Test v9 (manual)"
-# 3. Click "Run workflow", scegli branch v9-rewrite, conferma
-
 on:
   workflow_dispatch:
-    inputs:
-      compare_with_main:
-        description: "Confronta output con data.json di main (true/false)"
-        required: false
-        default: "true"
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test-v9:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout branch corrente (v9-rewrite o altro)
+      - name: Checkout repo (branch corrente)
         uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.12'
 
-      - name: Verifica struttura v9
+      - name: Verify v9 files present
         run: |
           echo "=== File v9 attesi ==="
-          test -f config/seasons/2025-26.json && echo "✅ config" || echo "❌ config mancante"
-          test -f scripts/main.py && echo "✅ main.py" || echo "❌ main.py mancante"
-          test -f scripts/core/models.py && echo "✅ models" || echo "❌ models mancante"
-          test -f scripts/fetchers/lnp.py && echo "✅ lnp fetcher" || echo "❌ lnp fetcher mancante"
+          [ -f config/seasons/2025-26.json ] && echo "✅ config" || echo "❌ config (manca config/seasons/2025-26.json)"
+          [ -f scripts/main.py ] && echo "✅ main.py" || echo "❌ main.py (manca scripts/main.py)"
+          [ -f scripts/core/models.py ] && echo "✅ models" || echo "❌ models (manca scripts/core/models.py)"
+          [ -f scripts/fetchers/lnp.py ] && echo "✅ lnp fetcher" || echo "❌ lnp fetcher (manca scripts/fetchers/lnp.py)"
 
-      - name: Esegui v9 (fetch reale)
-        run: python scripts/main.py --out-v9 data-v9.json
-
-      - name: Genera anche output legacy per confronto
-        run: python scripts/main.py --out-v9 /tmp/skip.json --write-legacy --data data.json.legacy || true
-
-      - name: Confronto con data.json di main (opzionale)
-        if: ${{ github.event.inputs.compare_with_main == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # ──────────────────────────────────────────────────────────────────
+      # NUOVO: sync data.json da main prima di girare v9.
+      # Evita di dover sincronizzare manualmente il branch v9-rewrite con
+      # le scritture di cron v8.9 su main.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Sync data.json from main branch
         run: |
-          # Scarica data.json corrente da main
-          gh api /repos/${{ github.repository }}/contents/data.json?ref=main \
-            -H "Accept: application/vnd.github.v3.raw" > data.json.main || true
-
-          if [ -s data.json.main ]; then
-            echo "=== Confronto numero match ==="
-            python3 -c "
-          import json
-          main_d = json.load(open('data.json.main'))
-          v9 = json.load(open('data-v9.json'))
-          print(f'main (v8.9): {len(main_d[\"matches\"])} matches')
-          print(f'v9:          {len(v9[\"matches\"])} matches')
-          delta = len(v9['matches']) - len(main_d['matches'])
-          print(f'delta:       {delta:+d}')
-          "
-          else
-            echo "⚠️  Nessun data.json su main per confronto"
+          BRANCH="${{ github.ref_name }}"
+          if [ "$BRANCH" = "main" ]; then
+            echo "ℹ️  Già su main, skip sync"
+            exit 0
           fi
-
-      - name: Riepilogo
-        run: |
-          echo "=== Riepilogo run v9 ==="
-          if [ -f data-v9.json ]; then
-            python3 -c "
-          import json
-          d = json.load(open('data-v9.json'))
-          print(f'Schema:      {d.get(\"\$schema_version\")}')
-          print(f'Stagione:    {d[\"season\"]}')
-          print(f'Matches:     {len(d[\"matches\"])}')
-          print(f'Standings:   {list(d[\"standings\"].keys())}')
-          sc = d['config'].get('series_closed', [])
-          print(f'Series chiuse: {len(sc)}')
-          for s in sc:
-              adv = 'avanza' if s['team_advances'] else 'eliminata'
-              print(f'  - {s[\"team_key\"]} vs {s[\"opponent\"]} ({s[\"round_name\"]}): {s[\"result\"]} → {adv}')
-          "
-          else
-            echo "❌ data-v9.json non generato"
+          echo "📥 Pulling fresh data.json from main..."
+          # Usa raw.githubusercontent per evitare di committare cose
+          curl -sL --fail \
+            "https://raw.githubusercontent.com/${{ github.repository }}/main/data.json" \
+            -o data.json
+          if [ ! -s data.json ]; then
+            echo "❌ data.json vuoto o non scaricato"
             exit 1
           fi
+          MATCHES=$(python3 -c 'import json; print(len(json.load(open("data.json"))["matches"]))')
+          LAST=$(python3 -c 'import json; print(json.load(open("data.json")).get("last_updated", "?"))')
+          echo "✅ data.json from main: $MATCHES matches, last_updated=$LAST"
 
-      - name: Upload artifacts
+      - name: Run v9 fetcher (preserve existing data, output to data-v9.json)
+        run: python scripts/main.py --out-v9 data-v9.json
+
+      - name: Run v9 fetcher (write-legacy from scratch — sanity check)
+        run: python scripts/main.py --out-v9 /tmp/skip.json --write-legacy --data data.json.legacy || true
+
+      - name: Compare match count v9 vs main
+        run: |
+          echo "=== Confronto numero match ==="
+          MAIN_COUNT=$(python3 -c 'import json; print(len(json.load(open("data.json"))["matches"]))')
+          V9_COUNT=$(python3 -c 'import json; print(len(json.load(open("data-v9.json"))["matches"]))')
+          DELTA=$((V9_COUNT - MAIN_COUNT))
+          SIGN=""; [ $DELTA -ge 0 ] && SIGN="+"
+          echo "main (v8.9): $MAIN_COUNT matches"
+          echo "v9:          $V9_COUNT matches"
+          echo "delta:       ${SIGN}${DELTA}"
+
+      - name: Run summary
+        run: |
+          echo "=== Riepilogo run v9 ==="
+          python3 - << 'PYEOF'
+          import json
+          d = json.load(open("data-v9.json"))
+          print(f"Schema:      {d.get('$schema_version', '?')}")
+          print(f"Stagione:    {d.get('season', '?')}")
+          print(f"Matches:     {len(d['matches'])}")
+          print(f"Standings:   {list((d.get('standings') or {}).keys())}")
+          sc = (d.get("config") or {}).get("series_closed", [])
+          print(f"Series chiuse: {len(sc)}")
+          for s in sc:
+              tag = "→ avanza" if s.get("team_advances") else "→ eliminata"
+              print(f"  - {s['team_key']} vs {s['opponent']} ({s['round_name']}): {s['result']} {tag}")
+          # Quick coverage check Fase 2.3
+          playoff_matches = [m for m in d["matches"] if m.get("phase") == "playoff"]
+          with_ext_id = sum(1 for m in playoff_matches if m.get("external_id"))
+          with_periods = sum(1 for m in playoff_matches if m.get("periods"))
+          print(f"Playoff coverage: {len(playoff_matches)} match, "
+                f"{with_ext_id} con external_id, {with_periods} con periods")
+          PYEOF
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: v9-output-${{ github.run_id }}
           path: |
             data-v9.json
             data.json.legacy
-          retention-days: 7
+          retention-days: 30
