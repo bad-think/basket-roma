@@ -3,71 +3,57 @@
   "season": "2025-26",
   "next_season": "2026-27",
   "league_classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
+
   "rss_feeds": [
     {
       "url": "https://sportando.basketball/category/europa/italia/serie-b/feed/",
-      "categories": [
-        "B Nazionale"
-      ],
+      "categories": ["B Nazionale"],
       "enabled": true,
       "note": "Feed Serie B specifico: alto tasso di articoli score-rich"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=38",
-      "categories": [
-        "B Nazionale"
-      ],
+      "categories": ["B Nazionale"],
       "enabled": true
     },
     {
       "url": "https://sportando.basketball/feed/",
-      "categories": [
-        "all"
-      ],
+      "categories": ["all"],
       "enabled": false,
       "note": "Feed generale: deprecato, troppo rumore. Usare /category/.../serie-b/feed/"
     },
     {
       "url": "https://www.basketinside.com/feed/",
-      "categories": [
-        "all"
-      ],
+      "categories": ["all"],
       "enabled": false,
       "note": "WordPress restituisce HTML invece di XML, da investigare"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=43",
-      "categories": [
-        "A2"
-      ],
+      "categories": ["A2"],
       "enabled": false,
       "note": "Attivare quando una squadra tracciata sale in A2"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=2",
-      "categories": [
-        "A"
-      ],
+      "categories": ["A"],
       "enabled": false,
-      "note": "Attivare quando una squadra tracciata sale in A"
+      "note": "Attivare quando una squadra tracciata sale in A (es. BC Roma 2026-27)"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=35",
-      "categories": [
-        "EuroCup"
-      ],
+      "categories": ["EuroCup"],
       "enabled": false,
       "note": "Attivare se qualificazione EuroCup"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=48",
-      "categories": [
-        "Champions League"
-      ],
+      "categories": ["Champions League"],
       "enabled": false,
       "note": "Attivare se qualificazione Basketball Champions League"
     }
   ],
+
   "teams": [
     {
       "key": "virtus",
@@ -94,11 +80,7 @@
           "girone": "B",
           "fetcher": "lnp",
           "source_slug": "serie-b",
-          "phases": [
-            "regular",
-            "playoff",
-            "playout"
-          ]
+          "phases": ["regular", "playoff", "playout"]
         }
       ]
     },
@@ -126,15 +108,12 @@
           "girone": "B",
           "fetcher": "lnp",
           "source_slug": "serie-b",
-          "phases": [
-            "regular",
-            "playoff",
-            "playout"
-          ]
+          "phases": ["regular", "playoff", "playout"]
         }
       ]
     }
   ],
+
   "series_closed": [
     {
       "team_key": "luiss",
@@ -157,7 +136,20 @@
       "next_opponent": "Rucker San Vendemiano",
       "next_opponent_seed": 4,
       "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF vs Rucker (vincente Serie 4)"
+    },
+    {
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "round_name": "SF",
+      "opponent": "Rucker San Vendemiano",
+      "result": "3-2",
+      "team_advances": true,
+      "next_opponent": "La T Tecnica Gema Montecatini",
+      "next_opponent_seed": 2,
+      "note": "Vincente SF 2025-26 (3-2 su Rucker, serie a G5 31/5 86-62). Finale vs Montecatini (vincente Tabellone 1, 2A). Pattern home CCFFC confermato da calendario LNP (G1/G2/G5 casa Virtus)."
     }
   ],
+
   "match_id_overrides": []
 }
