@@ -1,34 +1,51 @@
 name: Test v9 (manual)
 
+# Workflow di test per Basket Roma v9.0 — eseguibile SOLO manualmente.
+# Non ha schedule cron, non scrive su data.json di main, non rompe v8.9.2.
+#
+# Produce due artifact:
+# - data-v9.json       : output schema v9.0 nativo
+# - data.json.legacy   : output v9.0 convertito in schema v8.9 (per cutover)
+#
+# Per lanciarlo:
+# 1. Vai su Actions
+# 2. Seleziona "Test v9 (manual)"
+# 3. Click "Run workflow", scegli branch v9-rewrite (o main post-cutover), conferma
+
 on:
   workflow_dispatch:
+    inputs:
+      compare_with_main:
+        description: "Confronta output con data.json di main (true/false)"
+        required: false
+        default: "true"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test-v9:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo (branch corrente)
+      - name: Checkout branch corrente
         uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.11"
 
-      - name: Verify v9 files present
+      - name: Verifica struttura v9
         run: |
           echo "=== File v9 attesi ==="
-          [ -f config/seasons/2025-26.json ] && echo "✅ config" || echo "❌ config (manca config/seasons/2025-26.json)"
-          [ -f scripts/main.py ] && echo "✅ main.py" || echo "❌ main.py (manca scripts/main.py)"
-          [ -f scripts/core/models.py ] && echo "✅ models" || echo "❌ models (manca scripts/core/models.py)"
-          [ -f scripts/fetchers/lnp.py ] && echo "✅ lnp fetcher" || echo "❌ lnp fetcher (manca scripts/fetchers/lnp.py)"
+          test -f config/seasons/2025-26.json && echo "✅ config" || echo "❌ config mancante"
+          test -f scripts/main.py && echo "✅ main.py" || echo "❌ main.py mancante"
+          test -f scripts/core/models.py && echo "✅ models" || echo "❌ models mancante"
+          test -f scripts/fetchers/lnp.py && echo "✅ lnp fetcher" || echo "❌ lnp fetcher mancante"
 
-      # ──────────────────────────────────────────────────────────────────
-      # NUOVO: sync data.json da main prima di girare v9.
-      # Evita di dover sincronizzare manualmente il branch v9-rewrite con
-      # le scritture di cron v8.9 su main.
-      # ──────────────────────────────────────────────────────────────────
+      # Sync data.json da main: evita di dover sincronizzare manualmente il
+      # branch v9-rewrite con le scritture di cron v8.9 su main.
+      # Skip automatico se workflow gira già su main (no-op safe).
       - name: Sync data.json from main branch
         run: |
           BRANCH="${{ github.ref_name }}"
@@ -37,7 +54,6 @@ jobs:
             exit 0
           fi
           echo "📥 Pulling fresh data.json from main..."
-          # Usa raw.githubusercontent per evitare di committare cose
           curl -sL --fail \
             "https://raw.githubusercontent.com/${{ github.repository }}/main/data.json" \
             -o data.json
@@ -49,10 +65,10 @@ jobs:
           LAST=$(python3 -c 'import json; print(json.load(open("data.json")).get("last_updated", "?"))')
           echo "✅ data.json from main: $MATCHES matches, last_updated=$LAST"
 
-      - name: Run v9 fetcher (preserve existing data, output to data-v9.json)
+      - name: Esegui v9 (fetch reale)
         run: python scripts/main.py --out-v9 data-v9.json
 
-      - name: Run v9 fetcher (write-legacy from scratch — sanity check)
+      - name: Genera anche output legacy per confronto
         run: python scripts/main.py --out-v9 /tmp/skip.json --write-legacy --data data.json.legacy || true
 
       - name: Compare match count v9 vs main
@@ -81,7 +97,6 @@ jobs:
           for s in sc:
               tag = "→ avanza" if s.get("team_advances") else "→ eliminata"
               print(f"  - {s['team_key']} vs {s['opponent']} ({s['round_name']}): {s['result']} {tag}")
-          # Quick coverage check Fase 2.3
           playoff_matches = [m for m in d["matches"] if m.get("phase") == "playoff"]
           with_ext_id = sum(1 for m in playoff_matches if m.get("external_id"))
           with_periods = sum(1 for m in playoff_matches if m.get("periods"))
@@ -89,11 +104,11 @@ jobs:
                 f"{with_ext_id} con external_id, {with_periods} con periods")
           PYEOF
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: v9-output-${{ github.run_id }}
           path: |
             data-v9.json
             data.json.legacy
-          retention-days: 30
+          retention-days: 7
