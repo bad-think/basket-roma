@@ -15,11 +15,8 @@ on:
     - cron: '0 3 * * *'    # 04:00 inverno (UTC+1)
   workflow_dispatch:
 
-# Concurrency guard: serializza esecuzioni del workflow.
-# Se un cron parte mentre una run manuale (workflow_dispatch) sta girando
-# — o viceversa — la nuova attende che la precedente finisca invece di
-# lanciarsi in parallelo. Previene push concorrenti su data.json che
-# fallirebbero con "non-fast-forward". Una sola run alla volta, sempre.
+# Concurrency guard: una sola run alla volta, previene push concorrenti
+# su data.json che fallirebbero con "non-fast-forward".
 concurrency:
   group: update-data
   cancel-in-progress: false
@@ -42,54 +39,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      # ──────────────────────────────────────────────────────────────────
-      # STEP 1: v8.9.2 (legacy, produzione attiva).
-      # Fetcha regular season Virtus + Luiss da fonti varie. Scrive
-      # data.json (schema legacy v8.9).
-      # ──────────────────────────────────────────────────────────────────
+      # STEP 1: v8.9.2 (legacy, scrive data.json schema v8.9)
       - name: Esegui aggiornamento dati (v8.9 legacy)
         run: python scripts/update_data.py
 
-      # ──────────────────────────────────────────────────────────────────
-      # STEP 1bis: backup data.json prima dell'arricchimento v9.
-      # Se v9 crashasse durante la scrittura legacy, abbiamo come
-      # ripristinare il file v8.9. Backup locale, non committato.
-      # ──────────────────────────────────────────────────────────────────
-      - name: Backup data.json prima di v9
-        run: cp data.json data.json.v89-backup
-
-      # ──────────────────────────────────────────────────────────────────
-      # STEP 2: arricchimento v9 (additivo + write-legacy).
-      # Legge data.json (v8.9), arricchisce con:
-      #   - schedule playoff dedotto (Fase 2.2)
-      #   - tabellino LNP con score+parziali (Fase 2.3a)
-      #   - discovery match_id (Fase 2.3b)
-      # Scrive:
-      #   - data-v9.json: schema 9.0 nativo (per Fase 3 frontend)
-      #   - data.json: schema legacy 8.9 ARRICCHITO (per frontend attuale,
-      #     include score SF/Finale che v8.9 non riesce a popolare)
+      # STEP 2: arricchimento v9 (solo data-v9.json, NO write-legacy).
+      # Il bug delle date errate nel deducer (calcola Finale con formula
+      # approssimativa, sbaglia di 1 mese) renderebbe data.json inconsistente
+      # se sovrascritto. Quindi v9 produce SOLO data-v9.json. Frontend Fase 3
+      # leggerà data-v9.json nativamente (multi-team, parziali, link tabellini).
       #
-      # continue-on-error: TRUE → se v9 fallisce, lo step di ripristino
-      # rimette data.json al backup v8.9 e il workflow continua.
-      # ──────────────────────────────────────────────────────────────────
-      - name: Esegui arricchimento v9 (con write-legacy)
-        id: v9
+      # continue-on-error: se v9 fallisce, data.json v8.9 resta intatto.
+      - name: Esegui arricchimento v9 (solo data-v9.json)
         continue-on-error: true
-        run: python scripts/main.py --out-v9 data-v9.json --write-legacy
-
-      # ──────────────────────────────────────────────────────────────────
-      # STEP 2bis: rollback data.json se v9 ha fallito.
-      # Se step v9 ha exit code != 0, ripristina data.json dal backup.
-      # Garantisce che il frontend non veda mai un data.json corrotto.
-      # ──────────────────────────────────────────────────────────────────
-      - name: Rollback data.json se v9 fallito
-        if: steps.v9.outcome == 'failure'
-        run: |
-          echo "⚠️  v9 fallito, ripristino data.json dal backup v8.9"
-          cp data.json.v89-backup data.json
-
-      - name: Pulizia file temporanei
-        run: rm -f data.json.v89-backup
+        run: python scripts/main.py --out-v9 data-v9.json
 
       - name: Commit e push se ci sono modifiche
         run: |
