@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-06-06T19:02:47.802533",
+  "last_updated": "2026-06-06T19:58:23.610030",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -561,20 +561,6 @@
       "sa": 89,
       "round": 37,
       "game_num": 3
-    },
-    {
-      "id": "v_po_f_g5",
-      "team": "virtus",
-      "phase": "playoff",
-      "date": "2026-05-18",
-      "time": "20:00",
-      "home": "Virtus GVM Roma",
-      "away": "La T Tecnica Gema Montecatini",
-      "sh": null,
-      "sa": null,
-      "round": 53,
-      "game_num": 5,
-      "tentative": true
     },
     {
       "id": "v_po_r37_2",
