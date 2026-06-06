@@ -15,8 +15,7 @@ on:
     - cron: '0 3 * * *'    # 04:00 inverno (UTC+1)
   workflow_dispatch:
 
-# Concurrency guard: una sola run alla volta, previene push concorrenti
-# su data.json che fallirebbero con "non-fast-forward".
+# Concurrency guard: una sola run alla volta.
 concurrency:
   group: update-data
   cancel-in-progress: false
@@ -39,17 +38,43 @@ jobs:
         with:
           python-version: '3.11'
 
-      # STEP 1: v8.9.2 (legacy, scrive data.json schema v8.9)
+      # STEP 1: v8.9 (legacy)
       - name: Esegui aggiornamento dati (v8.9 legacy)
         run: python scripts/update_data.py
 
-      # STEP 2: arricchimento v9 (solo data-v9.json, NO write-legacy).
-      # Il bug delle date errate nel deducer (calcola Finale con formula
-      # approssimativa, sbaglia di 1 mese) renderebbe data.json inconsistente
-      # se sovrascritto. Quindi v9 produce SOLO data-v9.json. Frontend Fase 3
-      # leggerà data-v9.json nativamente (multi-team, parziali, link tabellini).
+      # ──────────────────────────────────────────────────────────────────
+      # STEP 1bis: cleanup partite spurie v9 deducer.
+      # Il deducer Fase 2.2 di v9 ha un bug che assegna date errate alle
+      # partite Finale dedotte (es. 8/5 invece di 8/6, off-by-one-month).
+      # Quando --write-legacy era abilitato, queste finivano in data.json
+      # con id "v_po_f_g*". Dopo il rollback, v8.9 non le elimina (non
+      # essendo sue) e restano in data.json corrompendo il frontend.
       #
-      # continue-on-error: se v9 fallisce, data.json v8.9 resta intatto.
+      # Questo step rimuove le partite con id che inizia per "v_po_f_g"
+      # da data.json. Idempotente: no-op se non ne trova.
+      # Permanente come safety net finché il deducer non viene fixato.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Cleanup partite spurie v9 deducer
+        run: |
+          python3 << 'PYEOF'
+          import json
+          with open('data.json') as f:
+              d = json.load(f)
+          before = len(d['matches'])
+          # Rimuovi tutte le partite con id che inizia per "v_po_f_g"
+          # (artefatti del deducer v9 Fase 2.2 con date errate)
+          d['matches'] = [m for m in d['matches']
+                          if not str(m.get('id', '')).startswith('v_po_f_g')]
+          after = len(d['matches'])
+          if after < before:
+              with open('data.json', 'w', encoding='utf-8') as f:
+                  json.dump(d, f, indent=2, ensure_ascii=False)
+              print(f'🧹 Cleanup: rimosse {before - after} partite spurie v9 deducer')
+          else:
+              print('✅ Cleanup: nessuna partita spuria, data.json già pulito')
+          PYEOF
+
+      # STEP 2: arricchimento v9 (solo data-v9.json, NO --write-legacy)
       - name: Esegui arricchimento v9 (solo data-v9.json)
         continue-on-error: true
         run: python scripts/main.py --out-v9 data-v9.json
