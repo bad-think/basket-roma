@@ -498,19 +498,6 @@
       "round": 38
     },
     {
-      "id": "v_po_f_g1",
-      "team": "virtus",
-      "phase": "playoff",
-      "date": "2026-05-08",
-      "time": "20:00",
-      "home": "Virtus GVM Roma",
-      "away": "La T Tecnica Gema Montecatini",
-      "sh": null,
-      "sa": null,
-      "round": 49,
-      "game_num": 1
-    },
-    {
       "id": "v_po_r37",
       "team": "virtus",
       "phase": "playoff",
@@ -522,19 +509,6 @@
       "sa": 71,
       "round": 37,
       "game_num": 1
-    },
-    {
-      "id": "v_po_f_g2",
-      "team": "virtus",
-      "phase": "playoff",
-      "date": "2026-05-10",
-      "time": "20:00",
-      "home": "Virtus GVM Roma",
-      "away": "La T Tecnica Gema Montecatini",
-      "sh": null,
-      "sa": null,
-      "round": 50,
-      "game_num": 2
     },
     {
       "id": "v_po_r38",
