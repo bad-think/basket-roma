@@ -1,0 +1,919 @@
+{
+  "$schema_version": "9.0",
+  "last_updated": "2026-06-06T15:32:09.757137",
+  "season": "2025-26",
+  "config": {
+    "season": "2025-26",
+    "next_season": "2026-27",
+    "league_classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
+    "teams": [
+      {
+        "key": "virtus",
+        "display_name": "Virtus GVM Roma",
+        "short_name": "Virtus",
+        "aliases": [
+          "virtus gvm roma",
+          "virtus roma",
+          "virtus gvm roma 1960",
+          "pallacanestro virtus roma"
+        ],
+        "color_primary": "#FFD700",
+        "color_secondary": "#000000",
+        "venue": {
+          "name": "PalaTiziano – Palazzetto dello Sport",
+          "address": "Piazza Apollodoro 10, 00196 Roma",
+          "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+        },
+        "active_competitions": [
+          {
+            "id": "b_naz_2526",
+            "type": "championship",
+            "category": "B Nazionale",
+            "fetcher": "lnp",
+            "girone": "B",
+            "source_slug": "serie-b",
+            "rss_section": null,
+            "phases": [
+              "regular",
+              "playoff",
+              "playout"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "luiss",
+        "display_name": "Luiss Roma",
+        "short_name": "Luiss",
+        "aliases": [
+          "luiss roma",
+          "luiss",
+          "luiss basketball"
+        ],
+        "color_primary": "#003366",
+        "color_secondary": "#FFFFFF",
+        "venue": {
+          "name": "PalaTiziano – Palazzetto dello Sport",
+          "address": "Piazza Apollodoro 10, 00196 Roma",
+          "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+        },
+        "active_competitions": [
+          {
+            "id": "b_naz_2526",
+            "type": "championship",
+            "category": "B Nazionale",
+            "fetcher": "lnp",
+            "girone": "B",
+            "source_slug": "serie-b",
+            "rss_section": null,
+            "phases": [
+              "regular",
+              "playoff",
+              "playout"
+            ]
+          }
+        ]
+      }
+    ],
+    "rss_feeds": [
+      {
+        "url": "https://sportando.basketball/category/europa/italia/serie-b/feed/",
+        "categories": [
+          "B Nazionale"
+        ],
+        "enabled": true
+      },
+      {
+        "url": "https://www.pianetabasket.com/rss/?section=38",
+        "categories": [
+          "B Nazionale"
+        ],
+        "enabled": true
+      },
+      {
+        "url": "https://sportando.basketball/feed/",
+        "categories": [
+          "all"
+        ],
+        "enabled": false
+      },
+      {
+        "url": "https://www.basketinside.com/feed/",
+        "categories": [
+          "all"
+        ],
+        "enabled": false
+      },
+      {
+        "url": "https://www.pianetabasket.com/rss/?section=43",
+        "categories": [
+          "A2"
+        ],
+        "enabled": false
+      },
+      {
+        "url": "https://www.pianetabasket.com/rss/?section=2",
+        "categories": [
+          "A"
+        ],
+        "enabled": false
+      },
+      {
+        "url": "https://www.pianetabasket.com/rss/?section=35",
+        "categories": [
+          "EuroCup"
+        ],
+        "enabled": false
+      },
+      {
+        "url": "https://www.pianetabasket.com/rss/?section=48",
+        "categories": [
+          "Champions League"
+        ],
+        "enabled": false
+      }
+    ],
+    "series_closed": [
+      {
+        "team_key": "luiss",
+        "competition_id": "b_naz_2526",
+        "phase": "playoff",
+        "opponent": "Logiman Orzinuovi",
+        "result": "0-3",
+        "team_advances": false,
+        "round_name": "QF",
+        "note": "Eliminata QF 2025-26 (G3 casa 72-89)",
+        "next_opponent": "",
+        "next_opponent_seed": null
+      },
+      {
+        "team_key": "virtus",
+        "competition_id": "b_naz_2526",
+        "phase": "playoff",
+        "opponent": "Paffoni Fulgor Basket Omegna",
+        "result": "3-0",
+        "team_advances": true,
+        "round_name": "QF",
+        "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF vs Rucker (vincente Serie 4)",
+        "next_opponent": "Rucker San Vendemiano",
+        "next_opponent_seed": 4
+      },
+      {
+        "team_key": "virtus",
+        "competition_id": "b_naz_2526",
+        "phase": "playoff",
+        "opponent": "Rucker San Vendemiano",
+        "result": "3-2",
+        "team_advances": true,
+        "round_name": "SF",
+        "note": "Vincente SF 2025-26 (3-2 su Rucker, serie a G5 31/5 86-62). Finale vs Montecatini (vincente Tabellone 1, 2A). Pattern home CCFFC confermato da calendario LNP (G1/G2/G5 casa Virtus).",
+        "next_opponent": "La T Tecnica Gema Montecatini",
+        "next_opponent_seed": 2
+      }
+    ],
+    "match_id_overrides": []
+  },
+  "matches": [
+    {
+      "id": "v02",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-09-26",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Consultinvest Loreto Pesaro",
+      "sh": 76,
+      "sa": 69,
+      "round": 2
+    },
+    {
+      "id": "v04",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-10-11",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Solbat Golfo Piombino",
+      "sh": 91,
+      "sa": 64,
+      "round": 4
+    },
+    {
+      "id": "l03",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-10-15",
+      "time": "20:30",
+      "home": "Luiss Roma",
+      "away": "Malvin PSA Basket Casoria",
+      "sh": 67,
+      "sa": 51,
+      "round": 5
+    },
+    {
+      "id": "v06",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-10-19",
+      "time": "18:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "General Contractor Jesi",
+      "sh": 78,
+      "sa": 72,
+      "round": 6
+    },
+    {
+      "id": "l05",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-10-25",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Power Basket Nocera",
+      "sh": 80,
+      "sa": 70,
+      "round": 7
+    },
+    {
+      "id": "v08",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-10-29",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "UP Andrea Costa Imola",
+      "sh": 76,
+      "sa": 58,
+      "round": 8
+    },
+    {
+      "id": "v09",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-01",
+      "time": "18:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Adamant Ferrara",
+      "sh": 84,
+      "sa": 72,
+      "round": 9
+    },
+    {
+      "id": "l07",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-02",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "OraSì Ravenna",
+      "sh": 84,
+      "sa": 76,
+      "round": 10
+    },
+    {
+      "id": "l08",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-08",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Ristopro Fabriano",
+      "sh": 80,
+      "sa": 71,
+      "round": 10
+    },
+    {
+      "id": "v11",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-12",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Virtus Imola",
+      "sh": 89,
+      "sa": 58,
+      "round": 11
+    },
+    {
+      "id": "l10",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-15",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "General Contractor Jesi",
+      "sh": 66,
+      "sa": 82,
+      "round": 12
+    },
+    {
+      "id": "v13",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-22",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Verodol CBD Pielle Livorno",
+      "sh": 70,
+      "sa": 68,
+      "round": 13
+    },
+    {
+      "id": "l12",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-26",
+      "time": "20:00",
+      "home": "Luiss Roma",
+      "away": "Umana San Giobbe Chiusi",
+      "sh": 82,
+      "sa": 66,
+      "round": 1
+    },
+    {
+      "id": "l13",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-11-29",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Solbat Golfo Piombino",
+      "sh": 89,
+      "sa": 73,
+      "round": 14
+    },
+    {
+      "id": "v15",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-12-07",
+      "time": "18:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "OraSì Ravenna",
+      "sh": 69,
+      "sa": 60,
+      "round": 15
+    },
+    {
+      "id": "v16",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-12-13",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Paperdi Juvecaserta 2021",
+      "sh": 99,
+      "sa": 63,
+      "round": 16
+    },
+    {
+      "id": "l16",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-12-17",
+      "time": "20:00",
+      "home": "Luiss Roma",
+      "away": "Consorzio Leonardo Dany Quarrata",
+      "sh": 89,
+      "sa": 74,
+      "round": 17
+    },
+    {
+      "id": "v17",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2025-12-20",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Luiss Roma",
+      "sh": 71,
+      "sa": 72,
+      "round": 18
+    },
+    {
+      "id": "l19",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-01-03",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Benacquista Assicurazioni Latina",
+      "sh": 91,
+      "sa": 86,
+      "round": 20
+    },
+    {
+      "id": "v20",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-01-10",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Malvin PSA Basket Casoria",
+      "sh": 72,
+      "sa": 63,
+      "round": 21
+    },
+    {
+      "id": "l21",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-01-17",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Consultinvest Loreto Pesaro",
+      "sh": 66,
+      "sa": 53,
+      "round": 22
+    },
+    {
+      "id": "v22",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-01-24",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Allianz Pazienza San Severo",
+      "sh": 95,
+      "sa": 61,
+      "round": 23
+    },
+    {
+      "id": "l23",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-01-31",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Adamant Ferrara",
+      "sh": 65,
+      "sa": 75,
+      "round": 24
+    },
+    {
+      "id": "v24",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-02-08",
+      "time": "18:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Power Basket Nocera",
+      "sh": 78,
+      "sa": 67,
+      "round": 25
+    },
+    {
+      "id": "l24",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-02-14",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Virtus Imola",
+      "sh": 73,
+      "sa": 77,
+      "round": 26
+    },
+    {
+      "id": "l25",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-02-18",
+      "time": "20:00",
+      "home": "Luiss Roma",
+      "away": "Paperdi Juvecaserta 2021",
+      "sh": 69,
+      "sa": 80,
+      "round": 27
+    },
+    {
+      "id": "v27",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-02-21",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Tema Sinergie Faenza",
+      "sh": 74,
+      "sa": 81,
+      "round": 28
+    },
+    {
+      "id": "l27",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-02-28",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "UP Andrea Costa Imola",
+      "sh": 63,
+      "sa": 53,
+      "round": 29
+    },
+    {
+      "id": "l29",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-03-08",
+      "time": "17:00",
+      "home": "Luiss Roma",
+      "away": "Allianz Pazienza San Severo",
+      "sh": 68,
+      "sa": 70,
+      "round": 31
+    },
+    {
+      "id": "v30",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-03-21",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Ristopro Fabriano",
+      "sh": 94,
+      "sa": 69,
+      "round": 32
+    },
+    {
+      "id": "l31",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-03-28",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Virtus GVM Roma 1960",
+      "sh": 45,
+      "sa": 80,
+      "round": 33
+    },
+    {
+      "id": "v32",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-04-04",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Benacquista Assicurazioni Latina",
+      "sh": 69,
+      "sa": 42,
+      "round": 34
+    },
+    {
+      "id": "v33",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-04-11",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Consorzio Leonardo Dany Quarrata",
+      "sh": 82,
+      "sa": 60,
+      "round": 35
+    },
+    {
+      "id": "l34",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-04-15",
+      "time": "20:00",
+      "home": "Luiss Roma",
+      "away": "Tema Sinergie Faenza",
+      "sh": 87,
+      "sa": 75,
+      "round": 36
+    },
+    {
+      "id": "l35",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-04-18",
+      "time": "18:30",
+      "home": "Luiss Roma",
+      "away": "Verodol CBD Pielle Livorno",
+      "sh": 77,
+      "sa": 71,
+      "round": 37
+    },
+    {
+      "id": "v36",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-04-26",
+      "time": "18:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Umana San Giobbe Chiusi",
+      "sh": 92,
+      "sa": 76,
+      "round": 38
+    },
+    {
+      "id": "v_po_f_g1",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-08",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 49,
+      "game_num": 1,
+      "series_id": "f_la t tecnica gema mo",
+      "sources": [
+        "lnp_advance"
+      ]
+    },
+    {
+      "id": "v_po_r37",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-08",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Paffoni Fulgor Basket Omegna",
+      "sh": 94,
+      "sa": 71,
+      "round": 37,
+      "game_num": 1,
+      "sources": [
+        "lnp_tabellino"
+      ],
+      "external_id": "ita3_b_ply_50",
+      "periods": [
+        [
+          31,
+          16
+        ],
+        [
+          22,
+          15
+        ],
+        [
+          21,
+          20
+        ],
+        [
+          20,
+          20
+        ]
+      ]
+    },
+    {
+      "id": "v_po_f_g2",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-10",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 50,
+      "game_num": 2,
+      "series_id": "f_la t tecnica gema mo",
+      "sources": [
+        "lnp_advance"
+      ]
+    },
+    {
+      "id": "v_po_r38",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-10",
+      "time": "18:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Paffoni Fulgor Basket Omegna",
+      "sh": 98,
+      "sa": 79,
+      "round": 38,
+      "game_num": 2,
+      "sources": [
+        "lnp_tabellino"
+      ],
+      "external_id": "ita3_b_ply_54",
+      "periods": [
+        [
+          29,
+          15
+        ],
+        [
+          31,
+          24
+        ],
+        [
+          22,
+          23
+        ],
+        [
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "id": "l_po_r37",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-13",
+      "time": "20:00",
+      "home": "Luiss Roma",
+      "away": "Logiman Orzinuovi",
+      "sh": 72,
+      "sa": 89,
+      "round": 37,
+      "game_num": 3
+    },
+    {
+      "id": "v_po_f_g5",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-18",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 53,
+      "game_num": 5,
+      "series_id": "f_la t tecnica gema mo",
+      "tentative": true,
+      "sources": [
+        "lnp_advance"
+      ]
+    },
+    {
+      "id": "v_po_r37_2",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-21",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Rucker San Vendemiano",
+      "sh": 75,
+      "sa": 59,
+      "round": 37,
+      "sources": [
+        "lnp_tabellino"
+      ],
+      "external_id": "ita3_b_ply_75",
+      "periods": [
+        [
+          21,
+          14
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          18,
+          13
+        ]
+      ]
+    },
+    {
+      "id": "v_po_r37_3",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-23",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Rucker San Vendemiano",
+      "sh": 87,
+      "sa": 74,
+      "round": 37,
+      "sources": [
+        "lnp_tabellino"
+      ],
+      "external_id": "ita3_b_ply_76",
+      "periods": [
+        [
+          21,
+          26
+        ],
+        [
+          23,
+          12
+        ],
+        [
+          18,
+          21
+        ],
+        [
+          25,
+          15
+        ]
+      ]
+    },
+    {
+      "id": "v_po_r37_4",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-05-31",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Rucker San Vendemiano",
+      "sh": 86,
+      "sa": 62,
+      "round": 37,
+      "sources": [
+        "lnp_tabellino"
+      ],
+      "external_id": "ita3_b_ply_79",
+      "periods": [
+        [
+          22,
+          14
+        ],
+        [
+          22,
+          13
+        ],
+        [
+          23,
+          22
+        ],
+        [
+          19,
+          13
+        ]
+      ]
+    },
+    {
+      "id": "v_po_r37_5",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-06-08",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 37
+    }
+  ],
+  "standings": {
+    "virtus": {
+      "pos": 1,
+      "pts": 58,
+      "w": 29,
+      "l": 7
+    },
+    "luiss": {
+      "pos": 7,
+      "pts": 42,
+      "w": 21,
+      "l": 15
+    }
+  }
+}
