@@ -42,12 +42,40 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Esegui aggiornamento dati
+      # ──────────────────────────────────────────────────────────────────
+      # STEP 1: v8.9.2 (legacy, produzione attiva).
+      # Fetcha regular season Virtus + Luiss da fonti varie. Scrive
+      # data.json (schema legacy v8.9).
+      # ──────────────────────────────────────────────────────────────────
+      - name: Esegui aggiornamento dati (v8.9 legacy)
         run: python scripts/update_data.py
+
+      # ──────────────────────────────────────────────────────────────────
+      # STEP 2: arricchimento v9 (additivo, non bloccante).
+      # Legge data.json appena aggiornato da v8.9 e produce data-v9.json
+      # con:
+      #   - schedule playoff dedotto (Fase 2.2 next-round deducer)
+      #   - tabellino LNP con score+parziali (Fase 2.3a)
+      #   - discovery automatica match_id (Fase 2.3b via pagina avversario)
+      #   - sources multipli, external_id, periods
+      #
+      # continue-on-error: TRUE
+      #   Razionale: v9 e' layer di arricchimento, non sostitutivo. Se
+      #   fallisce (LNP down, bug parser, regex regression, ecc.) il
+      #   workflow continua, data.json v8.9 viene committato regolarmente
+      #   e il frontend resta funzionante. Failure isolato -> zero impatto
+      #   utenti, errore visibile solo nei log del workflow.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Esegui arricchimento v9
+        continue-on-error: true
+        run: python scripts/main.py --out-v9 data-v9.json
 
       - name: Commit e push se ci sono modifiche
         run: |
           git config user.name "Roma Basket Bot"
           git config user.email "bot@romabasket.app"
-          git add data.json
+          # add include data-v9.json: se v9 ha fallito (file non aggiornato
+          # o assente) git add e' no-op safe e diff --staged --quiet rileva
+          # l'assenza di modifiche.
+          git add data.json data-v9.json
           git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
