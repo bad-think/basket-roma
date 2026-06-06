@@ -1082,6 +1082,15 @@ if (savedMatches && Array.isArray(savedMatches)) {
 let standings = JSON.parse(localStorage.getItem('brc_s') || 'null') || {...STANDINGS};
 let lastUpdate = localStorage.getItem('brc_lu') || null;
 let classificaUrl = localStorage.getItem('brc_cu') || null;
+// v9: mappa per multi-classifica per categoria (multi-team, multi-lega).
+// Quando arriva BC Roma in Serie A (2026-27), questo si auto-popola dal config.
+const CLASSIFICA_URLS_BY_CATEGORY = {
+  "B Nazionale": "https://www.legapallacanestro.com/serie/4/classifica",
+  "A2":          "https://www.legapallacanestro.com/serie/3/classifica",
+  "Serie A":     "https://www.legabasket.it/standings"
+};
+// Per team_key → URL classifica della sua categoria (popolato in doRefresh da data-v9.json)
+let classificaUrlByTeam = JSON.parse(localStorage.getItem('brc_cubt') || '{}');
 // v8.9.2: stato serie chiuse + config squadre per detection awaiting/eliminated
 let seriesClosed = JSON.parse(localStorage.getItem('brc_sc') || '[]');
 let teamsConfig = JSON.parse(localStorage.getItem('brc_tc') || '{}');
@@ -1168,8 +1177,117 @@ function updateSeasonLabels() {
 }
 
 // ============================================================
-// FETCH data.json
+// FETCH data-v9.json (schema v9 nativo, post-cutover Fase 3)
 // ============================================================
+//
+// Schema differenze v9 vs legacy v8.9:
+//  - matches[i].team_key (v9) invece di matches[i].team (legacy)
+//  - matches[i] aggiunge: external_id, periods, sources, competition_id
+//  - config.teams è una LISTA (v9) invece di OBJECT (legacy)
+//  - config.classifica_url RIMOSSO: derivato per-team da active_competitions[0].category
+//  - matches dedotti hanno sources=['lnp_advance']: nascosti finché non hanno score
+//    (workaround per bug deducer date errate Fase 2.2, in attesa di fix backend)
+//
+// Adapter v9→legacy: trasforma data-v9.json in struttura compatibile col rendering
+// esistente, preservando campi v9 (sources, external_id, periods) per future estensioni.
+function adaptV9ToLegacy(data) {
+  // 1. Mappa matches: team_key → team, preserva campi v9
+  const mappedMatches = (data.matches || []).map(dm => ({
+    id: dm.id,
+    team: dm.team_key || dm.team,
+    phase: dm.phase || 'regular',
+    round: dm.round,
+    game_num: dm.game_num,
+    date: dm.date,
+    time: dm.time,
+    home: dm.home,
+    away: dm.away,
+    sh: dm.sh,
+    sa: dm.sa,
+    // Campi v9 preservati (per parziali quarti, link tabellini LNP, sources)
+    external_id: dm.external_id || null,
+    periods: dm.periods || null,
+    sources: dm.sources || [],
+    tentative: dm.tentative || false
+  }));
+
+  // 2. Filtro v9: nascondi partite SOLO dedotte (sources=['lnp_advance']) SENZA score.
+  //    Workaround per bug deducer Fase 2.2 che genera date errate.
+  //    Le partite reali (da v8.9 calendar o con tabellino LNP) restano visibili.
+  const safeMatches = mappedMatches.filter(m => {
+    if (m.phase !== 'playoff' && m.phase !== 'playout') return true;
+    const hasScore = m.sh != null && m.sa != null;
+    if (hasScore) return true;
+    const onlyDeduced = m.sources.length === 1 && m.sources[0] === 'lnp_advance';
+    return !onlyDeduced;
+  });
+
+  // 3. Dedup intelligente: per stessa (team, opponent_normalized, phase, game_num)
+  //    tieni la versione più "buona" (con score > senza score; data più tarda > più antica)
+  const normName = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const dedupKey = m => (m.phase === 'regular')
+    ? `r:${m.id}`
+    : `p:${m.team}:${normName(m.away)}:${m.phase}:${m.game_num || '?'}`;
+  const dedupMap = new Map();
+  for (const m of safeMatches) {
+    const k = dedupKey(m);
+    const e = dedupMap.get(k);
+    if (!e) { dedupMap.set(k, m); continue; }
+    const aScore = m.sh != null && m.sa != null;
+    const bScore = e.sh != null && e.sa != null;
+    if (aScore && !bScore) dedupMap.set(k, m);
+    else if (aScore === bScore && m.date > e.date) dedupMap.set(k, m);
+  }
+  const finalMatches = [...dedupMap.values()];
+
+  // 4. Config.teams: v9 è LISTA, legacy è OBJECT. Converti.
+  const teamsList = Array.isArray(data.config && data.config.teams)
+    ? data.config.teams : [];
+  const teamsObj = {};
+  const classByTeam = {};
+  for (const t of teamsList) {
+    const k = t.key;
+    if (!k) continue;
+    // Adatta a struttura legacy attesa dal frontend
+    teamsObj[k] = {
+      name: t.display_name || t.short_name || k,
+      name_aliases: t.aliases || [],
+      serie: (t.active_competitions && t.active_competitions[0] && t.active_competitions[0].category) || '',
+      girone: (t.active_competitions && t.active_competitions[0] && t.active_competitions[0].girone) || '',
+      venue_name: (t.venue && t.venue.name) || '',
+      venue_address: (t.venue && t.venue.address) || '',
+      venue_maps: (t.venue && t.venue.maps_url) || ''
+    };
+    // Multi-classifica: deriva URL dalla categoria della prima competizione attiva
+    const cat = (t.active_competitions && t.active_competitions[0] && t.active_competitions[0].category) || '';
+    if (CLASSIFICA_URLS_BY_CATEGORY[cat]) {
+      classByTeam[k] = CLASSIFICA_URLS_BY_CATEGORY[cat];
+    }
+  }
+
+  // 5. series_closed: v9 usa team_key, frontend usa team. Adatta.
+  const sc = Array.isArray(data.config && data.config.series_closed)
+    ? data.config.series_closed.map(s => ({
+        team: s.team_key || s.team,
+        opponent: s.opponent || s.next_opponent || '',
+        phase: s.phase || 'playoff',
+        round_name: s.round_name || '',
+        result: s.result || '',
+        team_advances: !!s.team_advances,
+        note: s.note || ''
+      }))
+    : [];
+
+  return {
+    matches: finalMatches,
+    standings: data.standings || {},
+    teamsConfig: teamsObj,
+    classificaUrlByTeam: classByTeam,
+    seriesClosed: sc,
+    last_updated: data.last_updated
+  };
+}
+
 function doRefresh(manual) {
   if (refreshing) return;
   refreshing = true;
@@ -1177,45 +1295,38 @@ function doRefresh(manual) {
     setBadge('wait','<span class="live-dot"></span>SYNC');
     document.getElementById('refreshBtn').classList.add('spin');
   }
-  fetch('data.json?v=' + Date.now(), {cache:'no-store'})
+  fetch('data-v9.json?v=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.json() : Promise.reject('404'))
-    .then(data => {
+    .then(rawData => {
+      const data = adaptV9ToLegacy(rawData);
       if (data.matches && data.matches.length) {
-        // Sostituzione completa: data.json è la fonte autoritativa
-        matches = data.matches.map(dm => ({
-          id: dm.id, team: dm.team, phase: dm.phase || 'regular',
-          round: dm.round, date: dm.date, time: dm.time,
-          home: dm.home, away: dm.away, sh: dm.sh, sa: dm.sa
-        }));
+        matches = data.matches;
         localStorage.setItem('brc_m', JSON.stringify(matches));
       }
       if (data.standings) {
         standings = data.standings;
         localStorage.setItem('brc_s', JSON.stringify(standings));
       }
-      if (data.config && data.config.classifica_url) {
-        classificaUrl = data.config.classifica_url;
+      // Multi-classifica per team (v9): la classificaUrl singola resta come fallback
+      classificaUrlByTeam = data.classificaUrlByTeam || {};
+      localStorage.setItem('brc_cubt', JSON.stringify(classificaUrlByTeam));
+      // Fallback: la prima URL disponibile diventa la classifica "default" (per stats globali)
+      const firstUrl = Object.values(classificaUrlByTeam)[0];
+      if (firstUrl) {
+        classificaUrl = firstUrl;
         localStorage.setItem('brc_cu', classificaUrl);
       }
-      // v8.9.2: carico series_closed e teams per detection awaiting/eliminated
-      if (data.config && Array.isArray(data.config.series_closed)) {
-        seriesClosed = data.config.series_closed;
+      // series_closed convertito da v9
+      if (data.seriesClosed && data.seriesClosed.length) {
+        seriesClosed = data.seriesClosed;
         localStorage.setItem('brc_sc', JSON.stringify(seriesClosed));
       } else {
-        // se data.json non ha più series_closed, pulisco (nuova stagione)
         seriesClosed = [];
         localStorage.removeItem('brc_sc');
       }
-      if (data.config && data.config.teams && typeof data.config.teams === 'object') {
-        teamsConfig = data.config.teams;
+      if (data.teamsConfig && Object.keys(data.teamsConfig).length) {
+        teamsConfig = data.teamsConfig;
         localStorage.setItem('brc_tc', JSON.stringify(teamsConfig));
-      }
-      // Supporto a campionati separati per stagione futura
-      if (data.config && data.config.team_labels) {
-        Object.assign(TEAM_LABEL, data.config.team_labels);
-      }
-      if (data.config && data.config.venues) {
-        Object.assign(VENUES, data.config.venues);
       }
       const ts = data.last_updated
         ? new Date(data.last_updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
@@ -1328,9 +1439,32 @@ function render() {
 function renderStandings() {
   const v = getTeamStats('virtus');
   const l = getTeamStats('luiss');
-  const link = classificaUrl
-    ? `<a href="${escHtml(classificaUrl)}" target="_blank" rel="noopener" class="schip slink">★ CLASSIFICA UFFICIALE</a>`
-    : '';
+  // v9: multi-classifica. Raggruppa per URL (stessa lega → 1 bottone).
+  // Esempio 2025-26: Virtus + Luiss in B Naz → 1 URL → 1 bottone "CLASSIFICA UFFICIALE"
+  // Esempio 2026-27: Virtus A2 + Luiss B + BC Roma Serie A → 3 URL → 3 bottoni
+  // Mappa inversa: URL → array di category labels (per costruire l'etichetta del bottone)
+  const urlToCategories = {};
+  for (const tk of Object.keys(classificaUrlByTeam)) {
+    const url = classificaUrlByTeam[tk];
+    const cat = teamsConfig[tk] && teamsConfig[tk].serie ? teamsConfig[tk].serie : '';
+    if (!urlToCategories[url]) urlToCategories[url] = new Set();
+    if (cat) urlToCategories[url].add(cat);
+  }
+  const urlEntries = Object.entries(urlToCategories);
+  let link = '';
+  if (urlEntries.length === 1) {
+    // Caso comune: tutti team stessa lega
+    link = `<a href="${escHtml(urlEntries[0][0])}" target="_blank" rel="noopener" class="schip slink">★ CLASSIFICA UFFICIALE</a>`;
+  } else if (urlEntries.length > 1) {
+    // Multi-categoria: un bottone per ogni lega distinta
+    link = urlEntries.map(([url, cats]) => {
+      const label = [...cats].join(' / ');
+      return `<a href="${escHtml(url)}" target="_blank" rel="noopener" class="schip slink">★ CLASSIFICA ${escHtml(label.toUpperCase())}</a>`;
+    }).join('');
+  } else if (classificaUrl) {
+    // fallback legacy se v9 non ha popolato classificaUrlByTeam
+    link = `<a href="${escHtml(classificaUrl)}" target="_blank" rel="noopener" class="schip slink">★ CLASSIFICA UFFICIALE</a>`;
+  }
   const chip = (team, st) => {
     const cls = team==='virtus'?'sv':'sl';
     const lbl = team==='virtus'?'VIRTUS':'LUISS';
