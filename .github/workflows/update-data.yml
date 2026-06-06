@@ -51,31 +51,49 @@ jobs:
         run: python scripts/update_data.py
 
       # ──────────────────────────────────────────────────────────────────
-      # STEP 2: arricchimento v9 (additivo, non bloccante).
-      # Legge data.json appena aggiornato da v8.9 e produce data-v9.json
-      # con:
-      #   - schedule playoff dedotto (Fase 2.2 next-round deducer)
-      #   - tabellino LNP con score+parziali (Fase 2.3a)
-      #   - discovery automatica match_id (Fase 2.3b via pagina avversario)
-      #   - sources multipli, external_id, periods
-      #
-      # continue-on-error: TRUE
-      #   Razionale: v9 e' layer di arricchimento, non sostitutivo. Se
-      #   fallisce (LNP down, bug parser, regex regression, ecc.) il
-      #   workflow continua, data.json v8.9 viene committato regolarmente
-      #   e il frontend resta funzionante. Failure isolato -> zero impatto
-      #   utenti, errore visibile solo nei log del workflow.
+      # STEP 1bis: backup data.json prima dell'arricchimento v9.
+      # Se v9 crashasse durante la scrittura legacy, abbiamo come
+      # ripristinare il file v8.9. Backup locale, non committato.
       # ──────────────────────────────────────────────────────────────────
-      - name: Esegui arricchimento v9
+      - name: Backup data.json prima di v9
+        run: cp data.json data.json.v89-backup
+
+      # ──────────────────────────────────────────────────────────────────
+      # STEP 2: arricchimento v9 (additivo + write-legacy).
+      # Legge data.json (v8.9), arricchisce con:
+      #   - schedule playoff dedotto (Fase 2.2)
+      #   - tabellino LNP con score+parziali (Fase 2.3a)
+      #   - discovery match_id (Fase 2.3b)
+      # Scrive:
+      #   - data-v9.json: schema 9.0 nativo (per Fase 3 frontend)
+      #   - data.json: schema legacy 8.9 ARRICCHITO (per frontend attuale,
+      #     include score SF/Finale che v8.9 non riesce a popolare)
+      #
+      # continue-on-error: TRUE → se v9 fallisce, lo step di ripristino
+      # rimette data.json al backup v8.9 e il workflow continua.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Esegui arricchimento v9 (con write-legacy)
+        id: v9
         continue-on-error: true
-        run: python scripts/main.py --out-v9 data-v9.json
+        run: python scripts/main.py --out-v9 data-v9.json --write-legacy
+
+      # ──────────────────────────────────────────────────────────────────
+      # STEP 2bis: rollback data.json se v9 ha fallito.
+      # Se step v9 ha exit code != 0, ripristina data.json dal backup.
+      # Garantisce che il frontend non veda mai un data.json corrotto.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Rollback data.json se v9 fallito
+        if: steps.v9.outcome == 'failure'
+        run: |
+          echo "⚠️  v9 fallito, ripristino data.json dal backup v8.9"
+          cp data.json.v89-backup data.json
+
+      - name: Pulizia file temporanei
+        run: rm -f data.json.v89-backup
 
       - name: Commit e push se ci sono modifiche
         run: |
           git config user.name "Roma Basket Bot"
           git config user.email "bot@romabasket.app"
-          # add include data-v9.json: se v9 ha fallito (file non aggiornato
-          # o assente) git add e' no-op safe e diff --staged --quiet rileva
-          # l'assenza di modifiche.
           git add data.json data-v9.json
           git diff --staged --quiet && echo "Nessuna modifica" || (git commit -m "🏀 Aggiornamento dati $(date +'%d/%m/%Y %H:%M')" && git push)
