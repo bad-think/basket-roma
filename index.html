@@ -1211,34 +1211,52 @@ function adaptV9ToLegacy(data) {
     tentative: dm.tentative || false
   }));
 
-  // 2. Filtro v9: nascondi partite SOLO dedotte (sources=['lnp_advance']) SENZA score.
-  //    Workaround per bug deducer Fase 2.2 che genera date errate.
-  //    Le partite reali (da v8.9 calendar o con tabellino LNP) restano visibili.
-  const safeMatches = mappedMatches.filter(m => {
-    if (m.phase !== 'playoff' && m.phase !== 'playout') return true;
-    const hasScore = m.sh != null && m.sa != null;
-    if (hasScore) return true;
-    const onlyDeduced = m.sources.length === 1 && m.sources[0] === 'lnp_advance';
-    return !onlyDeduced;
-  });
-
-  // 3. Dedup intelligente: per stessa (team, opponent_normalized, phase, game_num)
-  //    tieni la versione più "buona" (con score > senza score; data più tarda > più antica)
+  // 2. Dedup intelligente: per stessa (team, opponent_normalized, phase, date)
+  //    tieni la versione più "buona". Gestisce duplicati v9 deducer:
+  //    es. G1 Finale può apparire 2x (v8.9 v_po_r37_5 + v9 v_po_f_g1) → 1 sola.
+  //    Anche per regular: se stessa data+avversario+team, è duplicato.
+  //    Preferenze (in ordine):
+  //      a) match con score popolato vince
+  //      b) match con game_num popolato vince (più "deciso")
+  //      c) match con più sources vince (più triangolato)
   const normName = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const dedupKey = m => (m.phase === 'regular')
-    ? `r:${m.id}`
-    : `p:${m.team}:${normName(m.away)}:${m.phase}:${m.game_num || '?'}`;
+  const dedupKey = m => `${m.phase}|${m.team}|${normName(m.away)}|${m.date}`;
   const dedupMap = new Map();
-  for (const m of safeMatches) {
+  for (const m of mappedMatches) {
     const k = dedupKey(m);
     const e = dedupMap.get(k);
     if (!e) { dedupMap.set(k, m); continue; }
     const aScore = m.sh != null && m.sa != null;
     const bScore = e.sh != null && e.sa != null;
-    if (aScore && !bScore) dedupMap.set(k, m);
-    else if (aScore === bScore && m.date > e.date) dedupMap.set(k, m);
+    if (aScore && !bScore) { dedupMap.set(k, m); continue; }
+    if (!aScore && bScore) continue;
+    // Score-stato uguale: preferisci game_num popolato
+    if (m.game_num && !e.game_num) { dedupMap.set(k, m); continue; }
+    if (!m.game_num && e.game_num) continue;
+    // Game_num-stato uguale: preferisci più sources
+    if ((m.sources || []).length > (e.sources || []).length) dedupMap.set(k, m);
   }
   const finalMatches = [...dedupMap.values()];
+
+  // 3. Filtro date sospette (safety net): nascondi partite playoff/playout
+  //    senza score con data anteriore all'ultima partita disputata dello
+  //    stesso team nella stessa fase. Difesa contro residui bug del deducer.
+  const lastDisputed = {};  // team_key → max ISO date di una match disputata
+  for (const m of finalMatches) {
+    if (m.sh != null && m.sa != null) {
+      const cur = lastDisputed[m.team] || '';
+      if (m.date > cur) lastDisputed[m.team] = m.date;
+    }
+  }
+  const safeMatches = finalMatches.filter(m => {
+    if (m.phase !== 'playoff' && m.phase !== 'playout') return true;
+    const hasScore = m.sh != null && m.sa != null;
+    if (hasScore) return true;
+    // Match futura senza score: deve avere data >= ultima disputata dello stesso team
+    const ld = lastDisputed[m.team];
+    if (!ld) return true;
+    return m.date >= ld;
+  });
 
   // 4. Config.teams: v9 è LISTA, legacy è OBJECT. Converti.
   const teamsList = Array.isArray(data.config && data.config.teams)
@@ -1279,7 +1297,7 @@ function adaptV9ToLegacy(data) {
     : [];
 
   return {
-    matches: finalMatches,
+    matches: safeMatches,
     standings: data.standings || {},
     teamsConfig: teamsObj,
     classificaUrlByTeam: classByTeam,
