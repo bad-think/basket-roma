@@ -347,9 +347,13 @@ class LNPFetcher:
         return games
 
     def _extract_round_dates(self, text: str, round_heading: str) -> list[str]:
+        # Ancoraggio a inizio riga (re.MULTILINE) cruciale: il regex non deve
+        # matchare il sub-string "Finale" dentro "Quarti di Finale", altrimenti
+        # estrae le date QF (maggio) invece di quelle della Finale vera (giugno).
+        # Pattern matcha SOLO heading all'inizio di una riga, seguito da dash.
         pattern = re.compile(
-            rf"{re.escape(round_heading)}\s*[-–]\s*([^\n]*)",
-            re.IGNORECASE,
+            rf"^\s*{re.escape(round_heading)}\s*[-–]\s*([^\n]*)$",
+            re.IGNORECASE | re.MULTILINE,
         )
         m = pattern.search(text)
         if not m:
