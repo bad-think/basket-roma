@@ -1,409 +1,450 @@
-[CONTINUITA.md](https://github.com/user-attachments/files/28196044/CONTINUITA.md)
-# BASKET ROMA: DOCUMENTO DI CONTINUITÀ
+# CONTINUITA.md — Basket Roma PWA
 
-**Versione doc:** v8.9.2 + v9.0 Fase 2.3a completa
-**Versione script main:** v8.9.1 (in produzione su main)
-**Versione frontend main:** v8.9.2 (in produzione su main)
-**Versione v9 rewrite:** Fase 2.3a tabellino parser (pronto per deploy)
-**Data ultimo aggiornamento:** 24 maggio 2026
-**Repo:** github.com/bad-think/basket-roma
+> **Documento operativo single-source-of-truth.** Letto per riprendere il lavoro in nuova sessione senza ricostruire contesto.
 
 ---
 
-## 1. STATO STAGIONE 2025-26
+## 1. Identità progetto
 
-**Regular season:** completa.
-- Virtus: 1° girone B, 29V-7P, 58pt
-- LUISS: 6° girone B, 21V-15P, 42pt
-
-**Quarti playoff: CONCLUSI**
-- Virtus vs Omegna 3-0 → **Semifinale**
-- LUISS vs Orzinuovi 0-3 → **Eliminata**
-
-**Semifinali in corso — Virtus vs Rucker San Vendemiano (Tabellone 2, Serie 5):**
-- **G1 (21/05/2026 20:30): Virtus 75 — 59 Rucker** ✅ (21-14, 19-12, 17-20, 18-13)
-- G2 (23/05/2026): disputata, score via RSS
-- G3 (26/05/2026): trasferta a San Vendemiano
-- G4 (28/05/2026): trasferta, tentative
-- G5 (31/05/2026): home Virtus, tentative
-- Pattern CCFFC (Virtus higher seed 1 vs 4)
+| | |
+|---|---|
+| **Live** | https://bad-think.github.io/basket-roma/ |
+| **Repo** | https://github.com/bad-think/basket-roma (pubblico) |
+| **Owner** | [@bad-think](https://github.com/bad-think) — solo developer |
+| **Scopo** | PWA tracking squadre romane basket: calendario, risultati, classifica, countdown, notifiche |
+| **Stile** | Brutalist arancione/giallo/nero, mobile-first, offline-first via service worker |
+| **Hosting** | GitHub Pages da branch `main` |
+| **CI/CD** | GitHub Actions free unlimited (repo pubblico) — costo €0 |
 
 ---
 
-## 2. ARCHITETTURA DOPPIA TRACCIA
+## 2. CONVENZIONI UTENTE — CRUCIALI
 
-### 2.1. Main (produzione) — v8.9.x
+Da rispettare SEMPRE:
 
-```
-scripts/update_data.py       v8.9.1, 2727 righe
-index.html                   v8.9.2
-data.json                    41 partite (al 24/05)
-.github/workflows/
-  ├── update-data.yml         8 cron/giorno
-  ├── freshness-check.yml
-  └── update-data-v9-test.yml workflow_dispatch only
-```
-
-### 2.2. Branch `v9-rewrite` (sviluppo) — v9.0 Fase 2.3a ✅
-
-```
-config/seasons/2025-26.json   config + series_closed con next_opponent
-scripts/
-  ├── main.py
-  ├── core/
-  │   ├── models.py            Match con external_id + periods (NUOVO)
-  │   │                         SeriesClosed con next_opponent
-  │   └── state.py             load/save/merge
-  └── fetchers/
-      ├── lnp.py               QF + next-round deducer + TABELLINO PARSER (NUOVO)
-      │                         (~736 righe — sopra target morbido 500)
-      ├── rss_pool.py
-      └── pianetabasket.py
-```
-
-**Stato v9-rewrite (24/05):** 42 partite vs main 41. v9 supera main in copertura.
+- **Browser-only.** No terminale locale, no editor IDE, no comandi shell. Tutte modifiche via web editor GitHub.
+- **No programmazione autonoma.** Forniscigli sempre file COMPLETI da sostituire interamente. MAI istruzioni "modifica la riga X" o "aggiungi questo blocco". Solo: "apri questo URL, Ctrl+A, Delete, incolla il file, Commit".
+- **Lingua italiana** sempre nelle risposte e commit messages.
+- **Commit messages strutturati.** Dopo ogni file modificato fornisci sempre: file version (se versioned) + change summary. Esempi: `fix(lnp): heading "Finali" plurale + lookbehind regex`, `feat(frontend): switch source a data-v9.json + multi-classifica`.
+- **Sostituzione file intera**, mai patch parziali. L'utente non sa risolvere conflict né merge selettivi.
+- **AST validation** sui Python e syntax check sui JS prima di consegnare.
+- **userPreferences attive** (sempre):
+  - Anti-hallucination: classificare claim come [VERIFIED]/[INFERRED]/[UNCERTAIN] quando non banale
+  - Dire `"non ho dati"` invece di inventare
+  - Reasoning silenzioso prima di output denso
+  - No "Certamente!", "Ottima domanda!", padding
+  - Output denso, no ripetizioni, no postambolo
+  - Critical thinking: contraddire premesse sbagliate
+  - Intellectual honesty: se sbaglio, lo dico esplicitamente
+  - Ottimizza uso token
 
 ---
 
-## 3. CONOSCENZE TECNICHE CRITICHE
+## 3. Stato corrente (07/06/2026)
 
-### 3.1. PianetaBasket — sezioni RSS
+### Cosa gira in produzione
 
 ```
-sez 38 = Serie B Nazionale       ← attiva
-sez 43 = Serie A2                ← disponibile, enabled:false
-sez  2 = Lega A
-sez 35 = EuroCup
-sez 48 = Champions League
-sez 34 = EuroLeague
+Cron 8/giorno (16,17,18,19,20,21 UTC + 2,3 UTC) → update-data.yml
+├── Step 1: python scripts/update_data.py     [v8.9 legacy, ~1m]
+├── Step 2: cleanup partite v9 spurie         [idempotente, 0s]
+├── Step 3: python scripts/main.py            [v9 enrichment, ~15s]
+└── Step 4: git commit + push se modifiche
+
+Frontend: index.html
+└── fetch('data-v9.json') → adapter v9→legacy → render
 ```
 
-URL: `https://www.pianetabasket.com/rss/?section={N}`
+### Fasi completate ✅
 
-### 3.2. LNP — codici playoff per categoria
+1. Foundation v9 (multi-team architecture)
+2. Hybrid mode (v9 arricchisce v8.9)
+3. Next-round deducer Fase 2.2
+4. Tabellino parser LNP Fase 2.3a
+5. Discovery `external_id` via avversario Fase 2.3b
+6. **Cutover backend v9 in produzione** (06/06)
+7. **Frontend Fase 3 nativo v9** (07/06)
+8. **Fix bug deducer date Finale** (07/06)
 
-```python
-CATEGORY_TO_SERIE_NUM = {"B Nazionale": 4, "A2": 3}
-PLAYOFF_PAGE_CODES = {
-    "B Nazionale": ["ita3_a_poff", "ita3_b_poff"],
-    "A2": ["ita2_a2_poff"],
+### Stagione 2025-26 stato squadre
+
+| Squadra | Categoria | Stato playoff |
+|---------|-----------|---------------|
+| Virtus GVM Roma 1960 | B Naz gir B | 1° (29V-7P, 58pt) — **in FINALE** vs La T Tecnica Gema Montecatini (G1 8/6 ore 20:30) |
+| Luiss Roma | B Naz gir B | 7° (21V-15P, 42pt) — eliminata QF (0-3 vs Logiman Orzinuovi) |
+
+Pattern Finale (Virtus higher seed 1B vs Montecatini seed 2A): C-C-F-F-C
+- G1 8/6 casa, G2 10/6 casa, G3 13/6 trasferta, G4 15/6 trasferta, G5 18/6 casa (se necessaria, tentative)
+
+---
+
+## 4. Architettura file
+
+```
+basket-roma/
+├── index.html                         # PWA frontend single-file, ~2100 righe
+├── sw.js                              # service worker offline
+├── manifest.json                      # PWA manifest
+├── data.json                          # output v8.9 (schema legacy)
+├── data-v9.json                       # output v9 (schema 9.0) — FONTE PRIMARIA FRONTEND
+├── README.md                          # con link live
+├── CONTINUITA.md                      # questo file
+│
+├── scripts/
+│   ├── update_data.py                 # v8.9 monolitico ~1m, scraping LNP + PDF + classifica
+│   ├── main.py                        # v9 orchestrator
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── models.py                  # Match, Team, Season, SeriesClosed dataclasses
+│   │   └── state.py                   # state load/save + merge logic
+│   └── fetchers/
+│       ├── __init__.py                # REGISTRY = {"lnp": LNPFetcher, ...}
+│       ├── _text.py                   # normalize, http utilities
+│       ├── lnp.py                     # **fetcher LNP + deducer Fase 2.2**
+│       ├── pianetabasket.py           # parser articoli PianetaBasket
+│       └── rss_pool.py                # multi-RSS aggregator
+│
+├── config/
+│   └── seasons/
+│       └── 2025-26.json               # squadre, RSS feeds, series_closed
+│
+└── .github/workflows/
+    ├── update-data.yml                # cron principale (3 step + commit)
+    ├── update-data-v9-test.yml        # workflow manuale di test v9
+    └── freshness-check.yml            # alert email se cron >24h fermo (36h lug-ago)
+```
+
+---
+
+## 5. Schema dati
+
+### `data.json` (legacy v8.9)
+```json
+{
+  "last_updated": "ISO",
+  "season": "2025-26",
+  "config": {
+    "teams": { "virtus": {...}, "luiss": {...} },    // OBJECT
+    "classifica_url": "...",                          // singolo URL
+    "series_closed": [{ "team": "virtus", ... }]
+  },
+  "matches": [
+    {"id": "v02", "team": "virtus", "phase": "regular", "round": 2,
+     "date": "2025-09-26", "time": "20:30", "home": "...", "away": "...",
+     "sh": 76, "sa": 69}
+  ],
+  "standings": { "virtus": {"pos":1, "pts":58, "w":29, "l":7} }
 }
 ```
 
-### 3.3. LNP — bracket parser limiti
-
-**Solo i QF hanno testo strutturato con nomi squadra.** SF/F hanno placeholder
-`Vincente N vs vincente M` che LNP non aggiorna mai. Soluzione: §3.5.
-
-### 3.4. LNP — pagina tabellino partita
-
-URL: `legapallacanestro.com/wp/match/{external_id}/{phase_id}/x{season_short}/tabellino`
-Esempio: `ita3_b_ply_75` (G1 SF Virtus).
-
-**Phase_id** = external_id senza il suffisso "_N" (es. "ita3_b_ply").
-**season_short** = "2526" per 2025-26.
-
-Pattern external_id:
-- Regular B Nazionale: `ita3_b_N`
-- Playoff B Nazionale: `ita3_b_ply_N`
-- Coppa Italia LNP: `ita3_cup_N`
-- A2 playoff: `ita2_a2_ply_N`
-
-Parser estrae: data, ora, nomi squadra (da `meta og:title` o `<title>`), score finale, parziali (con validazione: somma parziali = score).
-
-### 3.5. NEXT-ROUND DEDUCER (Fase 2.2) ✅
-
-Deduce gare home dei round successivi (SF, F) da `series_closed` con
-`team_advances=True` e `next_opponent` valorizzato. Riusa date heading LNP +
-pattern home CCFFC/FFCCF. Validato 24/05.
-
-### 3.6. TABELLINO PARSER (Fase 2.3a) ✅
-
-**Cosa fa:**
-- Per ogni Match con `external_id` valorizzato e score/parziali mancanti
-- Fetcha `LNP_BASE/wp/match/{external_id}/.../tabellino`
-- Parsing robusto con doppia sorgente nomi squadra (og:title → fallback title)
-- Validazione: sum(parziali) == score (autocorrezione invertimento home/away se necessario)
-- Arricchimento Match: sh, sa, periods, time → aggiunge `lnp_tabellino` a sources
-
-**Popolamento `external_id`:**
-- Manuale via `Season.match_id_overrides` nel config (§3.11)
-- Automatico via discovery (Fase 2.3b, ⏳)
-
-**Cosa NON fa (rimandato a Fase 2.3b):**
-- Discovery automatica: pagina squadra LNP NON mostra link playoff,
-  pagina bracket NON ha link tabellini. Discovery richiede investigare
-  `/serie/{N}/calendario`.
-
-### 3.11. match_id_overrides (Fase 2.3a→b transition)
-
-Campo opzionale in `Season` (config stagionale). Lista di mapping manuali:
+### `data-v9.json` (schema 9.0)
 ```json
-"match_id_overrides": [
-  {
-    "team_key": "virtus",
-    "date": "2026-05-21",
-    "away": "Rucker San Vendemiano",
-    "external_id": "ita3_b_ply_75",
-    "note": "..."
-  }
-]
+{
+  "$schema_version": "9.0",
+  "last_updated": "ISO",
+  "season": "2025-26",
+  "config": {
+    "teams": [                                        // LISTA
+      {"key": "virtus", "display_name": "Virtus GVM Roma",
+       "aliases": [...], "venue": {...},
+       "active_competitions": [
+         {"id": "b_naz_2526", "category": "B Nazionale",
+          "fetcher": "lnp", "source_slug": "serie-b", "girone": "B"}
+       ]}
+    ],
+    "series_closed": [{"team_key": "virtus", ...}]
+  },
+  "matches": [
+    {"id": "v_po_r37_4", "team_key": "virtus", "competition_id": "b_naz_2526",
+     "phase": "playoff", "date": "2026-05-31", "time": "20:00",
+     "home": "Virtus...", "away": "Rucker...",
+     "sh": 86, "sa": 62,
+     "external_id": "ita3_b_ply_75",                  // link LNP tabellino
+     "periods": [[21,14],[19,12],[17,20],[18,13]],    // parziali quarti
+     "sources": ["lnp_advance", "lnp_tabellino"],     // provenance
+     "game_num": 5, "tentative": false}
+  ],
+  "standings": {...}
+}
 ```
 
-Applicato da `state._apply_match_id_overrides` post-load:
-- Match matchata su `(team_key, date, normalize(away))`
-- Popola `external_id` solo se vuoto (no sovrascrittura)
-- Log: `🔗 Applicati N match_id_overrides da config`
+### Mapping campi v9 → legacy (in adapter frontend)
+- `team_key` → `team`
+- `config.teams` lista → object
+- `config.classifica_url` deriva da `teams[].active_competitions[0].category` tramite `CLASSIFICA_URLS_BY_CATEGORY`
+- `series_closed[].team_key` → `team`
 
-**Uso permanente:**
-- Validation Fase 2.3a (popola manualmente per testare parser)
-- Edge case Fase 2.3b (fallback dove discovery automatica fallisce)
-- Override esplicito (es. correggere mismatching detected)
+---
 
-**Stato pratico Fase 2.3a:** override per G1 SF Virtus (ita3_b_ply_75) popolato
-per validation end-to-end del parser tabellino.
+## 6. Workflow `update-data.yml` struttura
 
-### 3.7. Regex matchup bracket (QF / Play-In / Playout)
+```yaml
+# Concurrency: una run alla volta (no push concorrenti)
+# Env: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true (no Node 20 warnings)
+# Python 3.11
 
+Steps:
+1. Checkout
+2. Setup Python 3.11
+3. python scripts/update_data.py        # v8.9, scrive data.json
+4. CLEANUP: rimuove partite con id "v_po_f_g*" da data.json
+   - Idempotente, no-op se non trova
+   - Safety net permanente per residui bug deducer
+5. python scripts/main.py --out-v9 data-v9.json
+   - continue-on-error: true (v9 fallisce → workflow continua)
+   - NO --write-legacy (causava round errati 50/53 nel data.json)
+6. git commit + push se data.json o data-v9.json modificati
+```
+
+**Garanzie operative:**
+- Se v9 crasha: cleanup l'ha già fatto il suo, data.json resta v8.9-puro
+- Se v9 ha bug logico (es. partite con date strane): cleanup le rimuove al prossimo run
+- freshness-check.yml alerta email se update-data fermo >24h (36h luglio-agosto off-season)
+
+---
+
+## 7. Frontend (`index.html`)
+
+### Fonte dati
+`fetch('data-v9.json')` → `adaptV9ToLegacy(rawData)` → render esistente.
+
+### Logica adapter (nel JS, sezione `adaptV9ToLegacy`)
+1. **Mappa matches**: `team_key`→`team`, preserva `external_id`/`periods`/`sources`
+2. **Dedup intelligente per data**: key = `(phase, team, opponent_normalized, date)`. Preferenza:
+   - score popolato > non popolato
+   - game_num popolato > null
+   - più sources > meno
+   - Risolve: `v_po_r37_5` (G1 Finale da v8.9) e `v_po_f_g1` (G1 Finale da deducer v9) hanno stessa data dopo fix → mergiati a 1 sola entry
+3. **Filtro date sospette (safety net)**: playoff/playout senza score con data < ultima disputata dello stesso team → nascosti. Protegge da residui bug deducer.
+4. **Multi-classifica**: per ogni team in `config.teams[]`, deriva URL da:
+   ```javascript
+   CLASSIFICA_URLS_BY_CATEGORY = {
+     "B Nazionale": "https://www.legapallacanestro.com/serie/4/classifica",
+     "A2":          "https://www.legapallacanestro.com/serie/3/classifica",
+     "Serie A":     "https://www.legabasket.it/standings"
+   }
+   ```
+   Rendering: se tutti i team stessa lega → 1 bottone "CLASSIFICA UFFICIALE". Se categorie diverse → 1 bottone per ogni lega distinta.
+
+### Features v9 ancora NON esposte nel frontend (futuro)
+- Parziali quarti cliccabili (campo `periods`)
+- Link diretto al tabellino LNP (campo `external_id`)
+- Badge sources visibili
+- Tab playoff/playout
+
+---
+
+## 8. Bug noti & safeguards permanenti
+
+### BUG DEDUCER FASE 2.2 — FIXATO 07/06
+**Sintomo originale:** date Finale dedotte erano a maggio invece di giugno (off-by-one-month).
+
+**Causa:** regex `_extract_round_dates` in `lnp.py` cercava heading `"Finale"` (singolare) e matchava il sub-string DENTRO `"Quarti di Finale"` → estraeva date QF (maggio) invece di Finale (giugno). Inoltre il testo LNP B Nazionale usa `"Finali"` (plurale!), e tutto su una sola riga.
+
+**Fix applicato:**
+1. `ROUND_NAME_TO_HEADING["F"] = "Finali"` (era `"Finale"`)
+2. Regex: `(?:^|\W){re.escape(round_heading)}\s*[-–]\s*([^\n]*)` con `re.IGNORECASE`
+   - `(?:^|\W)` lookbehind: evita match dentro `Semifinali` (precede `i`, char `\w`)
+   - Heading `"Finali"` non collide con `"Quarti di Finale"` (singolare ≠ plurale)
+
+**ATTENZIONE per Fase 6 (Virtus eventualmente in A2):**
+A2 LNP usa `"Finale"` singolare (verificato sulla pagina A2 playoff). Quando Virtus sale in A2, servirà:
+- Heading dinamico per categoria (es. dict per league_key)
+- OPPURE regex `Finali?` che matcha entrambe (ma serve gestire lookbehind per evitare "di Finale")
+
+### BUG DUPLICATI G1 FINALE — workaround attivo
+**Sintomo:** v8.9 (`v_po_r37_5`) e v9 deducer (`v_po_f_g1`) creano entrambi G1 Finale con stessa data (post-fix). Id diversi → state.merge non li fonde.
+
+**Workaround:** dedup nel frontend per `(phase, team, opponent, date)`. Risolto display-side. Backend continua a tenerli entrambi in `data-v9.json` (innocuo).
+
+### Filtro `lnp_advance`-only RIMOSSO dal frontend (07/06)
+Dopo fix deducer, le partite con `sources=["lnp_advance"]` hanno date corrette. Quindi il filtro temporaneo è stato tolto. Resta il filtro `date < ultima_disputata` come safety net.
+
+### `--write-legacy` DISABILITATO nel cron
+Quando attivo, v9 scriveva data.json in schema legacy ma con `round` numerici progressivi (50, 53...) invece dei 37/38 v8.9 convention → frontend mostrava label sbagliate "G50, G53". Tolto. Il frontend legge data-v9.json direttamente.
+
+### Cleanup step IDEMPOTENTE PERMANENTE
+Rimuove partite con id `v_po_f_g*` da data.json. È no-op normalmente; se in futuro qualche regressione le rimette in data.json, le toglie automaticamente. NON rimuovere lo step anche se sembra inutile.
+
+---
+
+## 9. Config `config/seasons/2025-26.json` — series_closed correnti
+
+```json
+{
+  "series_closed": [
+    {"team_key": "luiss", "opponent": "Logiman Orzinuovi", "phase": "playoff",
+     "round_name": "QF", "result": "0-3", "team_advances": false,
+     "note": "Eliminata QF 2025-26"},
+    {"team_key": "virtus", "opponent": "Paffoni Fulgor Basket Omegna", "phase": "playoff",
+     "round_name": "QF", "result": "3-0", "team_advances": true,
+     "next_opponent": "Rucker San Vendemiano", "next_opponent_seed": 4,
+     "note": "Vincente QF, passa a SF"},
+    {"team_key": "virtus", "opponent": "Rucker San Vendemiano", "phase": "playoff",
+     "round_name": "SF", "result": "3-2", "team_advances": true,
+     "next_opponent": "La T Tecnica Gema Montecatini", "next_opponent_seed": 2,
+     "note": "Vincente SF, passa a Finale (Trigger B applicato 31/5)"}
+  ]
+}
+```
+
+**Pattern series_closed:** quando una serie playoff si chiude, l'utente aggiorna manualmente questo file aggiungendo l'entry corrispondente. Il deducer v9 leggerà `next_opponent` + `next_opponent_seed` per generare le partite del round successivo.
+
+---
+
+## 10. Roadmap aggiornata
+
+| Fase | Quando | Cosa |
+|------|--------|------|
+| 1-3 | ✅ giugno 2026 | Foundation v9 + Hybrid + frontend nativo |
+| **4** | luglio-agosto 2026 | **Cutover completo:** dismetti `update_data.py`, cron usa solo `main.py`. Frontend resta invariato (continua a leggere data-v9.json) |
+| 5 | agosto 2026 | Hardening (edge cases, test) |
+| **6** | settembre 2026 | **Fetcher LBA + BC Roma:** scrivi `scripts/fetchers/lba.py` per legabasket.it. Crea `config/seasons/2026-27.json` con 3 squadre. Test su canary (es. Olimpia Milano) prima del go-live |
+| **Go-live BC Roma** | ottobre 2026 | Inizio Serie A LBA 2026-27. Frontend autoconfigura 3 tab + 3 classifiche (se categorie diverse) |
+| 7 | gennaio 2027 condizionato | Coppa Italia LBA Final Eight (se BC Roma top-8) — `lba_cup.py` fetcher |
+| 8 | estate 2027 | NBA Europe fetcher (se BC Roma selezionata slot Roma garantito) |
+
+**Vincolo critico:** Fase 4 (dismissione v8.9) deve precedere Fase 6, altrimenti BC Roma esisterebbe solo in data-v9.json e v8.9 non saprebbe gestirla.
+
+---
+
+## 11. Squadre future (post-2025-26)
+
+### BC Roma (ex-Vanoli Cremona)
+- **[VERIFIED da Il Post + FIP + RealGM]** codice FIP a BC Roma Srl dal 29/05/2026
+- Soci: Donnie Nelson, Luka Doncic, Bianchini, Kaukenas
+- Gioca **Serie A LBA 2026-27** (esordio ottobre 2026)
+- Vanoli 2025-26 finita 11° (11V-17S), fuori playoff → BC Roma NON eredita qualifiche europee
+- Palazzetto TBD (PalaEUR vs altro)
+- Nome ufficiale commerciale TBD (atteso annuncio luglio 2026)
+- **NBA Europe 2027-28** con 16 squadre, 2 slot italiani garantiti (Milano + Roma)
+
+### Virtus 2026-27
+- Se vince Finale playoff 2025-26 → **promossa in A2**, categoria cambia, fetcher resta LNP con `source_slug: "serie-a2"`
+- Se perde Finale → resta in B Naz
+- Architettura v9 supporta cambio categoria nel config senza modifiche codice
+
+### Luiss 2026-27
+- Sicuramente in **B Nazionale** (no rischio retrocessione, no promozione)
+
+---
+
+## 12. Procedure operative ricorrenti
+
+### Sostituire un file su main
+1. URL `https://github.com/bad-think/basket-roma/edit/main/<path>`
+2. Ctrl+A → Delete → incolla → Commit
+3. Commit message: forma `tipo(scope): descrizione`
+
+### Forzare un run del cron
+1. URL `https://github.com/bad-think/basket-roma/actions/workflows/update-data.yml`
+2. "Run workflow" → branch main → Run
+3. Wait ~1m 30s
+4. Verifica log + frontend con Ctrl+F5
+
+### Verificare data-v9.json freshness
+URL diretto: `https://github.com/bad-think/basket-roma/blob/main/data-v9.json` → controlla `last_updated`
+
+### Cleanup branch backup
+- `pre-v9-backup`: cancellabile dopo 14/06/2026 se sistema stabile
+- `v9-rewrite`: obsoleto, cancellabile in qualsiasi momento
+- Via UI: `https://github.com/bad-think/basket-roma/branches` → icona trash
+
+---
+
+## 13. Convenzioni codice + dettagli tecnici
+
+### Schema id matches (legacy v8.9)
+- Regular: `v01..v36`, `l01..l36` (team_letter + number 01-36 = round)
+- Playoff QF: `v_po_r37`, `v_po_r38` (G1, G2 sulla giornata corrispondente), `l_po_r37` (Luiss)
+- Playoff SF Virtus (post-cleanup): `v_po_r37_2..5` (suffisso _N = game)
+- Finale dedotta v9: `v_po_f_g1`, `v_po_f_g2`, `v_po_f_g5` (RIMOSSE da data.json via cleanup step se schema sbagliato; lasciate intatte in data-v9.json)
+
+### ROUND_NUM_OFFSET in lnp.py (post-fix)
 ```python
-serie_pat = re.compile(
-    r"Serie\s+(\d+)\s*[-–]\s*"
-    r"(.+?)\s*\(\s*(\d+)\s*\^\s*[^)]+\)\s*[-–]\s*"
-    r"(.+?)\s*\(\s*(\d+)\s*\^\s*[^)]+\)",
-)
-round_pat = re.compile(
-    r"(Quarti di Finale|Semifinali|Finale|Play-In|Playout)\s*[-–]\s*([^\n]*)",
-)
+ROUND_NUM_OFFSET = {
+    "QF": 39,    # G1 QF dedotta → round 39 (per ordering)
+    "SF": 44,    # G1 SF dedotta → round 44
+    "F":  49,    # G1 Finale dedotta → round 49
+}
 ```
+Convenzione interna v9, NON usata dal frontend (legge `game_num` come label).
 
-**Round detection critico:** `rfind`-style.
+### Pattern Trigger B (chiusura serie)
+Quando una serie playoff finisce, utente aggiorna `2025-26.json` aggiungendo nuova entry in `series_closed` con `team_advances` + `next_opponent` + `next_opponent_seed`. Al prossimo cron, deducer genera schedule round successivo.
 
-### 3.8. Playoff best-of-5 — pattern home games
+### Frontend: campo `tentative`
+Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mostra badge "DA CONFERMARE" giallo. Logica già attiva.
 
-```
-Higher seed: CCFFC → home G1, G2, G5
-Lower seed:  FFCCF → home G3, G4
-```
-
-G4/G5 sono `tentative=True`. `data.json` contiene SOLO gare home delle squadre tracciate.
-
-### 3.9. RSS — gestione CDATA WordPress
-
-Fix: `"".join(el.itertext())` invece di `.text` (in `rss_pool.py`).
-
-### 3.10. State merge — chiave di identità Match
-
-`state._find_match_index` matcha su `(team_key, date, normalize(away))`.
-Conseguenza: due fonti che producono lo stesso Match (v8.9 widget + v9 deducer)
-vengono mergeate, non duplicate. Sources accumulato come union.
+### Stack tecnico
+- **Frontend:** HTML5 + CSS3 + Vanilla JS (no framework), service worker
+- **Backend:** Python 3.11, stdlib + minimal deps (no pypdf installato, usa fallback stdlib per parsing PDF calendario LNP)
+- **PDF calendario LNP:** parsato con fallback stdlib custom (`update_data.py` ha stdlib parser ~342 entries per girone)
 
 ---
 
-## 4. DECISIONI STRATEGICHE PRESE
+## 14. Storia sintetica sessioni recenti
 
-1. **No riscrittura full parser LNP regular** — v8.9 funziona
-2. **SofaScore SCARTATO** — ToS vieta scraping
-3. **PianetaBasket RIABILITATO** come RSS
-4. **basketinside.com DISABILITATO** — feed HTML
-5. **sportando.basketball feed generale DISABILITATO** — troppo rumore
-6. **Architettura plugin** — nuova competizione = config + opzionale fetcher
-7. **Cutover NON in big-bang**
-8. **Bracket SF/F via deduzione logica + tabellini diretti** (23/05/2026)
-   - Opzione A (Fase 2.2): ✅ deployed 24/05
-   - Opzione B (Fase 2.3a): ✅ infrastruttura pronta 24/05
-   - Opzione B discovery (Fase 2.3b): ⏳ prossimo
-9. **🆕 Scope-cut Fase 2.3** (24/05/2026)
-   - 2.3a = solo infrastruttura + parser (alta confidenza)
-   - 2.3b = discovery automatica external_id (richiede investigazione)
-   - Motivazione: lesson 23/05 — non assumere sorgenti non verificate
+**24-31 maggio 2026** — sviluppo v9 backend incrementale:
+- Fase 2.1 hybrid mode
+- Fase 2.2 next-round deducer
+- Fase 2.3a tabellino parser (Test 8 success)
+- Fase 2.3b discovery via avversario (Test 10/11 success)
 
----
+**31 maggio** — Trigger B applicato (chiusura SF Virtus 3-2 vs Rucker)
 
-## 5. BUG NOTI E FIX STORICI
+**06 giugno** — sessione cutover (4-5 ore):
+- Squash merge `v9-rewrite` → `main`
+- Modifica `update-data.yml` con step v9 enrichment (additivo)
+- Run successo: data-v9.json creato per la prima volta su main
+- Tentativo `--write-legacy` → fallito (creava round errati 50/53 nel data.json)
+- Rollback `--write-legacy`
+- Aggiunto cleanup step idempotente per rimuovere partite spurie
 
-### 5.1. `_parse_last_result` scomparsa 3x v8.9
-- **Lezione v9:** modularità file <500 righe (target morbido, ora `lnp.py` = 736)
-
-### 5.2. Opponent name fallback playoff sovrascriveva G1-G5
-- **Fix:** `if m.get("phase","regular") == "regular":` prima del fallback
-
-### 5.3. Cleanup troppo aggressivo rimuoveva G1/G2/G3 playoff
-- **Fix:** rimuove solo `tentative AND date<today AND sh==None`
-
-### 5.4. Bracket round detection sbagliato
-- **Fix:** `rfind()` per heading più vicina al matchup
-
-### 5.5. URL encoding caratteri accentati (OraSì Ravenna)
-- **Stato:** issue v8.9, non bloccante
-
-### 5.6. Drift data.json main vs v9-rewrite (INVERTITO 24/05)
-- Post-Fase 2.2: v9=42 > main=41
-- **Risoluzione strutturale:** Fase 4 cutover
-
-### 5.7. Bracket parser v9 incompleto per SF/F (RISOLTO 24/05)
-- **Fix:** Fase 2.2 next-round deducer ✅
-
-### 5.8. lnp.py supera target 500 righe (24/05)
-- **Stato:** 736 righe, ancora gestibile, ben organizzato in sezioni
-- **Soglia di refactor:** se supera 900 righe, splittare in:
-  - `lnp/__init__.py` (LNPFetcher class)
-  - `lnp/bracket.py` (QF parser + next-round deducer)
-  - `lnp/tabellino.py` (parse_tabellino + url builder)
+**07 giugno** — sessione frontend + bug deducer:
+- Riscrittura `index.html` (adapter v9→legacy, multi-classifica, dedup intelligente)
+- Tentativo 1 fix deducer: ancoraggio `^...$` con MULTILINE → FALLITO (testo LNP è su singola riga, e usa "Finali" plurale)
+- Tentativo 2 fix deducer: heading `"Finali"` + lookbehind `(?:^|\W)` → SUCCESS (testato sul testo reale via web search)
+- Frontend mostra G1, G2, G5 Finale con badge "DA CONFERMARE" su G5
 
 ---
 
-## 6. TEST REALI ESEGUITI
+## 15. Note critiche da NON dimenticare
 
-### Test 1 (Fase 2, 14/05/2026)
-LNPFetcher fallita. Pivot a Hybrid mode.
+🚨 **Mai riabilitare `--write-legacy`** finché lo schema legacy v9 non è validato 1:1 contro v8.9. Round numeri progressivi rompono il frontend.
 
-### Test 2 (Fase 2.1 Hybrid, 16/05/2026)
-Workflow 12s, 39 match preservati.
+🚨 **Il cleanup step deve restare** anche se sembra inutile. È no-op normale, salva-vita in caso di regressione.
 
-### Test 3 (Fase 2.1 Hybrid, 21/05/2026)
-Workflow 10s, 39 match. LNP bracket SF: 0 gare parsabili.
+🚨 **Quando aggiungi nuova categoria** (A2, Serie A, ecc.) verifica heading LNP/LBA per il deducer:
+- B Naz LNP → `"Finali"` (plurale)
+- A2 LNP → `"Finale"` (singolare) [VERIFIED via web]
+- Serie A LBA → da verificare quando scriverai `lba.py`
 
-### Test 4 (Diagnosi LNP SF, 23/05/2026)
-Confermato: LNP non popola placeholder SF/F. Tabellini accessibili.
+🚨 **Il frontend legge SOLO data-v9.json**, non più data.json. Se aggiungi una nuova squadra al config, deve apparire in data-v9.json per essere visibile.
 
-### Test 5 (Fase 2.2 deployed, 24/05/2026) ✅
-3 gare SF dedotte, 2 mergeate, 1 nuova. RSS pool bonus: 2 score.
-Workflow 15s. Validato `_find_match_index`.
+🚨 **Multi-classifica auto-deriva** da `teams[].active_competitions[0].category`. Se BC Roma config 26-27 avrà `category: "Serie A"`, frontend mostra automaticamente bottone "CLASSIFICA SERIE A" che linka legabasket.it.
 
-### Test 6 (Fase 2.3a offline, 24/05/2026) ✅
-Test parser `parse_tabellino` su 5 scenari HTML sintetici:
-- ✅ HTML completo (og:title, data, score em-dash, summary, parziali)
-- ✅ URL builder per B Nazionale + A2 playoff
-- ✅ Fallback `<title>` quando manca og:title
-- ✅ HTML invalido → ritorna None
-- ✅ Overtime (5 quarti) con validazione parziali
-- ✅ Auto-correzione invertimento home/away dei parziali via sum check
+🚨 **Branch `pre-v9-backup`** è safety net fino al 14/06/2026. NON cancellare prima.
 
-### Test 7 (Fase 2.3a deployed silent, 24/05/2026) ✅
-Run su v9-rewrite con codice 2.3a: identico output a Fase 2.2 (no
-external_id popolato). Conferma backward-compat e zero regressioni.
+🚨 **freshness-check.yml** monitora il workflow `update-data.yml`. Se cambi nome del workflow principale, aggiorna anche freshness-check.
 
-### Test 8 (Fase 2.3a validation end-to-end, 24/05/2026) — DA LANCIARE
-Config con `match_id_overrides` per G1 SF Virtus → "ita3_b_ply_75".
-
-**Output atteso al runtime:**
-```
-🔗 Applicati 1 match_id_overrides da config
-...
-🔍 [virtus] B Nazionale via lnp
-  🧩 [virtus] 3 gare casa dedotte da advancement (1 tentative)
-  📋 Schedule: 3 match recuperati
-  ✏️  Merge: 3 match modificati/aggiunti
-  📊 [virtus] 1 match arricchiti da LNP tabellino   ← NUOVO
-...
-```
-
-**Output atteso in `data-v9.json`:** G1 SF Virtus con
-- `sh: 75, sa: 59` (era null prima)
-- `periods: [[21,14], [19,12], [17,20], [18,13]]`
-- `external_id: "ita3_b_ply_75"`
-- `sources` include `"lnp_tabellino"`
-
-End-to-end offline simulato con successo (State.load + apply overrides).
+🚨 **Per fixare bug nel parser LNP**, SEMPRE verificare prima il testo reale della pagina (via web search o web_fetch su `https://www.legapallacanestro.com/serie/4/playoff-playout/2026/ita3_b_poff`). Mai fixare regex su assunzioni.
 
 ---
 
-## 7. TRIGGER PER PROSSIMA SESSIONE
+## 16. Quick reference URLs
 
-### Trigger A — Fase 2.3b: discovery automatica external_id 🔥 PROSSIMO
-**Obiettivo:** popolare `external_id` automaticamente per Match playoff.
-
-**Investigazione necessaria (prima di scrivere codice):**
-1. Fetch `/serie/4/calendario` → ha link a `ita3_b_ply_*`?
-2. Se sì → parser tabella calendario, mapping (date, opponent_normalized) → external_id
-3. Se no → alternativa:
-   - Pagina squadra avversario (link a partite contro di noi)
-   - Enumeration limitata con cache state (max 20 fetch/run)
-
-**Implementazione probabile:**
-- Nuovo metodo `LNPFetcher._discover_external_ids(matches)`
-- Chiamato in `fetch_schedule` o all'inizio di `fetch_scores`
-- Popola `external_id` su Match in state
-- Attivazione automatica del parser tabellino Fase 2.3a
-
-### Trigger B — Fine playoff Virtus (SF Rucker)
-Quando serie chiude:
-1. Aggiungi entry `series_closed` per round SF (manuale fino a 2.3b)
-2. Se Virtus avanza → aggiungi `next_opponent` (vincente Serie 6) per Finale
-3. Sistema genererà Match Finale automaticamente
-
-### Trigger C — Fase 3 (frontend data-driven)
-Pre-requisito tecnico soddisfatto. Cambio frontend per leggere `data-v9.json` schema v9.0.
-
-### Trigger D — Promozione Virtus in A2 (2026-27)
-1. Copy config `2025-26.json` → `2026-27.json`
-2. `source_slug`: `serie-b` → `serie-a2`, `category`: `"A2"`
-3. Abilita sez 43 RSS PianetaBasket
-
-### Trigger E — Qualificazione Coppa Italia LNP
-1. Nuova competition con `fetcher: "lnp"`, `phases: ["cup"]`
-2. **Importante:** Final Four parte da SF. Rivedere `PLAYOFF_ROUND_ORDER`
-   per cup type (es. `CUP_ROUND_ORDER = ["SF", "F"]`)
-3. Pattern external_id: `ita3_cup_N`
-
-### Trigger F — Qualificazione europee (Champions/EuroCup)
-1. Competition con `fetcher: "pianetabasket"`, `rss_section: 48/35`
+| Cosa | URL |
+|------|-----|
+| Live frontend | https://bad-think.github.io/basket-roma/ |
+| Repo | https://github.com/bad-think/basket-roma |
+| data-v9.json (raw) | https://raw.githubusercontent.com/bad-think/basket-roma/main/data-v9.json |
+| Actions | https://github.com/bad-think/basket-roma/actions |
+| LNP B Naz Tab 1 (Luiss) | https://www.legapallacanestro.com/serie/4/playoff-playout/2026/ita3_a_poff |
+| LNP B Naz Tab 2 (Virtus) | https://www.legapallacanestro.com/serie/4/playoff-playout/2026/ita3_b_poff |
+| LNP B Naz classifica | https://www.legapallacanestro.com/serie/4/classifica |
+| LBA Serie A standings | https://www.legabasket.it/standings |
 
 ---
 
-## 8. WORKFLOW OPERATIVO
-
-### 8.1. Dopo ogni modifica
-- Versione file + commit message
-- AST validation: `python3 -c "import ast; ast.parse(open('FILE').read())"`
-- v8.9: `grep -c "def _parse_last_result" scripts/update_data.py` = 1
-- v9: `python3 scripts/main.py --no-fetch` smoke test offline
-
-### 8.2. Test reale v9
-- Pre-step: sync `data.json` da main se necessario
-- Actions → "Test v9 (manual)" → branch `v9-rewrite`
-- Scarica artifact `v9-output-{id}` con `data-v9.json`
-
-### 8.3. Sviluppo browser-only
-- Modifiche via github.com web editor
-- Branch v9-rewrite per sviluppo v9.0
-
----
-
-## 9. ROADMAP RIMANENTE v9.0
-
-| Fase | Obiettivo | Stato |
-|------|-----------|-------|
-| 1 | Foundation: models + state | ✅ |
-| 2 | Fetchers (LNP QF, RSS, PianetaBasket) | ✅ |
-| 2.1 | Hybrid pivot — regular delegato a v8.9 | ✅ |
-| 2.2 | Next-round deducer SF/F (Opzione A) | ✅ 24/05/2026 |
-| 2.3a | Tabellino parser infrastruttura | ✅ 24/05/2026 |
-| **2.3b** | **Discovery external_id automatica** | 🔥 PROSSIMO |
-| 3 | Frontend data-driven | ⏳ |
-| 4 | Cutover parziale | ⏳ |
-| 5 | Hardening (AST hook, unit test, alert) | ⏳ |
-
----
-
-## 10. NOTE PER CLAUDE FUTURO
-
-- **CONTINUITA.md** è single source of truth
-- **Codice repo** è riferimento implementativo
-- **Workflow Actions** per testare v9 senza rischio
-- Lettura ordine: CONTINUITA → README-v9 → codice
-
-### Convenzioni
-- Token optimization: risposte concise, dense
-- Verità sopra approvazione
-- Versione + commit message dopo ogni modifica
-- AST validation obbligatoria
-- Test offline `--no-fetch` prima del workflow reale
-- Test offline sintetici per parser puri (vedi Test 6)
-
-### Lessons learned 23-24/05/2026
-- **Non assumere come pubblicato qualcosa che non si è verificato direttamente.** Esempio: ipotesi "LNP pubblicherà testo bracket SF" persa 5+ giorni.
-- **Fetch manuale URL reali appena possibile** quando un trigger dipende da output esterno.
-- **Falsificabilità:** ogni assunzione architetturale deve avere un test concreto.
-- **State merge ben progettato evita refactor:** chiave `(team_key, date, normalize(away))` ha permesso v9 di affiancare v8.9 senza duplicati.
-- **Scope-cut quando l'incertezza è alta:** scoperto 24/05 che pagina squadra LNP NON ha link playoff. Invece di tirare a indovinare la discovery, splittato Fase 2.3 in 2.3a (alta confidenza) e 2.3b (richiede investigazione).
+**Ultimo aggiornamento:** 07 giugno 2026 (post-Fase 3 frontend + fix deducer definitivo)
