@@ -64,7 +64,9 @@ PLAYOFF_ROUND_ORDER = ["QF", "SF", "F"]
 ROUND_NAME_TO_HEADING = {
     "QF": "Quarti di Finale",
     "SF": "Semifinali",
-    "F": "Finale",
+    # B Nazionale LNP usa "Finali" (plurale) nel tabellone playoff.
+    # A2 usa "Finale" (singolare): da gestire se/quando Virtus sale in A2 (Fase 6).
+    "F": "Finali",
 }
 
 # Offset numero round per gare playoff generate (per ordering nel frontend).
@@ -347,13 +349,21 @@ class LNPFetcher:
         return games
 
     def _extract_round_dates(self, text: str, round_heading: str) -> list[str]:
-        # Ancoraggio a inizio riga (re.MULTILINE) cruciale: il regex non deve
-        # matchare il sub-string "Finale" dentro "Quarti di Finale", altrimenti
-        # estrae le date QF (maggio) invece di quelle della Finale vera (giugno).
-        # Pattern matcha SOLO heading all'inizio di una riga, seguito da dash.
+        # Il testo LNP playoff è una linea continua con headers separati da spazi:
+        #   "Quarti di Finale - ... maggio Semifinali - ... maggio Finali - ... giugno"
+        # Servono DUE protezioni nel regex:
+        #
+        # 1. Lookbehind (?:^|\W): match heading SOLO se preceduto da inizio stringa
+        #    o da un non-word char. Evita match dentro "Semifinali" (heading="Finali"
+        #    matcherebbe il suffisso). Per "Quarti di Finale" non c'è collisione con
+        #    "Finali" perché differente: "Finale" singolare vs "Finali" plurale.
+        #
+        # 2. ROUND_NAME_TO_HEADING usa "Finali" (B Naz LNP convention). Cercare
+        #    "Finale" singolare farebbe matchare DENTRO "Quarti di Finale" → date QF
+        #    invece di Finale (bug "off by one month" osservato in produzione).
         pattern = re.compile(
-            rf"^\s*{re.escape(round_heading)}\s*[-–]\s*([^\n]*)$",
-            re.IGNORECASE | re.MULTILINE,
+            rf"(?:^|\W){re.escape(round_heading)}\s*[-–]\s*([^\n]*)",
+            re.IGNORECASE,
         )
         m = pattern.search(text)
         if not m:
