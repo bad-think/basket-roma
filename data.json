@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-06-07T20:04:33.173283",
+  "last_updated": "2026-06-08T21:09:44.166886",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -583,6 +583,18 @@
       "sh": null,
       "sa": null,
       "round": 37
+    },
+    {
+      "id": "v_po_r37_6",
+      "team": "virtus",
+      "phase": "playoff",
+      "round": 37,
+      "date": "2026-06-10",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null
     }
   ],
   "standings": {
