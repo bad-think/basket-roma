@@ -40,7 +40,7 @@ Da rispettare SEMPRE:
 
 ---
 
-## 3. Stato corrente (07/06/2026)
+## 3. Stato corrente (08/06/2026)
 
 ### Cosa gira in produzione
 
@@ -65,6 +65,7 @@ Frontend: index.html
 6. **Cutover backend v9 in produzione** (06/06)
 7. **Frontend Fase 3 nativo v9** (07/06)
 8. **Fix bug deducer date Finale** (07/06)
+9. **Cleanup branch `v9-rewrite` + workflow `update-data-v9-test.yml`** (08/06)
 
 ### Stagione 2025-26 stato squadre
 
@@ -110,9 +111,10 @@ basket-roma/
 │
 └── .github/workflows/
     ├── update-data.yml                # cron principale (3 step + commit)
-    ├── update-data-v9-test.yml        # workflow manuale di test v9
     └── freshness-check.yml            # alert email se cron >24h fermo (36h lug-ago)
 ```
+
+> Nota 08/06: `update-data-v9-test.yml` rimosso (workflow manuale di test v9, obsoleto post-cutover).
 
 ---
 
@@ -292,19 +294,26 @@ Rimuove partite con id `v_po_f_g*` da data.json. È no-op normalmente; se in fut
 
 ---
 
-## 10. Roadmap aggiornata
+## 10. Roadmap (riprogrammata 08/06/2026)
+
+> Principio guida: **foundation prima delle feature**, **detector che propone (gate umano), mai auto-apply su scraping**, **discovery solo con ≥2 fonti reali**.
 
 | Fase | Quando | Cosa |
 |------|--------|------|
-| 1-3 | ✅ giugno 2026 | Foundation v9 + Hybrid + frontend nativo |
-| **4** | luglio-agosto 2026 | **Cutover completo:** dismetti `update_data.py`, cron usa solo `main.py`. Frontend resta invariato (continua a leggere data-v9.json) |
-| 5 | agosto 2026 | Hardening (edge cases, test) |
-| **6** | settembre 2026 | **Fetcher LBA + BC Roma:** scrivi `scripts/fetchers/lba.py` per legabasket.it. Crea `config/seasons/2026-27.json` con 3 squadre. Test su canary (es. Olimpia Milano) prima del go-live |
-| **Go-live BC Roma** | ottobre 2026 | Inizio Serie A LBA 2026-27. Frontend autoconfigura 3 tab + 3 classifiche (se categorie diverse) |
-| 7 | gennaio 2027 condizionato | Coppa Italia LBA Final Eight (se BC Roma top-8) — `lba_cup.py` fetcher |
-| 8 | estate 2027 | NBA Europe fetcher (se BC Roma selezionata slot Roma garantito) |
+| **4** | lug–ago 2026 | **Cutover completo (priorità #1):** dismetti `update_data.py`, cron usa solo `main.py`, rimuovi step legacy + cleanup. Frontend invariato (continua a leggere `data-v9.json`). Collassa il doppio parser → meno fragilità a ogni run |
+| **5** | ago 2026 | Hardening (edge cases, test) **+ Bracket DETECTOR:** parser del bracket ufficiale LNP/LBA → scrive entry `series_closed` *proposta* in log Actions o `proposals.json`. Utente la incolla in `2025-26.json` (gate umano). Trigger B diventa *assistito*, non eliminato. Non time-critical: prossimi playoff = primavera 2027 |
+| **6** | set 2026 | **Fetcher LBA:** scrivi `scripts/fetchers/lba.py` (legabasket.it). Crea `config/seasons/2026-27.json` con 3 squadre (categoria Virtus 26-27 fissata qui in base a esito Finale). Test canary (es. Olimpia Milano). **+ Discovery probe:** ogni fetcher espone `discover(team)` → "questa squadra è nel mio campionato stagione N?" → auto-binding categoria. Ora ha 2 fonti per validare il cross-league |
+| **Go-live BC Roma** | ott 2026 | Inizio Serie A LBA 2026-27. Frontend autoconfigura 3 tab + classifiche (se categorie diverse) |
+| 7 | gen 2027 *(condizionato)* | `lba_cup.py` — Coppa Italia LBA Final Eight, se BC Roma top-8 |
+| 8 | est 2027 *(condizionato)* | NBA Europe fetcher, se BC Roma slot Roma garantito |
 
-**Vincolo critico:** Fase 4 (dismissione v8.9) deve precedere Fase 6, altrimenti BC Roma esisterebbe solo in data-v9.json e v8.9 non saprebbe gestirla.
+### Principi fissati
+
+- 🚨 **Fase 4 deve precedere Fase 6** — altrimenti BC Roma esisterebbe solo in `data-v9.json` e v8.9 non saprebbe gestirla.
+- **Un fetcher per ogni sito-fonte nuovo** = confine corretto, non fallimento. Costo "una volta", non "ogni anno". `lba.py` scritto una volta → BC Roma auto-gestita per sempre.
+- **Mai auto-apply su scraping.** Il detector propone, l'utente conferma. Safety net (cleanup idempotente, filtro date-sospette) restano permanenti.
+- **Detector ≠ autonomia totale.** Obiettivo reale: non dover *ricordare* la procedura, non "zero codice". L'autonomia cieca su fonti instabili è un cattivo scambio per un sistema non presidiato.
+- **Categoria Virtus 26-27:** decisa dall'esito Finale, fissata manualmente alla creazione di `2026-27.json` (Fase 6). Se promossa A2 → `source_slug: "serie-a2"` + heading deducer `"Finale"` singolare (A2 usa singolare, non plurale).
 
 ---
 
@@ -346,9 +355,15 @@ Rimuove partite con id `v_po_f_g*` da data.json. È no-op normalmente; se in fut
 URL diretto: `https://github.com/bad-think/basket-roma/blob/main/data-v9.json` → controlla `last_updated`
 
 ### Cleanup branch backup
-- `pre-v9-backup`: cancellabile dopo 14/06/2026 se sistema stabile
-- `v9-rewrite`: obsoleto, cancellabile in qualsiasi momento
+- `v9-rewrite`: **CANCELLATO 08/06/2026** (già in `main` via squash merge)
+- `pre-v9-backup`: **NON ancora cancellato.** Cancellabile dopo fine serie Finale (>14/06, idealmente post-G5 ~18/06) se sistema stabile
 - Via UI: `https://github.com/bad-think/basket-roma/branches` → icona trash
+
+### Cancellare un workflow obsoleto
+1. Apri la cartella `https://github.com/bad-think/basket-roma/tree/main/.github/workflows`
+2. Click sul file `.yml` → icona cestino (Delete this file) → Commit
+3. Commit message: `chore(ci): rimuovi workflow obsoleto <nome>.yml`
+4. Sparisce dalla sidebar Actions; le run storiche restano (innocue), il file è recuperabile da git history
 
 ---
 
@@ -372,6 +387,7 @@ Convenzione interna v9, NON usata dal frontend (legge `game_num` come label).
 
 ### Pattern Trigger B (chiusura serie)
 Quando una serie playoff finisce, utente aggiorna `2025-26.json` aggiungendo nuova entry in `series_closed` con `team_advances` + `next_opponent` + `next_opponent_seed`. Al prossimo cron, deducer genera schedule round successivo.
+> Roadmap §10 Fase 5: questa procedura diventerà *assistita* dal bracket detector (proposta auto-generata, conferma manuale).
 
 ### Frontend: campo `tentative`
 Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mostra badge "DA CONFERMARE" giallo. Logica già attiva.
@@ -407,6 +423,12 @@ Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mo
 - Tentativo 2 fix deducer: heading `"Finali"` + lookbehind `(?:^|\W)` → SUCCESS (testato sul testo reale via web search)
 - Frontend mostra G1, G2, G5 Finale con badge "DA CONFERMARE" su G5
 
+**08 giugno** — sessione roadmap + cleanup:
+- Riprogrammata §10: Fase 4 (cutover) promossa a priorità #1; bracket parser riposizionato come *detector con gate umano* in Fase 5; discovery probe spostato in Fase 6 (richiede ≥2 fonti reali). Fissato confine "un fetcher per ogni sito-fonte nuovo"
+- Cancellato branch obsoleto `v9-rewrite` (già in main)
+- Cancellato workflow obsoleto `update-data-v9-test.yml`
+- `pre-v9-backup` confermato da tenere fino a fine Finale
+
 ---
 
 ## 15. Note critiche da NON dimenticare
@@ -424,7 +446,7 @@ Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mo
 
 🚨 **Multi-classifica auto-deriva** da `teams[].active_competitions[0].category`. Se BC Roma config 26-27 avrà `category: "Serie A"`, frontend mostra automaticamente bottone "CLASSIFICA SERIE A" che linka legabasket.it.
 
-🚨 **Branch `pre-v9-backup`** è safety net fino al 14/06/2026. NON cancellare prima.
+🚨 **Branch `pre-v9-backup`** è safety net. NON cancellare prima di fine Finale (>14/06, idealmente post-G5 ~18/06).
 
 🚨 **freshness-check.yml** monitora il workflow `update-data.yml`. Se cambi nome del workflow principale, aggiorna anche freshness-check.
 
@@ -447,4 +469,4 @@ Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mo
 
 ---
 
-**Ultimo aggiornamento:** 07 giugno 2026 (post-Fase 3 frontend + fix deducer definitivo)
+**Ultimo aggiornamento:** 08 giugno 2026 (roadmap §10 riprogrammata + cleanup branch `v9-rewrite` e workflow `update-data-v9-test.yml`)
