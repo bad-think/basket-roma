@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-06-09T06:41:15.466687",
+  "last_updated": "2026-06-09T18:16:02.862478",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -276,7 +276,7 @@
       "away": "OraSì Ravenna",
       "sh": 84,
       "sa": 76,
-      "round": 9
+      "round": 10
     },
     {
       "id": "l08",
