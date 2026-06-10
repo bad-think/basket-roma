@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-06-10T20:04:53.205041",
+  "last_updated": "2026-06-10T21:23:14.188197",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -276,7 +276,7 @@
       "away": "OraSì Ravenna",
       "sh": 84,
       "sa": 76,
-      "round": 9
+      "round": 10
     },
     {
       "id": "l08",
@@ -842,13 +842,14 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "La T Tecnica Gema Montecatini",
-      "sh": null,
-      "sa": null,
+      "sh": 66,
+      "sa": 61,
       "round": 37,
       "game_num": 1,
       "series_id": "f_la t tecnica gema mo",
       "sources": [
-        "lnp_advance"
+        "lnp_advance",
+        "rss"
       ]
     },
     {
@@ -860,13 +861,14 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "La T Tecnica Gema Montecatini",
-      "sh": null,
-      "sa": null,
+      "sh": 66,
+      "sa": 61,
       "round": 37,
       "game_num": 2,
       "series_id": "f_la t tecnica gema mo",
       "sources": [
-        "lnp_advance"
+        "lnp_advance",
+        "rss"
       ]
     },
     {
