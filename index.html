@@ -513,6 +513,26 @@ header{
 }
 .gc-wl.w{background:var(--yellow);color:var(--black)}
 .gc-wl.l{background:#222;color:var(--yellow)}
+.gc-score-meta{
+  flex-basis:100%;
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  margin-top:4px;
+}
+.gc-periods{
+  font-family:'Archivo',sans-serif;
+  font-size:10px;letter-spacing:.3px;
+  color:#555;
+}
+.gc-boxlink{
+  font-family:'Archivo Black',sans-serif;
+  font-size:9px;letter-spacing:.5px;
+  text-decoration:none;
+  color:var(--black);background:var(--yellow);
+  padding:2px 5px;
+  border:1.5px solid var(--black);
+  box-shadow:1.5px 1.5px 0 var(--black);
+}
+.gc-boxlink:hover{background:var(--black);color:var(--yellow)}
 
 .gc-venue{
   display:flex;align-items:center;gap:8px;
@@ -1302,7 +1322,8 @@ function adaptV9ToLegacy(data) {
     teamsConfig: teamsObj,
     classificaUrlByTeam: classByTeam,
     seriesClosed: sc,
-    last_updated: data.last_updated
+    last_updated: data.last_updated,
+    season: data.season || null
   };
 }
 
@@ -1351,6 +1372,11 @@ function doRefresh(manual) {
         : new Date().toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
       lastUpdate = ts;
       localStorage.setItem('brc_lu', ts);
+      // Deriva stagione breve per gli URL tabellino LNP ("2025-26" → "2526")
+      if (data.season) {
+        const mm = String(data.season).match(/\d{2}(\d{2})-(\d{2})/);
+        if (mm) SEASON_SHORT = mm[1] + mm[2];
+      }
       setBadge('ok','<span class="live-dot"></span>LIVE');
       if (manual) showToast('★ DATI AGGIORNATI ★');
       render();
@@ -1509,7 +1535,7 @@ function renderHero(m) {
   return `<div class="scoreboard">
     <div class="sb-topbar ${tcls}">
       <span class="sb-live"><span class="live-dot"></span>UPCOMING ${tod ? '· OGGI' : ''}</span>
-      <span>${escHtml(fmtUpper(m.date))} · ${escHtml(m.time||'')}</span>
+      <span>${escHtml(fmtUpper(m.date))} · ${escHtml(m.time||'')}${m.tentative ? ' (DA CONFERMARE)' : ''}</span>
     </div>
     <div class="sb-halftone"></div>
     <div class="sb-crest-bg"><img src="${TEAM_LOGO[m.team]}" alt=""/></div>
@@ -1537,7 +1563,7 @@ function renderHero(m) {
         ${v.maps ? `<a class="sb-map-btn" href="${escHtml(v.maps)}" target="_blank" rel="noopener">MAPPA</a>` : ''}
       </div>` : ''}
       <div class="lower-third">
-        <div class="lt-label">★ TIP-OFF IN ★</div>
+        <div class="lt-label">${m.tentative ? '★ TIP-OFF IN (ORARIO DA CONF.) ★' : '★ TIP-OFF IN ★'}</div>
         <div class="lt-cd" id="heroCD">—</div>
       </div>
     </div>
@@ -1581,6 +1607,30 @@ function renderStats() {
   </div>`;
 }
 
+// Stagione breve per URL LNP (es. "2025-26" → "2526"). Popolata in adapter.
+let SEASON_SHORT = '2526';
+
+// Costruisce l'URL del tabellino LNP da un external_id.
+// es. "ita3_b_ply_90" → phase_id "ita3_b_ply" →
+//   https://www.legapallacanestro.com/wp/match/ita3_b_ply_90/ita3_b_ply/x2526/tabellino
+function tabellinoUrl(extId) {
+  if (!extId) return null;
+  const m = String(extId).match(/^(.+?)_\d+$/);
+  if (!m) return null;
+  const phaseId = m[1];
+  return `https://www.legapallacanestro.com/wp/match/${extId}/${phaseId}/x${SEASON_SHORT}/tabellino`;
+}
+
+// Riga parziali "(17-21, 19-18, 13-10, 15-20)" da periods [[h,a],...].
+function periodsLine(periods) {
+  if (!Array.isArray(periods) || !periods.length) return '';
+  const parts = periods
+    .filter(p => Array.isArray(p) && p.length === 2)
+    .map(p => `${p[0]}-${p[1]}`);
+  if (!parts.length) return '';
+  return `(${parts.join(', ')})`;
+}
+
 function renderCard(m, idx, isPastCard) {
   const tcls = m.phase!=='regular'?'cp':(m.team==='virtus'?'cv':'cl');
   const tlbl = TEAM_LABEL[m.team] || (m.team==='virtus'?'VIRTUS ROMA':'LUISS ROMA');
@@ -1594,6 +1644,9 @@ function renderCard(m, idx, isPastCard) {
   let rightSide;
   if (m.sh!=null && m.sa!=null) {
     const win = m.sh>m.sa;
+    const pl = periodsLine(m.periods);
+    const turl = tabellinoUrl(m.external_id);
+    const extra = (pl || turl) ? `<div class="gc-score-meta">${pl ? `<span class="gc-periods">${escHtml(pl)}</span>` : ''}${turl ? `<a class="gc-boxlink" href="${escHtml(turl)}" target="_blank" rel="noopener">TABELLINO ↗</a>` : ''}</div>` : '';
     rightSide = `<div class="gc-right">
       <div class="gc-score">
         <span class="gc-score-h ${win?'win':'loss'}">${m.sh}</span>
@@ -1601,6 +1654,7 @@ function renderCard(m, idx, isPastCard) {
         <span style="color:#ccc">${m.sa}</span>
       </div>
       <div class="gc-wl ${win?'w':'l'}">${win?'W':'L'}</div>
+      ${extra}
     </div>`;
   } else if (today_) {
     rightSide = `<div class="gc-right">${tentBadge}<div class="gc-chip gc-today"><span class="gc-chip-dot"></span>OGGI</div></div>`;
