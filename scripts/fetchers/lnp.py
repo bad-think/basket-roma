@@ -51,6 +51,10 @@ PLAYOFF_PHASE_IDS = {
 }
 
 # Source slug per costruire URL pagina squadra LNP (es. /serie-b/{team_slug}).
+# Fase 2.3c — probing sequenziale tabellini (fallback discovery)
+PROBE_MAX_IDS = 25            # quante id oltre il massimo noto sondare
+PROBE_MAX_MISSES = 5          # buchi consecutivi prima di fermarsi
+
 CATEGORY_TO_SOURCE_SLUG = {
     "B Nazionale": "serie-b",
     "A2": "serie-a2",
@@ -107,6 +111,11 @@ class LNPFetcher:
         """
         # 1. Discovery external_id via pagina squadra avversario (Fase 2.3b)
         self._discover_external_ids(matches)
+
+        # 1b. Fallback: probing sequenziale id tabellino (Fase 2.3c)
+        #     Copre i casi in cui la pagina avversario non espone il round
+        #     corrente (es. Finale inter-girone, cache Drupal stantia).
+        self._probe_external_ids(matches)
 
         # 2. Tabellino diretto (priorità: più accurato + parziali)
         self._fetch_scores_from_tabellini(matches)
@@ -519,6 +528,127 @@ class LNPFetcher:
         if updated:
             print(f"  🔍 [{self.team.key}] {updated} external_id scoperti da "
                   f"pagine avversario")
+        return updated
+
+    # ==================================================================
+    # PROBING SEQUENZIALE (Fase 2.3c) — fallback indipendente da pagine
+    # ==================================================================
+    def _probe_external_ids(self, matches: list[Match]) -> int:
+        """
+        Fallback discovery: sonda gli id tabellino LNP in sequenza.
+
+        Gli id tabellino sono progressivi per phase_id: i nuovi turni
+        (es. Finale) hanno id > max noto. A differenza della discovery
+        via pagina avversario, non dipende dal tab default ne' dalla
+        cache Drupal delle pagine squadra: il tabellino match esiste
+        sempre, anche pre-partita (score vuoto).
+
+        Si attiva SOLO se esiste almeno una gara gia' giocata (date <=
+        oggi) senza external_id e senza score. Mappa pero' anche le
+        gare future trovate nella finestra (id assegnato subito, score
+        arrivera' dall'enrichment standard nei run successivi).
+
+        Returns: numero di Match a cui e' stato assegnato external_id.
+        """
+        pending = [
+            m for m in matches
+            if m.team_key == self.team.key
+            and m.competition_id == self.comp.id
+            and m.phase in ("playoff", "playout")
+            and not m.external_id
+        ]
+        today_iso = date.today().strftime("%Y-%m-%d")
+        trigger = [
+            m for m in pending
+            if m.date and m.date <= today_iso
+            and (m.sh is None or m.sa is None)
+        ]
+        if not trigger:
+            return 0
+
+        phase_id = PLAYOFF_PHASE_IDS.get(self.comp.category)
+        if not phase_id:
+            return 0
+
+        known_ids = []
+        prefix = phase_id + "_"
+        for mm in matches:
+            ext = mm.external_id or ""
+            if ext.startswith(prefix):
+                tail = ext.rsplit("_", 1)[-1]
+                if tail.isdigit():
+                    known_ids.append(int(tail))
+        start = (max(known_ids) + 1) if known_ids else 1
+
+        season_short = self._season_short()
+        team_aliases = [self.team.display_name] + self.team.aliases
+        date_pat = re.compile(r"Data:\s*(\d{1,2})/(\d{1,2})/(\d{4})")
+
+        updated = 0
+        misses = 0
+        for n in range(start, start + PROBE_MAX_IDS):
+            if not pending:
+                break
+            ext_id = f"{phase_id}_{n}"
+            url = _build_tabellino_url(ext_id, season_short)
+            if not url:
+                break
+            html = http_get_text(url)
+            if not html:
+                misses += 1
+                if misses >= PROBE_MAX_MISSES:
+                    break
+                continue
+
+            h_name, a_name = _parse_match_teams(html)
+            if not h_name or not a_name:
+                # Pagina template senza match → conta come buco
+                misses += 1
+                if misses >= PROBE_MAX_MISSES:
+                    break
+                continue
+            misses = 0
+
+            # Data (senza richiedere lo score: pre-partita ammesso)
+            dm = date_pat.search(strip_html(html))
+            if not dm:
+                continue
+            try:
+                p_date = (f"{int(dm.group(3)):04d}-"
+                          f"{int(dm.group(2)):02d}-"
+                          f"{int(dm.group(1)):02d}")
+            except ValueError:
+                continue
+
+            # Siamo noi in casa? (convention: tracciamo gare casa)
+            if not team_name_matches(h_name, team_aliases):
+                continue
+
+            a_norm = normalize(a_name)
+            for m in list(pending):
+                m_away_n = normalize(m.away)
+                if m.date != p_date:
+                    continue
+                if not (a_norm and m_away_n
+                        and (a_norm in m_away_n or m_away_n in a_norm)):
+                    continue
+                m.external_id = ext_id
+                # Se il tabellino ha gia' lo score, riempi subito
+                parsed = parse_tabellino(html)
+                if parsed:
+                    m.sh = parsed["sh"]
+                    m.sa = parsed["sa"]
+                    if parsed.get("periods"):
+                        m.periods = parsed["periods"]
+                    if "lnp_tabellino" not in m.sources:
+                        m.sources.append("lnp_tabellino")
+                pending.remove(m)
+                updated += 1
+                break
+
+        if updated:
+            print(f"  🎯 [{self.team.key}] {updated} external_id trovati "
+                  f"via probing sequenziale (start={start})")
         return updated
 
     def _opponent_to_slug(self, opp_norm: str) -> str:
