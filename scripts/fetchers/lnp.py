@@ -52,8 +52,11 @@ PLAYOFF_PHASE_IDS = {
 
 # Source slug per costruire URL pagina squadra LNP (es. /serie-b/{team_slug}).
 # Fase 2.3c — probing sequenziale tabellini (fallback discovery)
-PROBE_MAX_IDS = 25            # quante id oltre il massimo noto sondare
-PROBE_MAX_MISSES = 5          # buchi consecutivi prima di fermarsi
+# Nota calibrazione: LNP alloca gli id per blocchi di round con gap.
+# Verificato 2025-26 B Naz tab.2: QF/SF terminano a 79, Finale parte
+# da 90 (gap di 10 id inutilizzati). MAX_MISSES deve superare il gap.
+PROBE_MAX_IDS = 30            # quante id oltre il massimo noto sondare
+PROBE_MAX_MISSES = 12         # buchi consecutivi prima di fermarsi
 
 CATEGORY_TO_SOURCE_SLUG = {
     "B Nazionale": "serie-b",
