@@ -645,6 +645,13 @@ class LNPFetcher:
                     m.sa = parsed["sa"]
                     if parsed.get("periods"):
                         m.periods = parsed["periods"]
+                    # Affina orario: il tabellino ha il tip-off reale,
+                    # il deducer mette un placeholder "20:00". Senza questo,
+                    # le gare agganciate dal probe restano fuori dal targets
+                    # di _fetch_scores_from_tabellini (gia' hanno sh/sa/periods)
+                    # e l'orario placeholder non verrebbe mai corretto.
+                    if parsed.get("time"):
+                        m.time = parsed["time"]
                     if "lnp_tabellino" not in m.sources:
                         m.sources.append("lnp_tabellino")
                 pending.remove(m)
