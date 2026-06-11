@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import re
 import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
+from email.utils import parsedate_to_datetime
 from dataclasses import dataclass
 from typing import Iterator
 
@@ -27,6 +29,7 @@ class RssMention:
     article_text: str
     score_home: int
     score_away: int
+    pub_date: str | None = None  # ISO YYYY-MM-DD da <pubDate>, se presente
 
 
 class RssPoolFetcher:
@@ -73,6 +76,14 @@ class RssPoolFetcher:
             return None
 
         for men in self._mentions:
+            # Guardia temporale: la menzione deve essere pubblicata il
+            # giorno della gara o quello dopo. Senza questo filtro, due
+            # gare pendenti contro lo stesso avversario (es. G1 e G2 di
+            # una serie playoff) ricevono entrambe lo stesso score.
+            # Menzioni senza pubDate vengono scartate per sicurezza:
+            # il tabellino LNP resta la fonte canonica.
+            if not _pub_date_matches(men.pub_date, match.date):
+                continue
             full_text = f"{men.article_title} {men.article_text}"
             home_hit = _text_contains_team(full_text, home_aliases)
             away_hit = _text_contains_team(full_text, away_aliases)
@@ -99,6 +110,7 @@ class RssPoolFetcher:
             title = _element_text(item.find("title"))
             description = _element_text(item.find("description"))
             description = strip_html(description)
+            pub_date = _parse_pub_date(_element_text(item.find("pubDate")))
 
             # Cerca score sia nel titolo che nella description
             full = f"{title} {description}"
@@ -110,7 +122,32 @@ class RssPoolFetcher:
                     article_text=description,
                     score_home=sh,
                     score_away=sa,
+                    pub_date=pub_date,
                 )
+
+
+def _parse_pub_date(raw: str) -> str | None:
+    """Converte <pubDate> RFC822 (es. 'Wed, 10 Jun 2026 22:22:00 +0200')
+    in data ISO YYYY-MM-DD. None se assente o non parseabile."""
+    if not raw:
+        return None
+    try:
+        return parsedate_to_datetime(raw).strftime("%Y-%m-%d")
+    except (TypeError, ValueError):
+        return None
+
+
+def _pub_date_matches(pub_date: str | None, match_date: str) -> bool:
+    """True se la menzione e' pubblicata il giorno della gara o il
+    giorno successivo (recap mattutino). False se pubDate assente."""
+    if not pub_date or not match_date:
+        return False
+    try:
+        p = datetime.strptime(pub_date, "%Y-%m-%d").date()
+        g = datetime.strptime(match_date, "%Y-%m-%d").date()
+    except ValueError:
+        return False
+    return g <= p <= g + timedelta(days=1)
 
 
 def _element_text(el) -> str:
