@@ -1,3 +1,4 @@
+[CONTINUITA.md](https://github.com/user-attachments/files/28839545/CONTINUITA.md)
 # CONTINUITA.md — Basket Roma PWA
 
 > **Documento operativo single-source-of-truth.** Letto per riprendere il lavoro in nuova sessione senza ricostruire contesto.
@@ -40,7 +41,7 @@ Da rispettare SEMPRE:
 
 ---
 
-## 3. Stato corrente (08/06/2026)
+## 3. Stato corrente (11/06/2026)
 
 ### Cosa gira in produzione
 
@@ -66,16 +67,26 @@ Frontend: index.html
 7. **Frontend Fase 3 nativo v9** (07/06)
 8. **Fix bug deducer date Finale** (07/06)
 9. **Cleanup branch `v9-rewrite` + workflow `update-data-v9-test.yml`** (08/06)
+10. **Probing sequenziale external_id Fase 2.3c** (11/06) — `lnp.py`: fallback `_probe_external_ids` quando la discovery via pagina avversario fallisce (round inter-girone, cache Drupal). Sonda id tabellino oltre il max noto; `PROBE_MAX_MISSES=12` perché LNP alloca gli id per blocchi di round con gap (verificato: SF tab.2 terminano a 79, Finale parte da 90). Il probe scrive anche `time` dal tabellino (il deducer mette placeholder 20:00)
+11. **Guardia pubDate RSS pool** (11/06) — `rss_pool.py`: una menzione si applica solo se pubblicata il giorno gara o il successivo. Fix contaminazione: con 2 gare pendenti vs stesso avversario (G1/G2 Finale), lo stesso score veniva applicato a entrambe. Menzioni senza pubDate scartate
+12. **Frontend: parziali + link tabellino + orari tentative** (11/06, deployato e verificato live) — `index.html`: card risultato mostra parziali quarti e bottone TABELLINO ↗ (URL costruito da `external_id` + `season`, helper `tabellinoUrl`/`periodsLine`, `SEASON_SHORT` derivato da `data.season`); hero/countdown segnalano "(DA CONFERMARE)" sulle gare tentative
 
 ### Stagione 2025-26 stato squadre
 
 | Squadra | Categoria | Stato playoff |
 |---------|-----------|---------------|
-| Virtus GVM Roma 1960 | B Naz gir B | 1° (29V-7P, 58pt) — **in FINALE** vs La T Tecnica Gema Montecatini (G1 8/6 ore 20:30) |
+| Virtus GVM Roma 1960 | B Naz gir B | 1° (29V-7P, 58pt) — **FINALE 1-1** vs La T Tecnica Gema Montecatini (G1 64-69 L, G2 66-61 W) |
 | Luiss Roma | B Naz gir B | 7° (21V-15P, 42pt) — eliminata QF (0-3 vs Logiman Orzinuovi) |
 
 Pattern Finale (Virtus higher seed 1B vs Montecatini seed 2A): C-C-F-F-C
-- G1 8/6 casa, G2 10/6 casa, G3 13/6 trasferta, G4 15/6 trasferta, G5 18/6 casa (se necessaria, tentative)
+- G1 8/6 casa **64-69 L** · G2 10/6 casa **66-61 W** · G3 sab 13/6 trasferta 20:45 PalaTerme · G4 lun 15/6 trasferta (ev.) · G5 gio 18/6 casa (ev., tentative)
+- external_id Finale: blocco `ita3_b_ply_90..94` (G1=90, G2=91; tabellone 1 simmetrico su `ita3_a_ply`)
+- Perdente Finale → spareggio terza promozione, gara unica dom 21/6 a Forlì
+
+### Known-cost (accettati, spariscono con Fase 4)
+- **v9 è stateless tra run**: riparte da `data.json`, non rilegge `data-v9.json`. Conseguenze: re-discovery degli stessi external_id a ogni run + probing (~10-25 fetch LNP/run finché una serie è aperta). Tollerabile con 8 run/giorno
+- **Score playoff = solo v9**: v8.9 non ha vie score per i playoff (calendario LNP = solo regular; widget = solo gare future). By design
+- **RSS = ridondanza best-effort**: gli score stanno spesso solo nel body degli articoli, non nei titoli/description dei feed. Fonte canonica = tabellino LNP via external_id
 
 ---
 
@@ -218,6 +229,7 @@ Steps:
    - più sources > meno
    - Risolve: `v_po_r37_5` (G1 Finale da v8.9) e `v_po_f_g1` (G1 Finale da deducer v9) hanno stessa data dopo fix → mergiati a 1 sola entry
 3. **Filtro date sospette (safety net)**: playoff/playout senza score con data < ultima disputata dello stesso team → nascosti. Protegge da residui bug deducer.
+3b. **Parziali + tabellino (11/06)**: `periodsLine(m.periods)` rende "(17-21, 19-18, ...)"; `tabellinoUrl(m.external_id)` costruisce `LNP/wp/match/{ext_id}/{phase_id}/x{SEASON_SHORT}/tabellino` (phase_id = ext_id senza suffisso numerico). `SEASON_SHORT` settato in doRefresh da `data.season` ("2025-26" → "2526"). CSS: `.gc-score-meta`, `.gc-periods`, `.gc-boxlink`. Nota: l'URL tabellino dà 403 a curl/datacenter (WAF LNP) ma funziona dal browser.
 4. **Multi-classifica**: per ogni team in `config.teams[]`, deriva URL da:
    ```javascript
    CLASSIFICA_URLS_BY_CATEGORY = {
@@ -428,6 +440,15 @@ Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mo
 - Cancellato branch obsoleto `v9-rewrite` (già in main)
 - Cancellato workflow obsoleto `update-data-v9-test.yml`
 - `pre-v9-backup` confermato da tenere fino a fine Finale
+
+**11 giugno** — sessione "score Finale" (debugging multi-step):
+- Sintomo: G1 (8/6) senza score dopo 6+ run. Diagnosi: nessuna via di cattura funzionante — v8.9 non copre playoff (by design), discovery 2.3b fallita (pagina Montecatini = cache Drupal pre-partita, round inter-girone), RSS strutturalmente cieco (score nei body, non nei feed)
+- Fix 1 — **Fase 2.3c probing sequenziale** (`lnp.py`): sonda id tabellino oltre il max noto. Prima iterazione fallita in silenzio: `MAX_MISSES=5` < gap inter-round LNP (SF finiscono a 79, Finale parte a 90 — id G2=`ita3_b_ply_91` VERIFIED dal link boxscore nel comunicato LNP). Ricalibrato a 12 → success: `🎯 2 external_id trovati (start=80)`
+- Bug emerso in corsa — **contaminazione RSS**: con G1+G2 entrambe pendenti vs Montecatini, l'unica menzione (recap G2 66-61) veniva applicata a entrambe → G1 mostrava 66-61 W invece di 64-69 L. Fix: guardia pubDate in `rss_pool.py` (menzione valida solo se pubblicata il giorno gara o il successivo; senza pubDate si scarta)
+- Fix 2 — **probe scrive `time`** dal tabellino: le gare agganciate dal probe hanno già sh/sa/periods e restano fuori dal targets dell'enrichment, quindi il placeholder 20:00 del deducer non veniva mai corretto (gare reali 20:30)
+- Fix 3 — **frontend parziali + TABELLINO ↗ + caveat tentative** (vedi §7.3b). Deployato e verificato live
+- Falso allarme chiuso: "anomalia cron" segnalata il 08-10/06 non esisteva — i run fuori schedule erano `workflow_dispatch` manuali. §3 era già corretto
+- Lezione di metodo confermata (rinforza la nota 🚨 in §15): il primo probing è morto in silenzio per calibrazione su assunzione; la soluzione è arrivata trovando il dato reale (link boxscore nel comunicato LNP via web_fetch di /news)
 
 ---
 
