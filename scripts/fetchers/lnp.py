@@ -558,10 +558,12 @@ class LNPFetcher:
             and not m.external_id
         ]
         today_iso = date.today().strftime("%Y-%m-%d")
+        # Trigger: basta una gara giocata senza external_id. NON richiede
+        # score mancante: uno score potrebbe esserci ma essere errato
+        # (es. contaminazione RSS) e il tabellino e' la fonte canonica.
         trigger = [
             m for m in pending
             if m.date and m.date <= today_iso
-            and (m.sh is None or m.sa is None)
         ]
         if not trigger:
             return 0
