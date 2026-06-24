@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-06-22T22:51:41.257439",
+  "last_updated": "2026-06-24T06:04:11.114437",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -147,7 +147,7 @@
       "away": "Adamant Ferrara",
       "sh": 84,
       "sa": 72,
-      "round": 9
+      "round": 10
     },
     {
       "id": "l07",
@@ -339,7 +339,7 @@
       "away": "Adamant Ferrara",
       "sh": 65,
       "sa": 75,
-      "round": 24
+      "round": 26
     },
     {
       "id": "v24",
