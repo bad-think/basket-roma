@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-06-27T06:23:26.592541",
+  "last_updated": "2026-06-27T17:19:59.099532",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -654,7 +654,29 @@
       "sh": 94,
       "sa": 71,
       "round": 37,
-      "game_num": 1
+      "game_num": 1,
+      "sources": [
+        "lnp_tabellino"
+      ],
+      "external_id": "ita3_b_ply_50",
+      "periods": [
+        [
+          31,
+          16
+        ],
+        [
+          22,
+          15
+        ],
+        [
+          21,
+          20
+        ],
+        [
+          20,
+          20
+        ]
+      ]
     },
     {
       "id": "v_po_r38",
@@ -668,7 +690,29 @@
       "sh": 98,
       "sa": 79,
       "round": 38,
-      "game_num": 2
+      "game_num": 2,
+      "sources": [
+        "lnp_tabellino"
+      ],
+      "external_id": "ita3_b_ply_54",
+      "periods": [
+        [
+          29,
+          15
+        ],
+        [
+          31,
+          24
+        ],
+        [
+          22,
+          23
+        ],
+        [
+          16,
+          17
+        ]
+      ]
     },
     {
       "id": "l_po_r37",
