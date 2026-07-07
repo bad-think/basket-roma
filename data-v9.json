@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-07-06T22:21:53.974297",
+  "last_updated": "2026-07-07T06:05:14.911603",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -445,7 +445,7 @@
       "away": "Consultinvest Loreto Pesaro",
       "sh": 66,
       "sa": 53,
-      "round": 22
+      "round": 24
     },
     {
       "id": "v22",
