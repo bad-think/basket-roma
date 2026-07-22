@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-07-22T20:55:01.447796",
+  "last_updated": "2026-07-22T22:11:58.132312",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -641,6 +641,61 @@
       "sh": 92,
       "sa": 76,
       "round": 38
+    },
+    {
+      "id": "v_po_f_g1",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-06-08",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 49,
+      "game_num": 1,
+      "series_id": "f_la t tecnica gema mo",
+      "sources": [
+        "lnp_advance"
+      ]
+    },
+    {
+      "id": "v_po_f_g2",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-06-10",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 50,
+      "game_num": 2,
+      "series_id": "f_la t tecnica gema mo",
+      "sources": [
+        "lnp_advance"
+      ]
+    },
+    {
+      "id": "v_po_f_g5",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "playoff",
+      "date": "2026-06-18",
+      "time": "20:00",
+      "home": "Virtus GVM Roma",
+      "away": "La T Tecnica Gema Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 53,
+      "game_num": 5,
+      "series_id": "f_la t tecnica gema mo",
+      "tentative": true,
+      "sources": [
+        "lnp_advance"
+      ]
     }
   ],
   "standings": {
