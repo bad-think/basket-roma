@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-07-23T20:50:45.483049",
+  "last_updated": "2026-07-23T22:10:24.364247",
   "season": "2025-26",
   "config": {
     "season": "2025-26",
@@ -266,7 +266,7 @@
       "round": 9
     },
     {
-      "id": "l10",
+      "id": "l09",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
       "phase": "regular",
@@ -276,7 +276,7 @@
       "away": "OraSì Ravenna",
       "sh": 84,
       "sa": 76,
-      "round": 10
+      "round": 9
     },
     {
       "id": "l10",
@@ -357,7 +357,7 @@
       "round": 14
     },
     {
-      "id": "v17",
+      "id": "v15",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
       "phase": "regular",
@@ -367,7 +367,7 @@
       "away": "OraSì Ravenna",
       "sh": 69,
       "sa": 60,
-      "round": 17
+      "round": 15
     },
     {
       "id": "v16",
