@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-29T17:21:56.923679",
+  "last_updated": "2026-08-04T22:18:26.901832",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -13,7 +13,7 @@
           "virtus gvm roma 1960",
           "pallacanestro virtus roma"
         ],
-        "serie": "B Nazionale",
+        "serie": "A2",
         "girone": "B",
         "venue_name": "PalaTiziano – Palazzetto dello Sport",
         "venue_address": "Piazza Apollodoro 10, 00196 Roma",
@@ -33,7 +33,7 @@
         "venue_maps": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
       }
     },
-    "classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
+    "classifica_url": "https://www.legapallacanestro.com/serie/1/classifica",
     "series_closed": [
       {
         "team": "luiss",
