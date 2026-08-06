@@ -1,3 +1,4 @@
+[CONTINUITA.md](https://github.com/user-attachments/files/30793720/CONTINUITA.md)
 [CONTINUITA.md](https://github.com/user-attachments/files/28839545/CONTINUITA.md)
 # CONTINUITA.md — Basket Roma PWA
 
@@ -41,7 +42,7 @@ Da rispettare SEMPRE:
 
 ---
 
-## 3. Stato corrente (11/06/2026)
+## 3. Stato corrente (05/08/2026)
 
 ### Cosa gira in produzione
 
@@ -71,7 +72,12 @@ Frontend: index.html
 11. **Guardia pubDate RSS pool** (11/06) — `rss_pool.py`: una menzione si applica solo se pubblicata il giorno gara o il successivo. Fix contaminazione: con 2 gare pendenti vs stesso avversario (G1/G2 Finale), lo stesso score veniva applicato a entrambe. Menzioni senza pubDate scartate
 12. **Frontend: parziali + link tabellino + orari tentative** (11/06, deployato e verificato live) — `index.html`: card risultato mostra parziali quarti e bottone TABELLINO ↗ (URL costruito da `external_id` + `season`, helper `tabellinoUrl`/`periodsLine`, `SEASON_SHORT` derivato da `data.season`); hero/countdown segnalano "(DA CONFERMARE)" sulle gare tentative
 
-### Stagione 2025-26 stato squadre
+### Stagione 2025-26 — CHIUSA
+- **Virtus GVM Roma 1960**: QF vinta 3-0 vs Paffoni, SF vinta 3-2 vs Rucker San Vendemiano, Finale **PERSA 2-3 vs Montecatini Terme**, Gara Unica spareggio A2 **PERSA 67-71 vs Elachem Vigevano** (Forlì, 21/06/2026) → resta in Serie B Girone B 2026-27
+- **LUISS Roma**: confermata in Serie B Girone B 2026-27
+- Montecatini Terme Valdinievole (ex-La T Tecnica Gema Montecatini): slug LNP da aggiornare se servono query retrospettive
+
+### Stagione 2026-27 — DATI NOTI (da CU FIP N.94 + Calendario LBA)
 
 | Squadra | Categoria | Stato playoff |
 |---------|-----------|---------------|
@@ -284,6 +290,19 @@ Rimuove partite con id `v_po_f_g*` da data.json. È no-op normalmente; se in fut
 
 ## 9. Config `config/seasons/2025-26.json` — series_closed correnti
 
+> Stagione 2025-26 CHIUSA. La Virtus ha perso la Finale playoff 2025-26 vs Montecatini → NON promossa in A2.
+
+```json
+"series_closed": [
+  {"team_key":"luiss",  "round_name":"QF",          "result":"0-3", "team_advances":false},
+  {"team_key":"virtus", "round_name":"QF",          "result":"3-0", "team_advances":true},
+  {"team_key":"virtus", "round_name":"SF",          "result":"3-2", "team_advances":true},
+  {"team_key":"virtus", "round_name":"Finale",      "result":"2-3", "team_advances":false, "next_phase":"spareggio_a2"},
+  {"team_key":"virtus", "round_name":"Gara Unica A2","result":"0-1","score":"67-71","date":"2026-06-21","team_advances":false}
+]
+```
+(già aggiornato in `config/seasons/2025-26.json` con score partita per partita — `pre-v9-backup` **ELIMINATO** 05/08/2026)
+
 ```json
 {
   "series_closed": [
@@ -306,7 +325,7 @@ Rimuove partite con id `v_po_f_g*` da data.json. È no-op normalmente; se in fut
 
 ---
 
-## 10. Roadmap (riprogrammata 08/06/2026)
+## 10. Roadmap (aggiornata 27/06/2026)
 
 > Principio guida: **foundation prima delle feature**, **detector che propone (gate umano), mai auto-apply su scraping**, **discovery solo con ≥2 fonti reali**.
 
@@ -314,14 +333,14 @@ Rimuove partite con id `v_po_f_g*` da data.json. È no-op normalmente; se in fut
 |------|--------|------|
 | **4** | lug–ago 2026 | **Cutover completo (priorità #1):** dismetti `update_data.py`, cron usa solo `main.py`, rimuovi step legacy + cleanup. Frontend invariato (continua a leggere `data-v9.json`). Collassa il doppio parser → meno fragilità a ogni run |
 | **5** | ago 2026 | Hardening (edge cases, test) **+ Bracket DETECTOR:** parser del bracket ufficiale LNP/LBA → scrive entry `series_closed` *proposta* in log Actions o `proposals.json`. Utente la incolla in `2025-26.json` (gate umano). Trigger B diventa *assistito*, non eliminato. Non time-critical: prossimi playoff = primavera 2027 |
-| **6** | set 2026 | **Fetcher LBA:** scrivi `scripts/fetchers/lba.py` (legabasket.it). Crea `config/seasons/2026-27.json` con 3 squadre (categoria Virtus 26-27 fissata qui in base a esito Finale). Test canary (es. Olimpia Milano). **+ Discovery probe:** ogni fetcher espone `discover(team)` → "questa squadra è nel mio campionato stagione N?" → auto-binding categoria. Ora ha 2 fonti per validare il cross-league |
-| **Go-live BC Roma** | ott 2026 | Inizio Serie A LBA 2026-27. Frontend autoconfigura 3 tab + classifiche (se categorie diverse) |
+| **6** | set 2026 | **Fetcher LBA + EuroCup:** scrivi `scripts/fetchers/lba.py` (legabasket.it) e `scripts/fetchers/eurocup.py`. Crea `config/seasons/2026-27.json` con **4 squadre** (Virtus, LUISS, Basketball Roma SPQR, Maxima Roma — categoria Virtus 26-27 fissata da esito Finale). Test canary su Olimpia Milano. **+ Discovery probe:** ogni fetcher espone `discover(team)` → auto-binding categoria. Slug LNP/LBA delle due nuove squadre da verificare su sito federale (non ancora pubblicati al 27/06). |
+| **Go-live Serie A Roma** | ott 2026 | Inizio Serie A LBA 2026-27. Frontend autoconfigura ≥4 tab (Virtus, LUISS, Basketball Roma SPQR, Maxima Roma) + classifiche per categoria. EuroCup: entrambe le squadre romane impegnate (Basketball Roma SPQR + Maxima Roma). |
 | 7 | gen 2027 *(condizionato)* | `lba_cup.py` — Coppa Italia LBA Final Eight, se BC Roma top-8 |
-| 8 | est 2027 *(condizionato)* | NBA Europe fetcher, se BC Roma slot Roma garantito |
+| 8 | est 2027 | **NBA Europe fetcher** — competizione confermata, 2 slot italiani (Milano + Roma). Probabili partecipanti: Basketball Roma SPQR e/o Maxima Roma. Implementazione condizionata all'effettiva assegnazione slot. |
 
 ### Principi fissati
 
-- 🚨 **Fase 4 deve precedere Fase 6** — altrimenti BC Roma esisterebbe solo in `data-v9.json` e v8.9 non saprebbe gestirla.
+- 🚨 **Fase 4 deve precedere Fase 6** — altrimenti Basketball Roma SPQR e Maxima Roma esisterebbero solo in `data-v9.json` e v8.9 non saprebbe gestirle. Con 4 squadre e 4+ competizioni il cutover non è più opzionale: **deadline fissa estate 2026**.
 - **Un fetcher per ogni sito-fonte nuovo** = confine corretto, non fallimento. Costo "una volta", non "ogni anno". `lba.py` scritto una volta → BC Roma auto-gestita per sempre.
 - **Mai auto-apply su scraping.** Il detector propone, l'utente conferma. Safety net (cleanup idempotente, filtro date-sospette) restano permanenti.
 - **Detector ≠ autonomia totale.** Obiettivo reale: non dover *ricordare* la procedura, non "zero codice". L'autonomia cieca su fonti instabili è un cattivo scambio per un sistema non presidiato.
@@ -331,22 +350,53 @@ Rimuove partite con id `v_po_f_g*` da data.json. È no-op normalmente; se in fut
 
 ## 11. Squadre future (post-2025-26)
 
-### BC Roma (ex-Vanoli Cremona)
-- **[VERIFIED da Il Post + FIP + RealGM]** codice FIP a BC Roma Srl dal 29/05/2026
+> **Aggiornamento 27/06/2026 — Roma torna alla Serie A con DUE squadre**
+> [VERIFIED — FIP Consiglio federale straordinario, 26/06/2026]
+
+### Basketball Roma SPQR (ex-Vanoli Cremona)
+- **[VERIFIED 29/05/2026]** Trasferimento titolo sportivo Vanoli Cremona → Basketball Roma SPQR approvato FIP
 - Soci: Donnie Nelson, Luka Doncic, Bianchini, Kaukenas
-- Gioca **Serie A LBA 2026-27** (esordio ottobre 2026)
-- Vanoli 2025-26 finita 11° (11V-17S), fuori playoff → BC Roma NON eredita qualifiche europee
-- Palazzetto TBD (PalaEUR vs altro)
-- Nome ufficiale commerciale TBD (atteso annuncio luglio 2026)
-- **NBA Europe 2027-28** con 16 squadre, 2 slot italiani garantiti (Milano + Roma)
+- Gioca **Serie A LBA SisalClub 2026-27** + **EuroCup 2026-27**
+- Nome nel calendario LBA: **"BC Roma SPQR"** (slug legabasket.it: da rilevare)
+- Prima gara LBA: Dom **27/09/2026** TRASF vs Nutribullet Treviso Basket (G1)
+- Prima gara CASA LBA: Dom **04/10/2026** vs Bertram Derthona Tortona (G2)
+- Palazzetto: da confermare ufficialmente (PalaEUR candidato)
 
-### Virtus 2026-27
-- Se vince Finale playoff 2025-26 → **promossa in A2**, categoria cambia, fetcher resta LNP con `source_slug: "serie-a2"`
-- Se perde Finale → resta in B Naz
-- Architettura v9 supporta cambio categoria nel config senza modifiche codice
+### Maxima Roma (ex-Germani Brescia)
+- **[VERIFIED 26/06/2026]** Trasferimento titolo sportivo Germani Brescia → Maxima Roma approvato FIP
+- Acquisita dall'imprenditore americano Paul Matiasic (stesso gruppo: Pallacanestro Trieste)
+- Gioca **Serie A LBA SisalClub 2026-27** + **EuroCup 2026-27**
+- Nome nel calendario LBA: **"Maxima Roma"** (slug legabasket.it: da rilevare)
+- Prima gara LBA: Dom **27/09/2026** CASA vs Napoli Basketball (G1) — PalaEUR
+- Palazzetto: **PalaEUR** (accordo con EUR S.p.A. confermato, capienza >11.000)
+- Piano industriale: impatto economico stimato 24M€/anno su Roma
 
-### Luiss 2026-27
-- Sicuramente in **B Nazionale** (no rischio retrocessione, no promozione)
+### NBA Europe 2027-28
+- [VERIFIED] Progetto NBA per competizione continentale europea confermato
+- 2 slot italiani garantiti: Milano + Roma
+- Probabile coinvolgimento di entrambe le squadre romane di Serie A
+
+### Virtus GVM Roma 1960 — 2026-27
+- **[VERIFIED]** Confermata in **Serie B Girone B** — Finale persa 2-3 vs Montecatini Terme, poi spareggio A2 perso 67-71 vs Elachem Vigevano (Gara Unica, Forlì, 21/06/2026)
+- `source_slug`: invariato (`"virtus-gvm-roma-1960"` — da verificare su LNP a stagione aperta)
+- Prima gara: Sab **26/09/2026 20:00** vs Felice Scandone Avellino (CASA, gara 2351, PalaTiziano)
+- Calendario: 17 giornate andata (set–dic 2026) + 17 ritorno (gen–apr 2027)
+- Girone B 2026-27 include Montecatini (ora "MONTECATINI TERME VALDINIEVOLE" — slug LNP cambiato)
+
+### LUISS Roma — 2026-27
+- **[VERIFIED CU FIP N.94 30/07/2026]** Confermata in **Serie B Girone B**
+- `source_slug`: invariato (`"luiss-roma"` — da verificare su LNP a stagione aperta)
+- Prima gara: Sab **26/09/2026 18:00** TRASF vs Loreto Pesaro (gara 2346)
+- Prima gara CASA: Sab **03/10/2026 18:30** vs Latina Basket (gara 2361, PalaTiziano)
+- Calendario: stessa struttura di Virtus (girone B, 34 giornate)
+
+### Implicazioni architetturali immediate
+- `config/seasons/2026-27.json`: **4 squadre** + fonte EuroCup per SPQR e Maxima
+- `scripts/fetchers/lba.py`: nuovo fetcher (legabasket.it) — Fase 6
+- `scripts/fetchers/eurocup.py`: nuovo fetcher — Fase 6 (o 6b se serve priorità separata)
+- PianetaBasket section EuroCup (35 o 48) già mappata in codice: usabile come RSS pool
+- `PLAYOFF_PHASE_IDS` LBA: da rilevare su LNP/legabasket.it a stagione aperta
+- Slug delle nuove società: da cercare su legabasket.it e/o legapallacanestro.com non appena pubblicati (atteso luglio-agosto 2026)
 
 ---
 
@@ -368,7 +418,7 @@ URL diretto: `https://github.com/bad-think/basket-roma/blob/main/data-v9.json` �
 
 ### Cleanup branch backup
 - `v9-rewrite`: **CANCELLATO 08/06/2026** (già in `main` via squash merge)
-- `pre-v9-backup`: **NON ancora cancellato.** Cancellabile dopo fine serie Finale (>14/06, idealmente post-G5 ~18/06) se sistema stabile
+- `pre-v9-backup`: **ELIMINATO** 05/08/2026 (stagione 2025-26 chiusa)
 - Via UI: `https://github.com/bad-think/basket-roma/branches` → icona trash
 
 ### Cancellare un workflow obsoleto
@@ -439,7 +489,7 @@ Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mo
 - Riprogrammata §10: Fase 4 (cutover) promossa a priorità #1; bracket parser riposizionato come *detector con gate umano* in Fase 5; discovery probe spostato in Fase 6 (richiede ≥2 fonti reali). Fissato confine "un fetcher per ogni sito-fonte nuovo"
 - Cancellato branch obsoleto `v9-rewrite` (già in main)
 - Cancellato workflow obsoleto `update-data-v9-test.yml`
-- `pre-v9-backup` confermato da tenere fino a fine Finale
+- `pre-v9-backup` confermato da tenere fino a fine Finale (poi eliminato 05/08/2026)
 
 **11 giugno** — sessione "score Finale" (debugging multi-step):
 - Sintomo: G1 (8/6) senza score dopo 6+ run. Diagnosi: nessuna via di cattura funzionante — v8.9 non copre playoff (by design), discovery 2.3b fallita (pagina Montecatini = cache Drupal pre-partita, round inter-girone), RSS strutturalmente cieco (score nei body, non nei feed)
@@ -450,9 +500,40 @@ Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mo
 - Falso allarme chiuso: "anomalia cron" segnalata il 08-10/06 non esisteva — i run fuori schedule erano `workflow_dispatch` manuali. §3 era già corretto
 - Lezione di metodo confermata (rinforza la nota 🚨 in §15): il primo probing è morto in silenzio per calibrazione su assunzione; la soluzione è arrivata trovando il dato reale (link boxscore nel comunicato LNP via web_fetch di /news)
 
+**27 giugno** — notizia strutturale (nessun lavoro di codice):
+- FIP approva trasferimento Germani Brescia → **Maxima Roma** (Paul Matiasic). Aggiunge seconda squadra romana in Serie A per 2026-27, accanto a Basketball Roma SPQR (ex-Vanoli)
+- Da 2026-27: 4 squadre nel progetto (Virtus, LUISS, Basketball Roma SPQR, Maxima Roma), 4+ competizioni (B Naz, B Naz, Serie A + EuroCup, Serie A + EuroCup)
+- Fase 4 (cutover) assume deadline obbligatoria estate 2026. Fasi 6-7 (multi-categoria, EuroCup) diventano requisiti concreti con go-live ottobre 2026
+- Nessun codice da toccare: slug nuove società non ancora pubblicati da LNP/LBA (atteso luglio-agosto)
+- §10 roadmap e §11 squadre future aggiornati in questo commit
+
+---
+
+**5 agosto 2026** — Calendari 2026-27 ufficiali:
+- CU FIP N.94 (30/07/2026): calendario definitivo Serie B Girone B 2026-27. **Virtus Roma 1960 e LUISS Roma entrambe nel Girone B** → Virtus NON promossa: Finale persa 2-3 vs Montecatini Terme + Gara Unica spareggio A2 persa 67-71 vs Elachem Vigevano (Forlì, 21/06/2026)
+- Calendario LBA SisalClub (30/07/2026): BC Roma SPQR e Maxima Roma confermati, nomi definitivi verificati. G1 LBA: 27/09/2026
+- Slug LNP Serie B 2026-27 da verificare a stagione aperta (sito LNP aggiorna i profili team a settembre)
+- `pre-v9-backup`: **ELIMINATO** 05/08/2026
+- Montecatini rinominata "Montecatini Terme Valdinievole" — impatta solo query retroattive
+
+---
+
+**5 agosto 2026 (aggiornamento log playoff)** — log completo stagione 2025-26 acquisito:
+- QF vs Paffoni Fulgor: W 3-0 (94-71, 98-79, 75-64 @)
+- SF vs Rucker San Vendemiano: W 3-2 (75-59, 87-74, 66-73 @, 63-77 @, 86-62)
+- Finale vs Montecatini Terme: L 2-3 (64-69, 66-61, 72-78 @, 73-54 @, 63-66)
+- Gara Unica spareggio A2 vs Elachem Vigevano: L 67-71 (Forlì, 21/06/2026)
+- Top scorer playoffs: Y. Rodriguez (32pt max vs Rucker G2), M. Visintin (protagonista Finale)
+- Nota: G3-G5 Finale e Gara Unica non tracciati dal pipeline (partite trasferta/neutrali); data-v9.json ha solo G1 e G2 Finale
+- Nota sessione: ho introdotto un errore (concluso "Finale VINTA" invece di "PERSA") che ho poi corretto con il log completo
+
 ---
 
 ## 15. Note critiche da NON dimenticare
+
+> **Virtus 2025-26: Finale PERSA 2-3 + spareggio A2 PERSO.** Percorso: QF W 3-0 Paffoni, SF W 3-2 Rucker, Finale L 2-3 Montecatini Terme (G1 64-69 L, G2 66-61 W, G3 72-78 L, G4 73-54 W, G5 63-66 L), Gara Unica L 67-71 vs Elachem Vigevano (Forlì, 21/06/2026). `series_closed` aggiornato con score completi. `pre-v9-backup` **eliminato** 05/08/2026.
+
+> **Montecatini cambia nome**: "La T Tecnica Gema Montecatini" → "MONTECATINI TERME VALDINIEVOLE". Il slug LNP per il girone 2026-27 sarà diverso. Non impatta i dati 2025-26 già consolidati.
 
 🚨 **Mai riabilitare `--write-legacy`** finché lo schema legacy v9 non è validato 1:1 contro v8.9. Round numeri progressivi rompono il frontend.
 
@@ -467,7 +548,7 @@ Match con `tentative: true` (es. G5 Finale, può non disputarsi) → frontend mo
 
 🚨 **Multi-classifica auto-deriva** da `teams[].active_competitions[0].category`. Se BC Roma config 26-27 avrà `category: "Serie A"`, frontend mostra automaticamente bottone "CLASSIFICA SERIE A" che linka legabasket.it.
 
-🚨 **Branch `pre-v9-backup`** è safety net. NON cancellare prima di fine Finale (>14/06, idealmente post-G5 ~18/06).
+✅ **Branch `pre-v9-backup`** eliminato 05/08/2026 — stagione 2025-26 chiusa, sistema stabile.
 
 🚨 **freshness-check.yml** monitora il workflow `update-data.yml`. Se cambi nome del workflow principale, aggiorna anche freshness-check.
 
