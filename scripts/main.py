@@ -37,7 +37,7 @@ from fetchers import REGISTRY, RssPoolFetcher  # noqa: E402
 # PATH DI DEFAULT
 # ============================================================================
 ROOT = _HERE.parent
-DEFAULT_CONFIG = ROOT / "config" / "seasons" / "2025-26.json"
+DEFAULT_CONFIG = ROOT / "config" / "seasons" / "2026-27.json"
 DEFAULT_DATA = ROOT / "data.json"
 OUT_V9 = ROOT / "data-v9.json"
 
