@@ -1,138 +1,248 @@
 {
-  "$schema_version": "1.0",
-  "season": "2026-27",
-  "next_season": "2027-28",
-  "league_classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
-  "rss_feeds": [
-    {
-      "url": "https://sportando.basketball/category/europa/italia/serie-b/feed/",
-      "categories": [
-        "B Nazionale"
-      ],
-      "enabled": true,
-      "note": "Feed Serie B Sportando — 200 OK dal runner, contenuto soggetto a variazioni stagionali"
-    },
-    {
-      "url": "https://www.pianetabasket.com/rss/?section=38",
-      "categories": [
-        "B Nazionale"
-      ],
-      "enabled": false,
-      "note": "HTTP 404 da agosto 2026 — sezione Serie B rimossa o rinominata. Da riverificare."
-    },
-    {
-      "url": "https://www.pianetabasket.com/rss/?section=2",
-      "categories": [
-        "A"
-      ],
-      "enabled": false,
-      "note": "Attivare quando BC Roma SPQR / Maxima Roma fetcher LBA è operativo (Fase 6)"
-    },
-    {
-      "url": "https://www.pianetabasket.com/rss/?section=35",
-      "categories": [
-        "EuroCup"
-      ],
-      "enabled": false,
-      "note": "Attivare con Fase 6b (EuroCup fetcher)"
-    },
-    {
-      "url": "https://www.pianetabasket.com/rss/?section=43",
-      "categories": [
-        "A2"
-      ],
-      "enabled": false,
-      "note": "Disponibile per futuro uso A2"
-    },
-    {
-      "url": "https://www.basketinside.com/feed/",
-      "categories": [
-        "all"
-      ],
-      "enabled": false,
-      "note": "WordPress restituisce HTML invece di XML — da investigare"
-    }
-  ],
-  "teams": [
-    {
-      "key": "virtus",
-      "display_name": "Virtus GVM Roma",
-      "short_name": "Virtus",
-      "color_primary": "#FFD700",
-      "color_secondary": "#000000",
-      "aliases": [
-        "virtus gvm roma",
-        "virtus roma",
-        "virtus gvm roma 1960",
-        "pallacanestro virtus roma"
-      ],
-      "venue": {
-        "name": "PalaTiziano – Palazzetto dello Sport",
-        "address": "Piazza Apollodoro 10, 00196 Roma",
-        "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
-      },
-      "active_competitions": [
+    "$schema_version": "1.0",
+    "season": "2025-26",
+    "next_season": "2026-27",
+    "league_classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
+    "rss_feeds": [
         {
-          "id": "b_naz_2627",
-          "type": "championship",
-          "category": "B Nazionale",
-          "girone": "B",
-          "fetcher": "lnp",
-          "source_slug": "serie-b",
-          "phases": [
-            "regular",
-            "playoff",
-            "playout"
-          ],
-          "note": "Slug LNP verificato operativo 06/08/2026 — 34 partite caricate"
-        }
-      ]
-    },
-    {
-      "key": "luiss",
-      "display_name": "Luiss Roma",
-      "short_name": "Luiss",
-      "color_primary": "#003366",
-      "color_secondary": "#FFFFFF",
-      "aliases": [
-        "luiss roma",
-        "luiss",
-        "luiss basket roma"
-      ],
-      "venue": {
-        "name": "PalaTiziano – Palazzetto dello Sport",
-        "address": "Piazza Apollodoro 10, 00196 Roma",
-        "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
-      },
-      "active_competitions": [
+            "url": "https://sportando.basketball/category/europa/italia/serie-b/feed/",
+            "categories": [
+                "B Nazionale"
+            ],
+            "enabled": true,
+            "note": "Feed Serie B specifico: alto tasso di articoli score-rich"
+        },
         {
-          "id": "b_naz_2627",
-          "type": "championship",
-          "category": "B Nazionale",
-          "girone": "B",
-          "fetcher": "lnp",
-          "source_slug": "serie-b",
-          "phases": [
-            "regular",
-            "playoff",
-            "playout"
-          ],
-          "note": "Slug LNP verificato operativo 06/08/2026 — 34 partite caricate"
+            "url": "https://www.pianetabasket.com/rss/?section=38",
+            "categories": [
+                "B Nazionale"
+            ],
+            "enabled": true
+        },
+        {
+            "url": "https://sportando.basketball/feed/",
+            "categories": [
+                "all"
+            ],
+            "enabled": false,
+            "note": "Feed generale: deprecato, troppo rumore. Usare /category/.../serie-b/feed/"
+        },
+        {
+            "url": "https://www.basketinside.com/feed/",
+            "categories": [
+                "all"
+            ],
+            "enabled": false,
+            "note": "WordPress restituisce HTML invece di XML, da investigare"
+        },
+        {
+            "url": "https://www.pianetabasket.com/rss/?section=43",
+            "categories": [
+                "A2"
+            ],
+            "enabled": false,
+            "note": "Attivare quando una squadra tracciata sale in A2"
+        },
+        {
+            "url": "https://www.pianetabasket.com/rss/?section=2",
+            "categories": [
+                "A"
+            ],
+            "enabled": false,
+            "note": "Attivare quando una squadra tracciata sale in A (es. BC Roma 2026-27)"
+        },
+        {
+            "url": "https://www.pianetabasket.com/rss/?section=35",
+            "categories": [
+                "EuroCup"
+            ],
+            "enabled": false,
+            "note": "Attivare se qualificazione EuroCup"
+        },
+        {
+            "url": "https://www.pianetabasket.com/rss/?section=48",
+            "categories": [
+                "Champions League"
+            ],
+            "enabled": false,
+            "note": "Attivare se qualificazione Basketball Champions League"
         }
-      ]
-    }
-  ],
-  "series_closed": [],
-  "_pending_teams": {
-    "bc_roma_spqr": {
-      "note": "Da aggiungere in Fase 6. Slug legabasket.it da rilevare a settembre 2026. Competizioni: LBA Serie A + EuroCup.",
-      "first_game": "2026-09-27",
-      "venue_home": "TBD (PalaEUR candidato)"
-    },
-    "maxima_roma": {
-      "note": "Da aggiungere in Fase 6. Slug legabasket.it da rilevare a settembre 2026. Competizioni: LBA Serie A + EuroCup.",
-      "first_game": "2026-09-27",
-      "venue_home": "PalaEUR – Palazzo dello Sport, Piazza Guglielmo Marconi, Roma"
-    }
-  }
+    ],
+    "teams": [
+        {
+            "key": "virtus",
+            "display_name": "Virtus GVM Roma",
+            "short_name": "Virtus",
+            "color_primary": "#FFD700",
+            "color_secondary": "#000000",
+            "aliases": [
+                "virtus gvm roma",
+                "virtus roma",
+                "virtus gvm roma 1960",
+                "pallacanestro virtus roma"
+            ],
+            "venue": {
+                "name": "PalaTiziano – Palazzetto dello Sport",
+                "address": "Piazza Apollodoro 10, 00196 Roma",
+                "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+            },
+            "active_competitions": [
+                {
+                    "id": "b_naz_2526",
+                    "type": "championship",
+                    "category": "B Nazionale",
+                    "girone": "B",
+                    "fetcher": "lnp",
+                    "source_slug": "serie-b",
+                    "phases": [
+                        "regular",
+                        "playoff",
+                        "playout"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "luiss",
+            "display_name": "Luiss Roma",
+            "short_name": "Luiss",
+            "color_primary": "#003366",
+            "color_secondary": "#FFFFFF",
+            "aliases": [
+                "luiss roma",
+                "luiss",
+                "luiss basketball"
+            ],
+            "venue": {
+                "name": "PalaTiziano – Palazzetto dello Sport",
+                "address": "Piazza Apollodoro 10, 00196 Roma",
+                "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+            },
+            "active_competitions": [
+                {
+                    "id": "b_naz_2526",
+                    "type": "championship",
+                    "category": "B Nazionale",
+                    "girone": "B",
+                    "fetcher": "lnp",
+                    "source_slug": "serie-b",
+                    "phases": [
+                        "regular",
+                        "playoff",
+                        "playout"
+                    ]
+                }
+            ]
+        }
+    ],
+    "series_closed": [
+        {
+            "team_key": "luiss",
+            "competition_id": "b_naz_2526",
+            "phase": "playoff",
+            "round_name": "QF",
+            "opponent": "Logiman Orzinuovi",
+            "result": "0-3",
+            "team_advances": false,
+            "note": "Eliminata QF 2025-26 (G3 casa 72-89)"
+        },
+        {
+            "team_key": "virtus",
+            "competition_id": "b_naz_2526",
+            "phase": "playoff",
+            "round_name": "QF",
+            "opponent": "Paffoni Fulgor Basket Omegna",
+            "result": "3-0",
+            "team_advances": true,
+            "next_opponent": "Rucker San Vendemiano",
+            "next_opponent_seed": 4,
+            "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF vs Rucker (vincente Serie 4)"
+        },
+        {
+            "team_key": "virtus",
+            "competition_id": "b_naz_2526",
+            "phase": "playoff",
+            "round_name": "SF",
+            "opponent": "Rucker San Vendemiano",
+            "result": "3-2",
+            "team_advances": true,
+            "next_opponent": "La T Tecnica Gema Montecatini",
+            "next_opponent_seed": 2,
+            "note": "Vincente SF 2025-26 (3-2 su Rucker, serie a G5 31/5 86-62). Finale vs Montecatini (vincente Tabellone 1, 2A). Pattern home CCFFC confermato da calendario LNP (G1/G2/G5 casa Virtus)."
+        },
+        {
+            "team_key": "virtus",
+            "competition_id": "b_naz_2526",
+            "phase": "playoff",
+            "round_name": "Finale",
+            "opponent": "La T Tecnica Gema Montecatini",
+            "result": "2-3",
+            "scores": [
+                {
+                    "g": 1,
+                    "home": "Virtus",
+                    "away": "Montecatini",
+                    "sh": 64,
+                    "sa": 69,
+                    "wl": "L"
+                },
+                {
+                    "g": 2,
+                    "home": "Virtus",
+                    "away": "Montecatini",
+                    "sh": 66,
+                    "sa": 61,
+                    "wl": "W"
+                },
+                {
+                    "g": 3,
+                    "home": "Montecatini",
+                    "away": "Virtus",
+                    "sh": 78,
+                    "sa": 72,
+                    "wl": "L"
+                },
+                {
+                    "g": 4,
+                    "home": "Montecatini",
+                    "away": "Virtus",
+                    "sh": 54,
+                    "sa": 73,
+                    "wl": "W"
+                },
+                {
+                    "g": 5,
+                    "home": "Virtus",
+                    "away": "Montecatini",
+                    "sh": 63,
+                    "sa": 66,
+                    "wl": "L"
+                }
+            ],
+            "team_advances": false,
+            "next_phase": "spareggio_a2",
+            "note": "Finale PERSA 2-3. Montecatini promossa in A2. Virtus accede a spareggio A2 come finalista perdente."
+        },
+        {
+            "team_key": "virtus",
+            "competition_id": "b_naz_2526",
+            "phase": "spareggio_a2",
+            "round_name": "Gara Unica A2",
+            "opponent": "Elachem Vigevano",
+            "result": "0-1",
+            "scores": [
+                {
+                    "g": 1,
+                    "venue": "Forlì (neutro)",
+                    "sh": 67,
+                    "sa": 71,
+                    "wl": "L"
+                }
+            ],
+            "date": "2026-06-21",
+            "team_advances": false,
+            "note": "Spareggio promozione/retrocessione A2. Vigevano 71-67 Virtus. Fine stagione 2025-26. Virtus resta in Serie B."
+        }
+    ],
+    "match_id_overrides": []
 }
