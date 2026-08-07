@@ -1,10 +1,10 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-08-07T04:47:18.768690",
-  "season": "2025-26",
+  "last_updated": "2026-08-07T06:05:33.351173",
+  "season": "2026-27",
   "config": {
-    "season": "2025-26",
-    "next_season": "2026-27",
+    "season": "2026-27",
+    "next_season": "2027-28",
     "league_classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
     "teams": [
       {
@@ -26,7 +26,7 @@
         },
         "active_competitions": [
           {
-            "id": "b_naz_2526",
+            "id": "b_naz_2627",
             "type": "championship",
             "category": "B Nazionale",
             "fetcher": "lnp",
@@ -48,7 +48,7 @@
         "aliases": [
           "luiss roma",
           "luiss",
-          "luiss basketball"
+          "luiss basket roma"
         ],
         "color_primary": "#003366",
         "color_secondary": "#FFFFFF",
@@ -59,7 +59,7 @@
         },
         "active_competitions": [
           {
-            "id": "b_naz_2526",
+            "id": "b_naz_2627",
             "type": "championship",
             "category": "B Nazionale",
             "fetcher": "lnp",
@@ -88,27 +88,6 @@
         "categories": [
           "B Nazionale"
         ],
-        "enabled": true
-      },
-      {
-        "url": "https://sportando.basketball/feed/",
-        "categories": [
-          "all"
-        ],
-        "enabled": false
-      },
-      {
-        "url": "https://www.basketinside.com/feed/",
-        "categories": [
-          "all"
-        ],
-        "enabled": false
-      },
-      {
-        "url": "https://www.pianetabasket.com/rss/?section=43",
-        "categories": [
-          "A2"
-        ],
         "enabled": false
       },
       {
@@ -126,9 +105,16 @@
         "enabled": false
       },
       {
-        "url": "https://www.pianetabasket.com/rss/?section=48",
+        "url": "https://www.pianetabasket.com/rss/?section=43",
         "categories": [
-          "Champions League"
+          "A2"
+        ],
+        "enabled": false
+      },
+      {
+        "url": "https://www.basketinside.com/feed/",
+        "categories": [
+          "all"
         ],
         "enabled": false
       }
@@ -155,8 +141,8 @@
         "team_advances": true,
         "round_name": "QF",
         "note": "Vincente QF 2025-26 (G3 trasferta 75-64), passa a SF vs Rucker (vincente Serie 4)",
-        "next_opponent": "Rucker San Vendemiano",
-        "next_opponent_seed": 4
+        "next_opponent": "",
+        "next_opponent_seed": null
       },
       {
         "team_key": "virtus",
@@ -167,30 +153,6 @@
         "team_advances": true,
         "round_name": "SF",
         "note": "Vincente SF 2025-26 (3-2 su Rucker, serie a G5 31/5 86-62). Finale vs Montecatini (vincente Tabellone 1, 2A). Pattern home CCFFC confermato da calendario LNP (G1/G2/G5 casa Virtus).",
-        "next_opponent": "La T Tecnica Gema Montecatini",
-        "next_opponent_seed": 2
-      },
-      {
-        "team_key": "virtus",
-        "competition_id": "b_naz_2526",
-        "phase": "playoff",
-        "opponent": "La T Tecnica Gema Montecatini",
-        "result": "2-3",
-        "team_advances": false,
-        "round_name": "Finale",
-        "note": "Finale PERSA 2-3. Montecatini promossa in A2. Virtus accede a spareggio A2 come finalista perdente.",
-        "next_opponent": "",
-        "next_opponent_seed": null
-      },
-      {
-        "team_key": "virtus",
-        "competition_id": "b_naz_2526",
-        "phase": "spareggio_a2",
-        "opponent": "Elachem Vigevano",
-        "result": "0-1",
-        "team_advances": false,
-        "round_name": "Gara Unica A2",
-        "note": "Spareggio promozione/retrocessione A2. Vigevano 71-67 Virtus. Fine stagione 2025-26. Virtus resta in Serie B.",
         "next_opponent": "",
         "next_opponent_seed": null
       }
