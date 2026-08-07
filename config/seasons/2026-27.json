@@ -1,0 +1,138 @@
+{
+  "$schema_version": "1.0",
+  "season": "2026-27",
+  "next_season": "2027-28",
+  "league_classifica_url": "https://www.legapallacanestro.com/serie/4/classifica",
+  "rss_feeds": [
+    {
+      "url": "https://sportando.basketball/category/europa/italia/serie-b/feed/",
+      "categories": [
+        "B Nazionale"
+      ],
+      "enabled": true,
+      "note": "Feed Serie B Sportando — 200 OK dal runner, contenuto soggetto a variazioni stagionali"
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=38",
+      "categories": [
+        "B Nazionale"
+      ],
+      "enabled": false,
+      "note": "HTTP 404 da agosto 2026 — sezione Serie B rimossa o rinominata. Da riverificare."
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=2",
+      "categories": [
+        "A"
+      ],
+      "enabled": false,
+      "note": "Attivare quando BC Roma SPQR / Maxima Roma fetcher LBA è operativo (Fase 6)"
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=35",
+      "categories": [
+        "EuroCup"
+      ],
+      "enabled": false,
+      "note": "Attivare con Fase 6b (EuroCup fetcher)"
+    },
+    {
+      "url": "https://www.pianetabasket.com/rss/?section=43",
+      "categories": [
+        "A2"
+      ],
+      "enabled": false,
+      "note": "Disponibile per futuro uso A2"
+    },
+    {
+      "url": "https://www.basketinside.com/feed/",
+      "categories": [
+        "all"
+      ],
+      "enabled": false,
+      "note": "WordPress restituisce HTML invece di XML — da investigare"
+    }
+  ],
+  "teams": [
+    {
+      "key": "virtus",
+      "display_name": "Virtus GVM Roma",
+      "short_name": "Virtus",
+      "color_primary": "#FFD700",
+      "color_secondary": "#000000",
+      "aliases": [
+        "virtus gvm roma",
+        "virtus roma",
+        "virtus gvm roma 1960",
+        "pallacanestro virtus roma"
+      ],
+      "venue": {
+        "name": "PalaTiziano – Palazzetto dello Sport",
+        "address": "Piazza Apollodoro 10, 00196 Roma",
+        "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      },
+      "active_competitions": [
+        {
+          "id": "b_naz_2627",
+          "type": "championship",
+          "category": "B Nazionale",
+          "girone": "B",
+          "fetcher": "lnp",
+          "source_slug": "serie-b",
+          "phases": [
+            "regular",
+            "playoff",
+            "playout"
+          ],
+          "note": "Slug LNP verificato operativo 06/08/2026 — 34 partite caricate"
+        }
+      ]
+    },
+    {
+      "key": "luiss",
+      "display_name": "Luiss Roma",
+      "short_name": "Luiss",
+      "color_primary": "#003366",
+      "color_secondary": "#FFFFFF",
+      "aliases": [
+        "luiss roma",
+        "luiss",
+        "luiss basket roma"
+      ],
+      "venue": {
+        "name": "PalaTiziano – Palazzetto dello Sport",
+        "address": "Piazza Apollodoro 10, 00196 Roma",
+        "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+      },
+      "active_competitions": [
+        {
+          "id": "b_naz_2627",
+          "type": "championship",
+          "category": "B Nazionale",
+          "girone": "B",
+          "fetcher": "lnp",
+          "source_slug": "serie-b",
+          "phases": [
+            "regular",
+            "playoff",
+            "playout"
+          ],
+          "note": "Slug LNP verificato operativo 06/08/2026 — 34 partite caricate"
+        }
+      ]
+    }
+  ],
+  "series_closed": [],
+  "_pending_teams": {
+    "bc_roma_spqr": {
+      "note": "Da aggiungere in Fase 6. Slug legabasket.it da rilevare a settembre 2026. Competizioni: LBA Serie A + EuroCup.",
+      "first_game": "2026-09-27",
+      "venue_home": "TBD (PalaEUR candidato)"
+    },
+    "maxima_roma": {
+      "note": "Da aggiungere in Fase 6. Slug legabasket.it da rilevare a settembre 2026. Competizioni: LBA Serie A + EuroCup.",
+      "first_game": "2026-09-27",
+      "venue_home": "PalaEUR – Palazzo dello Sport, Piazza Guglielmo Marconi, Roma"
+    }
+  }
+}
