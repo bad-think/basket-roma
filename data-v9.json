@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-12T07:26:52.802019",
+  "last_updated": "2026-09-12T18:17:12.318208",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -657,7 +657,7 @@
   ],
   "standings": {
     "virtus": {
-      "pos": 18,
+      "pos": 17,
       "pts": 0,
       "w": 0,
       "l": 0
