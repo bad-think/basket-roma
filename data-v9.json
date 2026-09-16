@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-15T23:29:15.625154",
+  "last_updated": "2026-09-16T07:06:15.679685",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -210,7 +210,7 @@
       "away": "Benacquista Assicurazioni Latina",
       "sh": null,
       "sa": null,
-      "round": 2
+      "round": 3
     },
     {
       "id": "v02",
@@ -223,7 +223,7 @@
       "away": "Consultinvest Loreto Pesaro",
       "sh": null,
       "sa": null,
-      "round": 3
+      "round": 4
     },
     {
       "id": "l02",
@@ -236,7 +236,7 @@
       "away": "Umana San Giobbe Chiusi",
       "sh": null,
       "sa": null,
-      "round": 4
+      "round": 5
     },
     {
       "id": "v03",
@@ -249,7 +249,7 @@
       "away": "Allianz Pazienza Cestistica San Severo",
       "sh": null,
       "sa": null,
-      "round": 5
+      "round": 6
     },
     {
       "id": "l03",
@@ -262,7 +262,7 @@
       "away": "Pielle Livorno",
       "sh": null,
       "sa": null,
-      "round": 6
+      "round": 7
     },
     {
       "id": "v04",
@@ -275,7 +275,7 @@
       "away": "Benacquista Assicurazioni Latina",
       "sh": null,
       "sa": null,
-      "round": 7
+      "round": 8
     },
     {
       "id": "l04",
@@ -288,7 +288,7 @@
       "away": "PSA Napoli Est",
       "sh": null,
       "sa": null,
-      "round": 8
+      "round": 9
     },
     {
       "id": "l05",
@@ -301,7 +301,7 @@
       "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null,
-      "round": 9
+      "round": 10
     },
     {
       "id": "v05",
@@ -314,7 +314,7 @@
       "away": "Fabo Herons Montecatini",
       "sh": null,
       "sa": null,
-      "round": 10
+      "round": 12
     },
     {
       "id": "l06",
@@ -327,7 +327,7 @@
       "away": "Tema Sinergie Faenza",
       "sh": null,
       "sa": null,
-      "round": 12
+      "round": 14
     },
     {
       "id": "v06",
@@ -340,7 +340,7 @@
       "away": "PSA Napoli Est",
       "sh": null,
       "sa": null,
-      "round": 12
+      "round": 14
     },
     {
       "id": "l07",
@@ -353,7 +353,7 @@
       "away": "Ristopro Fabriano",
       "sh": null,
       "sa": null,
-      "round": 13
+      "round": 15
     },
     {
       "id": "v07",
@@ -366,7 +366,7 @@
       "away": "Umana San Giobbe Chiusi",
       "sh": null,
       "sa": null,
-      "round": 14
+      "round": 16
     },
     {
       "id": "l08",
@@ -379,7 +379,7 @@
       "away": "Fabo Herons Montecatini",
       "sh": null,
       "sa": null,
-      "round": 15
+      "round": 18
     },
     {
       "id": "v08",
@@ -392,7 +392,7 @@
       "away": "Luiss Roma",
       "sh": null,
       "sa": null,
-      "round": 16
+      "round": 2
     },
     {
       "id": "l09",
@@ -405,7 +405,7 @@
       "away": "Basketball Club Lucca",
       "sh": null,
       "sa": null,
-      "round": 17
+      "round": 20
     },
     {
       "id": "v09",
@@ -418,7 +418,7 @@
       "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null,
-      "round": 18
+      "round": 21
     },
     {
       "id": "l10",
@@ -431,7 +431,7 @@
       "away": "Consorzio Leonardo Dany Quarrata",
       "sh": null,
       "sa": null,
-      "round": 19
+      "round": 22
     },
     {
       "id": "v10",
@@ -444,7 +444,7 @@
       "away": "OraSì Ravenna",
       "sh": null,
       "sa": null,
-      "round": 20
+      "round": 23
     },
     {
       "id": "v11",
@@ -457,7 +457,7 @@
       "away": "Pielle Livorno",
       "sh": null,
       "sa": null,
-      "round": 21
+      "round": 25
     },
     {
       "id": "l11",
@@ -470,7 +470,7 @@
       "away": "OraSì Ravenna",
       "sh": null,
       "sa": null,
-      "round": 22
+      "round": 26
     },
     {
       "id": "v12",
@@ -483,7 +483,7 @@
       "away": "Basketball Club Lucca",
       "sh": null,
       "sa": null,
-      "round": 23
+      "round": 27
     },
     {
       "id": "l12",
@@ -496,7 +496,7 @@
       "away": "Consultinvest Loreto Pesaro",
       "sh": null,
       "sa": null,
-      "round": 24
+      "round": 28
     },
     {
       "id": "v25",
@@ -509,7 +509,7 @@
       "away": "Sendero Mens Sana Siena",
       "sh": null,
       "sa": null,
-      "round": 25
+      "round": 30
     },
     {
       "id": "v13",
@@ -522,7 +522,7 @@
       "away": "Mens Sana Basketball Siena",
       "sh": null,
       "sa": null,
-      "round": 25
+      "round": 30
     },
     {
       "id": "l13",
@@ -535,7 +535,7 @@
       "away": "Solbat Golfo Piombino",
       "sh": null,
       "sa": null,
-      "round": 26
+      "round": 31
     },
     {
       "id": "v14",
@@ -548,7 +548,7 @@
       "away": "Consorzio Leonardo Dany Quarrata",
       "sh": null,
       "sa": null,
-      "round": 27
+      "round": 32
     },
     {
       "id": "l14",
@@ -561,7 +561,7 @@
       "away": "Virtus GVM Roma 1960",
       "sh": null,
       "sa": null,
-      "round": 28
+      "round": 34
     },
     {
       "id": "l15",
@@ -574,7 +574,7 @@
       "away": "Allianz Pazienza Cestistica San Severo",
       "sh": null,
       "sa": null,
-      "round": 29
+      "round": 33
     },
     {
       "id": "v15",
@@ -587,7 +587,7 @@
       "away": "Tema Sinergie Faenza",
       "sh": null,
       "sa": null,
-      "round": 30
+      "round": 36
     },
     {
       "id": "l16",
@@ -600,7 +600,7 @@
       "away": "Mens Sana Basketball Siena",
       "sh": null,
       "sa": null,
-      "round": 31
+      "round": 37
     },
     {
       "id": "l31",
@@ -613,7 +613,7 @@
       "away": "Sendero Mens Sana Siena",
       "sh": null,
       "sa": null,
-      "round": 31
+      "round": 37
     },
     {
       "id": "v16",
@@ -626,7 +626,7 @@
       "away": "Solbat Golfo Piombino",
       "sh": null,
       "sa": null,
-      "round": 32
+      "round": 38
     },
     {
       "id": "l17",
@@ -639,7 +639,7 @@
       "away": "Felice Scandone Avellino",
       "sh": null,
       "sa": null,
-      "round": 33
+      "round": 39
     },
     {
       "id": "v17",
@@ -652,7 +652,7 @@
       "away": "Ristopro Fabriano",
       "sh": null,
       "sa": null,
-      "round": 34
+      "round": 40
     }
   ],
   "standings": {
