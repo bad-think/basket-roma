@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-19T21:54:36.684852",
+  "last_updated": "2026-09-19T22:51:37.040261",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -653,6 +653,19 @@
       "sh": null,
       "sa": null,
       "round": 34
+    },
+    {
+      "id": "v35_3",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2027-09-26",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Felice Scandone Avellino",
+      "sh": null,
+      "sa": null,
+      "round": 35
     }
   ],
   "standings": {

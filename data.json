@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-18T18:59:02.769483",
+  "last_updated": "2026-09-19T22:51:33.765376",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -518,6 +518,18 @@
       "time": "20:00",
       "home": "Luiss Roma",
       "away": "Sendero Mens Sana Siena",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "v35_3",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-09-26",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Felice Scandone Avellino",
       "sh": null,
       "sa": null
     }
