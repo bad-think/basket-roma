@@ -25,16 +25,16 @@
       "categories": [
         "A"
       ],
-      "enabled": false,
-      "note": "Attivare quando BC Roma SPQR / Maxima Roma fetcher LBA è operativo (Fase 6)"
+      "enabled": true,
+      "note": "Serie A LBA — attivato 31/08/2026 (BC Roma SPQR e Maxima Roma in LBA)"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=35",
       "categories": [
         "EuroCup"
       ],
-      "enabled": false,
-      "note": "Attivare con Fase 6b (EuroCup fetcher)"
+      "enabled": true,
+      "note": "EuroCup — attivato 31/08/2026 (BC Roma SPQR in EuroCup Gruppo D)"
     },
     {
       "url": "https://www.pianetabasket.com/rss/?section=43",
@@ -120,19 +120,160 @@
           "note": "Slug LNP verificato operativo 06/08/2026 — 34 partite caricate"
         }
       ]
+    },
+    {
+      "key": "bc_roma_spqr",
+      "display_name": "BC Roma SPQR",
+      "short_name": "BC Roma",
+      "color_primary": "#8B0000",
+      "color_secondary": "#FFD700",
+      "aliases": [
+        "bc roma spqr",
+        "basketball club roma spqr",
+        "bc roma",
+        "roma basketball",
+        "roma spqr"
+      ],
+      "legabasket_id": 1761,
+      "legabasket_slug": "bc-roma-spqr",
+      "venue": {
+        "name": "PalaTiziano – Palazzetto dello Sport",
+        "address": "Piazza Apollodoro 10, 00196 Roma",
+        "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma",
+        "note": "Sede provvisoria 2026-27. Arena definitiva: Centrale del Foro Italico (in ristrutturazione)."
+      },
+      "active_competitions": [
+        {
+          "id": "lba_2627",
+          "type": "championship",
+          "category": "A",
+          "fetcher": "lba",
+          "source_slug": "bc-roma-spqr",
+          "legabasket_id": 1761,
+          "phases": [
+            "regular",
+            "playoff"
+          ],
+          "first_game": "2026-09-27",
+          "note": "G1 TRASF vs Nutribullet Treviso. Prima CASA: G2 04/10 vs Bertram Derthona. Sosta nazionali: 29/11, 28/02.",
+          "legabasket_id_slug": "bc-roma-spqr"
+        },
+        {
+          "id": "eurocup_2627",
+          "type": "eurocup",
+          "category": "EuroCup",
+          "fetcher": "eurocup",
+          "source_slug": "roma-basketball",
+          "phases": [
+            "regular",
+            "knockout"
+          ],
+          "eurocup_group": "D",
+          "eurocup_name": "Roma Basketball",
+          "first_home_game": "2026-10-07",
+          "first_home_opponent": "Lietkabelis Panevezys",
+          "note": "Gruppo D con BOSNA BH Telecom Sarajevo (sostituisce AS Monaco — problemi finanziari), PAOK, Manresa, Balkan, Ulm, Bahcesehir. Prima casa: G2 07/10 20:00 vs Lietkabelis. Fase reg termina 12/01/2027.",
+          "eurocup_group_d": {
+            "avversari": [
+              "Bahcesehir College Istanbul",
+              "Lietkabelis Panevezys",
+              "BOSNA BH Telecom Sarajevo",
+              "PAOK Thessaloniki",
+              "Kids&Us Manresa",
+              "Balkan Botevgrad",
+              "ratiopharm Ulm"
+            ],
+            "note": "AS Monaco esclusa per insolvenza (luglio 2026)"
+          },
+          "home_games": [
+            {
+              "r": 2,
+              "date": "2026-10-06",
+              "time": "20:00",
+              "opponent": "Lietkabelis Panevezys"
+            },
+            {
+              "r": 3,
+              "date": "2026-10-14",
+              "time": "20:00",
+              "opponent": "Balkan Botevgrad"
+            },
+            {
+              "r": 4,
+              "date": "2026-10-21",
+              "time": "20:00",
+              "opponent": "BOSNA BH Telecom Sarajevo"
+            },
+            {
+              "r": 6,
+              "date": "2026-11-11",
+              "time": "20:00",
+              "opponent": "ratiopharm Ulm"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "maxima_roma",
+      "display_name": "Maxima Roma",
+      "short_name": "Maxima",
+      "color_primary": "#1A1A2E",
+      "color_secondary": "#E8C84B",
+      "aliases": [
+        "maxima roma",
+        "maxima"
+      ],
+      "legabasket_id": 1762,
+      "legabasket_slug": "maxima-roma",
+      "venue": {
+        "name": "Palazzo dello Sport – PalaEUR",
+        "address": "Piazza Guglielmo Marconi, 00144 Roma",
+        "maps_url": "https://maps.google.com/?q=Palazzo+dello+Sport+EUR+Roma",
+        "capacity": 11200
+      },
+      "active_competitions": [
+        {
+          "id": "lba_2627",
+          "type": "championship",
+          "category": "A",
+          "fetcher": "lba",
+          "source_slug": "maxima-roma",
+          "legabasket_id": 1762,
+          "phases": [
+            "regular",
+            "playoff"
+          ],
+          "first_game": "2026-09-27",
+          "note": "G1 CASA vs Napoli Basketball (27/09, PalaEUR). Derby G3 11/10 CASA vs BC Roma SPQR. Sosta: 29/11, 28/02.",
+          "legabasket_id_slug": "maxima-roma"
+        },
+        {
+          "id": "eurocup_2627",
+          "type": "eurocup",
+          "category": "EuroCup",
+          "fetcher": "eurocup",
+          "source_slug": "maxima-roma",
+          "phases": [
+            "regular",
+            "knockout"
+          ],
+          "note": "Partecipazione confermata BKT EuroCup 2026-27. Slug eurocup.com: da rilevare."
+        }
+      ]
     }
   ],
   "series_closed": [],
-  "_pending_teams": {
-    "bc_roma_spqr": {
-      "note": "Da aggiungere in Fase 6. Slug legabasket.it da rilevare a settembre 2026. Competizioni: LBA Serie A + EuroCup.",
-      "first_game": "2026-09-27",
-      "venue_home": "TBD (PalaEUR candidato)"
+  "lba_season_info": {
+    "start": "2026-09-27",
+    "end_regular": "2026-05-09",
+    "coppa_italia_final8": {
+      "city": "Torino",
+      "dates": "2027-02-17/21"
     },
-    "maxima_roma": {
-      "note": "Da aggiungere in Fase 6. Slug legabasket.it da rilevare a settembre 2026. Competizioni: LBA Serie A + EuroCup.",
-      "first_game": "2026-09-27",
-      "venue_home": "PalaEUR – Palazzo dello Sport, Piazza Guglielmo Marconi, Roma"
-    }
+    "sosta_nazionali": [
+      "2026-11-29",
+      "2027-02-28"
+    ]
   }
 }
