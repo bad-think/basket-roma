@@ -15,6 +15,7 @@ Stato Fase 2: registry popolato con 2 fetcher per-competition + 1 singleton.
 from typing import Any
 
 from .lnp import LNPFetcher
+from .lba import LBAFetcher
 from .pianetabasket import PianetaBasketArticleFetcher
 from .rss_pool import RssPoolFetcher
 
@@ -22,6 +23,7 @@ from .rss_pool import RssPoolFetcher
 # 'rss_pool' NON sta qui: è singleton cross-team istanziato da main.py.
 REGISTRY: dict[str, Any] = {
     "lnp": LNPFetcher,
+    "lba": LBAFetcher,
     "pianetabasket": PianetaBasketArticleFetcher,
 }
 
@@ -35,6 +37,7 @@ __all__ = [
     "REGISTRY",
     "get_fetcher",
     "LNPFetcher",
+    "LBAFetcher",
     "PianetaBasketArticleFetcher",
     "RssPoolFetcher",
 ]
