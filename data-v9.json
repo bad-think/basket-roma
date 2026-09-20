@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-20T08:03:26.459803",
+  "last_updated": "2026-09-20T15:18:04.598367",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -73,6 +73,97 @@
             ]
           }
         ]
+      },
+      {
+        "key": "bc_roma_spqr",
+        "display_name": "BC Roma SPQR",
+        "short_name": "BC Roma",
+        "aliases": [
+          "bc roma spqr",
+          "basketball club roma spqr",
+          "bc roma",
+          "roma basketball",
+          "roma spqr"
+        ],
+        "color_primary": "#8B0000",
+        "color_secondary": "#FFD700",
+        "venue": {
+          "name": "PalaTiziano – Palazzetto dello Sport",
+          "address": "Piazza Apollodoro 10, 00196 Roma",
+          "maps_url": "https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma"
+        },
+        "active_competitions": [
+          {
+            "id": "lba_2627",
+            "type": "championship",
+            "category": "A",
+            "fetcher": "lba",
+            "girone": "",
+            "source_slug": "bc-roma-spqr",
+            "rss_section": null,
+            "phases": [
+              "regular",
+              "playoff"
+            ]
+          },
+          {
+            "id": "eurocup_2627",
+            "type": "eurocup",
+            "category": "EuroCup",
+            "fetcher": "eurocup",
+            "girone": "",
+            "source_slug": "roma-basketball",
+            "rss_section": null,
+            "phases": [
+              "regular",
+              "knockout"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "maxima_roma",
+        "display_name": "Maxima Roma",
+        "short_name": "Maxima",
+        "aliases": [
+          "maxima roma",
+          "maxima"
+        ],
+        "color_primary": "#1A1A2E",
+        "color_secondary": "#E8C84B",
+        "venue": {
+          "name": "Palazzo dello Sport – PalaEUR",
+          "address": "Piazza Guglielmo Marconi, 00144 Roma",
+          "maps_url": "https://maps.google.com/?q=Palazzo+dello+Sport+EUR+Roma"
+        },
+        "active_competitions": [
+          {
+            "id": "lba_2627",
+            "type": "championship",
+            "category": "A",
+            "fetcher": "lba",
+            "girone": "",
+            "source_slug": "maxima-roma",
+            "rss_section": null,
+            "phases": [
+              "regular",
+              "playoff"
+            ]
+          },
+          {
+            "id": "eurocup_2627",
+            "type": "eurocup",
+            "category": "EuroCup",
+            "fetcher": "eurocup",
+            "girone": "",
+            "source_slug": "maxima-roma",
+            "rss_section": null,
+            "phases": [
+              "regular",
+              "knockout"
+            ]
+          }
+        ]
       }
     ],
     "rss_feeds": [
@@ -95,14 +186,14 @@
         "categories": [
           "A"
         ],
-        "enabled": false
+        "enabled": true
       },
       {
         "url": "https://www.pianetabasket.com/rss/?section=35",
         "categories": [
           "EuroCup"
         ],
-        "enabled": false
+        "enabled": true
       },
       {
         "url": "https://www.pianetabasket.com/rss/?section=43",
