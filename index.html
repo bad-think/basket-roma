@@ -513,6 +513,18 @@ header{
 }
 .gc-wl.w{background:var(--yellow);color:var(--black)}
 .gc-wl.l{background:#222;color:var(--yellow)}
+/* BC Roma SPQR */
+.tab.tbr,.sb-topbar.tbr,.gc-top.cbr{background:#8B0000;color:#fff}
+.sb-row.tbr,.gc-head.cbr,.gc-wl.tbr{border-color:#8B0000}
+.sb-badge.tbr,.gc-badge.cbr{background:#8B0000;color:#fff}
+.stn.sbr{color:#8B0000}
+.schip.sbr{border-left:4px solid #8B0000}
+/* Maxima Roma */
+.tab.tmx,.sb-topbar.tmx,.gc-top.cmx{background:#1A1A2E;color:#E8C84B}
+.sb-row.tmx,.gc-head.cmx,.gc-wl.tmx{border-color:#1A1A2E}
+.sb-badge.tmx,.gc-badge.cmx{background:#1A1A2E;color:#E8C84B}
+.stn.smx{color:#1A1A2E}
+.schip.smx{border-left:4px solid #1A1A2E}
 .gc-score-meta{
   flex-basis:100%;
   display:flex;flex-wrap:wrap;align-items:center;gap:6px;
@@ -1038,6 +1050,8 @@ header{
     <button class="tab tl"     onclick="setTab('luiss')">
       <span class="tab-crest"><img src="assets/luiss-roma.png" alt=""/></span>LUISS
     </button>
+    <button class="tab tbr"    onclick="setTab('bc_roma_spqr')">BC ROMA</button>
+    <button class="tab tmx"    onclick="setTab('maxima_roma')">MAXIMA</button>
     <button class="tab tp"     onclick="setTab('post')">PLAYOFF</button>
   </div>
 </header>
@@ -1056,8 +1070,10 @@ const STANDINGS = {
 };
 
 const VENUES = {
-  virtus:{name:'PalaTiziano – Palazzetto dello Sport',addr:'Piazza Apollodoro 10, Roma',maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'},
-  luiss: {name:'PalaTiziano – Palazzetto dello Sport',addr:'Piazza Apollodoro 10, Roma',maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'}
+  virtus:    {name:'PalaTiziano – Palazzetto dello Sport',addr:'Piazza Apollodoro 10, Roma',maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'},
+  luiss:     {name:'PalaTiziano – Palazzetto dello Sport',addr:'Piazza Apollodoro 10, Roma',maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'},
+  bc_roma_spqr:{name:'PalaTiziano – Palazzetto dello Sport',addr:'Piazza Apollodoro 10, Roma',maps:'https://maps.google.com/?q=Palazzetto+dello+Sport+Piazza+Apollodoro+10+Roma'},
+  maxima_roma: {name:'Palazzo dello Sport – PalaEUR',addr:'Piazza G. Marconi, Roma',maps:'https://maps.google.com/?q=Palazzo+dello+Sport+EUR+Roma'}
 };
 
 const SOURCES = [
@@ -1069,12 +1085,16 @@ const SOURCES = [
 ];
 
 const TEAM_LOGO = {
-  virtus: 'assets/virtus-roma.png',
-  luiss:  'assets/luiss-roma.png'
+  virtus:      'assets/virtus-roma.png',
+  luiss:       'assets/luiss-roma.png',
+  bc_roma_spqr:'assets/bc-roma.png',
+  maxima_roma: 'assets/maxima-roma.png'
 };
 const TEAM_LABEL = {
-  virtus: 'Virtus GVM Roma',
-  luiss:  'LUISS Roma'
+  virtus:      'Virtus GVM Roma',
+  luiss:       'LUISS Roma',
+  bc_roma_spqr:'BC Roma SPQR',
+  maxima_roma: 'Maxima Roma'
 };
 
 // ============================================================
@@ -1407,7 +1427,8 @@ function buildTicker() {
     return;
   }
   const items = past.map(m => {
-    const teamShort = m.team==='virtus'?'VIR':'LUI';
+    const _ts = {virtus:'VIR',luiss:'LUI',bc_roma_spqr:'BCR',maxima_roma:'MAX'};
+    const teamShort = _ts[m.team] || m.team.slice(0,3).toUpperCase();
     const oppShort = m.away.split(' ').slice(0,2).join(' ').toUpperCase();
     return `${teamShort} ${m.sh}–${m.sa} ${oppShort}`;
   });
@@ -1525,8 +1546,9 @@ function renderStandings() {
 }
 
 function renderHero(m) {
-  const tcls = m.team==='virtus'?'tv':'tl';
-  const tlabel = TEAM_LABEL[m.team] || (m.team==='virtus'?'VIRTUS ROMA':'LUISS ROMA');
+  const _tmap = {virtus:'tv',luiss:'tl',bc_roma_spqr:'tbr',maxima_roma:'tmx'};
+  const tcls = _tmap[m.team] || 'tl';
+  const tlabel = TEAM_LABEL[m.team] || m.team.toUpperCase();
   const v = VENUES[m.team] || {};
   const tod = isToday(m.date) ? `<span class="sb-tag">★ OGGI ★</span>` : '';
   const phaseTxt = phShort(m.phase) + (m.game_num ? ' · G'+m.game_num : (m.round ? ' · G'+m.round : ''));
@@ -1597,12 +1619,16 @@ function startCD(m) {
 
 function renderStats() {
   const wins = arr => arr.filter(m=>m.sh!=null&&m.sh>m.sa).length;
-  const vA = matches.filter(m=>m.team==='virtus'&&isPast(m.date)&&m.sh!=null);
-  const lA = matches.filter(m=>m.team==='luiss' &&isPast(m.date)&&m.sh!=null);
+  const vA  = matches.filter(m=>m.team==='virtus'&&isPast(m.date)&&m.sh!=null);
+  const lA  = matches.filter(m=>m.team==='luiss' &&isPast(m.date)&&m.sh!=null);
+  const brA = matches.filter(m=>m.team==='bc_roma_spqr'&&isPast(m.date)&&m.sh!=null);
+  const mxA = matches.filter(m=>m.team==='maxima_roma' &&isPast(m.date)&&m.sh!=null);
   const rem = matches.filter(m=>!isPast(m.date)).length;
   return `<div class="stats-row">
     <div class="sti"><div class="stn sv">${wins(vA)}/${vA.length||0}</div><div class="stl">VIRTUS CASA</div></div>
     <div class="sti"><div class="stn sl">${wins(lA)}/${lA.length||0}</div><div class="stl">LUISS CASA</div></div>
+    <div class="sti"><div class="stn sbr">${wins(brA)}/${brA.length||0}</div><div class="stl">BC ROMA CASA</div></div>
+    <div class="sti"><div class="stn smx">${wins(mxA)}/${mxA.length||0}</div><div class="stl">MAXIMA CASA</div></div>
     <div class="sti"><div class="stn sn">${rem}</div><div class="stl">RIMANENTI</div></div>
   </div>`;
 }
@@ -1632,8 +1658,9 @@ function periodsLine(periods) {
 }
 
 function renderCard(m, idx, isPastCard) {
-  const tcls = m.phase!=='regular'?'cp':(m.team==='virtus'?'cv':'cl');
-  const tlbl = TEAM_LABEL[m.team] || (m.team==='virtus'?'VIRTUS ROMA':'LUISS ROMA');
+  const _cmap = {virtus:'cv',luiss:'cl',bc_roma_spqr:'cbr',maxima_roma:'cmx'};
+  const tcls = m.phase!=='regular'?'cp':(_cmap[m.team]||'cl');
+  const tlbl = TEAM_LABEL[m.team] || m.team.toUpperCase();
   const v = VENUES[m.team] || {};
   const today_ = isToday(m.date);
   const dateTxt = fmtUpper(m.date);
@@ -1932,7 +1959,7 @@ function renderFooter() {
     <div class="footer-stars">★ ★ ★</div>
     <div class="footer-text">
       ROMA BASKET SPORT · CASA<br/>
-      <span id="footerSeason">VIRTUS · LUISS</span>
+      <span id="footerSeason">VIRTUS · LUISS · BC ROMA · MAXIMA</span>
     </div>
   </div>`;
 }
@@ -2064,7 +2091,7 @@ function renderPost() {
 function setTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
-  const map = {all:'ta',virtus:'tv',luiss:'tl',post:'tp'};
+  const map = {all:'ta',virtus:'tv',luiss:'tl',bc_roma_spqr:'tbr',maxima_roma:'tmx',post:'tp'};
   document.querySelectorAll('.tab.'+map[t]).forEach(el=>el.classList.add('on'));
   render();
   window.scrollTo({top:0, behavior:'smooth'});
