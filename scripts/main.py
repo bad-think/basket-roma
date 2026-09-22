@@ -72,6 +72,8 @@ def run_fetchers(state: State) -> None:
     # 1. Fase per-competition: schedule + score primario
     for team in season.teams:
         for comp in team.active_competitions:
+            if getattr(comp, "enabled", True) is False:
+                continue
             FetcherCls = REGISTRY.get(comp.fetcher)
             if FetcherCls is None:
                 print(f"  ⚠️  Fetcher '{comp.fetcher}' non registrato "
