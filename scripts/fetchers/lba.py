@@ -111,6 +111,8 @@ class LBAFetcher:
         self.comp = competition
         self.team = team
         self.season = season
+        # Supporta campo opzionale "enabled": false nel config
+        self.enabled: bool = getattr(competition, "enabled", True)
         # ID numerico squadra su legabasket.it (es. 1761 per BC Roma SPQR)
         self.lba_id: int = getattr(competition, "legabasket_id", 0)
         # Slug squadra (es. "bc-roma-spqr")
@@ -143,36 +145,81 @@ class LBAFetcher:
     def fetch_schedule(self) -> list[Match]:
         """
         Ritorna le gare casalinghe della squadra nella stagione corrente.
-        Usa prima __NEXT_DATA__, poi scraping HTML come fallback.
+        Ordine tentativi:
+          1. __NEXT_DATA__ JSON embedded nel HTML
+          2. Scraping HTML della tabella calendario
+          3. Fallback: home_games statici da competition.home_games (config)
         """
-        url = self._url_calendario()
-        html = http_get_text(url)
-        if not html:
-            print(f"  ⚠️  [{self.team.key}] LBA calendario: nessuna risposta da {url}")
+        if not self.enabled:
             return []
 
-        matches = []
+        url = self._url_calendario()
+        html = http_get_text(url)
 
-        # Tentativo 1: __NEXT_DATA__ JSON
-        nd = _extract_next_data(html)
-        if nd:
-            raw_games = _games_from_next_data(nd, self.lba_id)
-            matches = list(self._parse_games_json(raw_games))
+        if html:
+            # DEBUG: logga i primi 300 chars per diagnostica struttura HTML
+            snippet = html[:300].replace("\n", " ").replace("\r", "")
+            print(f"  🔬 [{self.team.key}] LBA HTML snippet: {snippet[:200]!r}")
+
+            # Tentativo 1: __NEXT_DATA__ JSON
+            nd = _extract_next_data(html)
+            if nd:
+                raw_games = _games_from_next_data(nd, self.lba_id)
+                matches = list(self._parse_games_json(raw_games))
+                if matches:
+                    print(f"  📋 [{self.team.key}] LBA: {len(matches)} gare casa "
+                          f"(via __NEXT_DATA__)")
+                    return matches
+
+            # Tentativo 2: scraping HTML della tabella calendario
+            matches = list(self._parse_games_html(html))
             if matches:
                 print(f"  📋 [{self.team.key}] LBA: {len(matches)} gare casa "
-                      f"(via __NEXT_DATA__)")
+                      f"(via HTML scraping)")
                 return matches
-
-        # Tentativo 2: scraping HTML della tabella calendario
-        matches = list(self._parse_games_html(html))
-        if matches:
-            print(f"  📋 [{self.team.key}] LBA: {len(matches)} gare casa "
-                  f"(via HTML scraping)")
         else:
-            print(f"  ⚠️  [{self.team.key}] LBA: nessuna gara trovata. "
-                  f"Aggiornare il parser se la struttura HTML è cambiata.")
+            print(f"  ⚠️  [{self.team.key}] LBA calendario: nessuna risposta da {url}")
 
-        return matches
+        # Tentativo 3: home_games statici dal config
+        static = list(self._load_static_schedule())
+        if static:
+            print(f"  📋 [{self.team.key}] LBA: {len(static)} gare casa "
+                  f"(via config statico — fetcher live non disponibile)")
+            return static
+
+        print(f"  ⚠️  [{self.team.key}] LBA: nessuna gara trovata. "
+              f"Aggiornare il parser o aggiungere home_games nel config.")
+        return []
+
+    def _load_static_schedule(self) -> list[Match]:
+        """
+        Legge home_games dal config competition (già pre-popolato per questa stagione).
+        Format: [{"g": 2, "date": "2026-10-04", "time": "20:00", "opponent": "..."}, ...]
+        """
+        raw = getattr(self.comp, "home_games", None) or []
+        team_name = self.team.display_name
+        for g in raw:
+            if not isinstance(g, dict):
+                continue
+            game_date = g.get("date")
+            opponent = g.get("opponent", "")
+            if not game_date or not opponent:
+                continue
+            game_num = g.get("g")
+            yield Match(
+                id=self._make_id(game_date, normalize(opponent)),
+                team_key=self.team.key,
+                competition_id=self.comp.id,
+                phase="regular",
+                game_num=game_num,
+                date=game_date,
+                time=g.get("time", "20:00"),
+                home=team_name,
+                away=opponent,
+                sh=None,
+                sa=None,
+                sources=["config_static"],
+            )
 
     def _parse_games_json(self, raw_games: list[dict]) -> Iterator[Match]:
         """
@@ -283,6 +330,8 @@ class LBAFetcher:
         Aggiorna sh/sa per le partite già in lista (data <= oggi, score mancante).
         Ri-fetcha la stessa pagina calendario con filtro data.
         """
+        if not self.enabled:
+            return matches
         today = datetime.today().strftime("%Y-%m-%d")
         pending = [
             m for m in matches
