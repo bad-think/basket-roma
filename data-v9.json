@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-21T23:59:37.677670",
+  "last_updated": "2026-09-22T06:46:39.085092",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -186,14 +186,14 @@
         "categories": [
           "A"
         ],
-        "enabled": true
+        "enabled": false
       },
       {
         "url": "https://www.pianetabasket.com/rss/?section=35",
         "categories": [
           "EuroCup"
         ],
-        "enabled": true
+        "enabled": false
       },
       {
         "url": "https://www.pianetabasket.com/rss/?section=43",
