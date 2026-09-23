@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-23T05:46:59.491603",
+  "last_updated": "2026-09-23T05:50:27.056346",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -37,7 +37,11 @@
               "regular",
               "playoff",
               "playout"
-            ]
+            ],
+            "enabled": true,
+            "home_games": [],
+            "legabasket_id": 0,
+            "legabasket_id_slug": ""
           }
         ]
       },
@@ -70,7 +74,11 @@
               "regular",
               "playoff",
               "playout"
-            ]
+            ],
+            "enabled": true,
+            "home_games": [],
+            "legabasket_id": 0,
+            "legabasket_id_slug": ""
           }
         ]
       },
@@ -104,7 +112,102 @@
             "phases": [
               "regular",
               "playoff"
-            ]
+            ],
+            "enabled": true,
+            "home_games": [
+              {
+                "g": 2,
+                "date": "2026-10-04",
+                "time": "20:00",
+                "opponent": "Bertram Derthona Tortona"
+              },
+              {
+                "g": 4,
+                "date": "2026-10-18",
+                "time": "20:00",
+                "opponent": "Umana Reyer Venezia"
+              },
+              {
+                "g": 6,
+                "date": "2026-11-01",
+                "time": "20:00",
+                "opponent": "Longobardi Scafati Basket"
+              },
+              {
+                "g": 8,
+                "date": "2026-11-15",
+                "time": "20:00",
+                "opponent": "Tezenis Verona"
+              },
+              {
+                "g": 10,
+                "date": "2026-12-06",
+                "time": "20:00",
+                "opponent": "Dolomiti Energia Trentino"
+              },
+              {
+                "g": 11,
+                "date": "2026-12-13",
+                "time": "20:00",
+                "opponent": "Napoli Basketball"
+              },
+              {
+                "g": 13,
+                "date": "2026-12-27",
+                "time": "20:00",
+                "opponent": "Acqua S.Bernardo Cantù"
+              },
+              {
+                "g": 15,
+                "date": "2027-01-10",
+                "time": "20:00",
+                "opponent": "Armani Olimpia Milano"
+              },
+              {
+                "g": 17,
+                "date": "2027-01-24",
+                "time": "20:00",
+                "opponent": "Maxima Roma"
+              },
+              {
+                "g": 19,
+                "date": "2027-02-07",
+                "time": "20:00",
+                "opponent": "Pallacanestro Trieste"
+              },
+              {
+                "g": 21,
+                "date": "2027-03-07",
+                "time": "20:00",
+                "opponent": "Nutribullet Treviso Basket"
+              },
+              {
+                "g": 23,
+                "date": "2027-03-21",
+                "time": "20:00",
+                "opponent": "Virtus Segafredo Bologna"
+              },
+              {
+                "g": 26,
+                "date": "2027-04-11",
+                "time": "20:00",
+                "opponent": "UNA Hotels Reggio Emilia"
+              },
+              {
+                "g": 28,
+                "date": "2027-04-25",
+                "time": "20:00",
+                "opponent": "Openjobmetis Varese"
+              },
+              {
+                "g": 30,
+                "date": "2027-05-09",
+                "time": "20:00",
+                "opponent": "APU Old Wild West Udine"
+              }
+            ],
+            "legabasket_id": 1761,
+            "legabasket_id_slug": "bc-roma-spqr"
           },
           {
             "id": "eurocup_2627",
@@ -117,7 +220,36 @@
             "phases": [
               "regular",
               "knockout"
-            ]
+            ],
+            "enabled": false,
+            "home_games": [
+              {
+                "r": 2,
+                "date": "2026-10-06",
+                "time": "20:00",
+                "opponent": "Lietkabelis Panevezys"
+              },
+              {
+                "r": 3,
+                "date": "2026-10-14",
+                "time": "20:00",
+                "opponent": "Balkan Botevgrad"
+              },
+              {
+                "r": 4,
+                "date": "2026-10-21",
+                "time": "20:00",
+                "opponent": "BOSNA BH Telecom Sarajevo"
+              },
+              {
+                "r": 6,
+                "date": "2026-11-11",
+                "time": "20:00",
+                "opponent": "ratiopharm Ulm"
+              }
+            ],
+            "legabasket_id": 0,
+            "legabasket_id_slug": ""
           }
         ]
       },
@@ -148,7 +280,96 @@
             "phases": [
               "regular",
               "playoff"
-            ]
+            ],
+            "enabled": true,
+            "home_games": [
+              {
+                "g": 1,
+                "date": "2026-09-27",
+                "time": "18:00",
+                "opponent": "Napoli Basketball"
+              },
+              {
+                "g": 3,
+                "date": "2026-10-11",
+                "time": "18:00",
+                "opponent": "BC Roma SPQR"
+              },
+              {
+                "g": 5,
+                "date": "2026-10-25",
+                "time": "18:00",
+                "opponent": "APU Old Wild West Udine"
+              },
+              {
+                "g": 7,
+                "date": "2026-11-08",
+                "time": "18:00",
+                "opponent": "Acqua S.Bernardo Cantù"
+              },
+              {
+                "g": 9,
+                "date": "2026-11-22",
+                "time": "18:00",
+                "opponent": "Nutribullet Treviso Basket"
+              },
+              {
+                "g": 14,
+                "date": "2027-01-03",
+                "time": "18:00",
+                "opponent": "Longobardi Scafati Basket"
+              },
+              {
+                "g": 16,
+                "date": "2027-01-17",
+                "time": "18:00",
+                "opponent": "Dolomiti Energia Trentino"
+              },
+              {
+                "g": 18,
+                "date": "2027-01-31",
+                "time": "18:00",
+                "opponent": "Virtus Segafredo Bologna"
+              },
+              {
+                "g": 20,
+                "date": "2027-02-14",
+                "time": "18:00",
+                "opponent": "Armani Olimpia Milano"
+              },
+              {
+                "g": 22,
+                "date": "2027-03-07",
+                "time": "18:00",
+                "opponent": "Tezenis Verona"
+              },
+              {
+                "g": 24,
+                "date": "2027-03-27",
+                "time": "18:00",
+                "opponent": "APU Old Wild West Udine"
+              },
+              {
+                "g": 25,
+                "date": "2027-04-04",
+                "time": "18:00",
+                "opponent": "Pallacanestro Trieste"
+              },
+              {
+                "g": 27,
+                "date": "2027-04-18",
+                "time": "18:00",
+                "opponent": "Napoli Basketball"
+              },
+              {
+                "g": 29,
+                "date": "2027-05-02",
+                "time": "18:00",
+                "opponent": "Openjobmetis Varese"
+              }
+            ],
+            "legabasket_id": 1762,
+            "legabasket_id_slug": "maxima-roma"
           },
           {
             "id": "eurocup_2627",
@@ -161,7 +382,11 @@
             "phases": [
               "regular",
               "knockout"
-            ]
+            ],
+            "enabled": false,
+            "home_games": [],
+            "legabasket_id": 0,
+            "legabasket_id_slug": ""
           }
         ]
       }
@@ -291,6 +516,22 @@
       "round": 1
     },
     {
+      "id": "maxima_roma_lba_2026-09-27_napoli_baske",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-09-27",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Napoli Basketball",
+      "sh": null,
+      "sa": null,
+      "game_num": 1,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l01",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -304,6 +545,22 @@
       "round": 2
     },
     {
+      "id": "bc_roma_spqr_lba_2026-10-04_bertram_dert",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-10-04",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Bertram Derthona Tortona",
+      "sh": null,
+      "sa": null,
+      "game_num": 2,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "v02",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
@@ -315,6 +572,38 @@
       "sh": null,
       "sa": null,
       "round": 3
+    },
+    {
+      "id": "maxima_roma_lba_2026-10-11_bc_roma_spqr",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-10-11",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "BC Roma SPQR",
+      "sh": null,
+      "sa": null,
+      "game_num": 3,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
+      "id": "bc_roma_spqr_lba_2026-10-18_umana_reyer_",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-10-18",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Umana Reyer Venezia",
+      "sh": null,
+      "sa": null,
+      "game_num": 4,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "l02",
@@ -343,6 +632,38 @@
       "round": 5
     },
     {
+      "id": "maxima_roma_lba_2026-10-25_apu_old_wild",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-10-25",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "APU Old Wild West Udine",
+      "sh": null,
+      "sa": null,
+      "game_num": 5,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
+      "id": "bc_roma_spqr_lba_2026-11-01_longobardi_s",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-11-01",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Longobardi Scafati Basket",
+      "sh": null,
+      "sa": null,
+      "game_num": 6,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l03",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -369,6 +690,22 @@
       "round": 7
     },
     {
+      "id": "maxima_roma_lba_2026-11-08_acqua_s.bern",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-11-08",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Acqua S.Bernardo Cantù",
+      "sh": null,
+      "sa": null,
+      "game_num": 7,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l04",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -380,6 +717,22 @@
       "sh": null,
       "sa": null,
       "round": 8
+    },
+    {
+      "id": "bc_roma_spqr_lba_2026-11-15_tezenis_vero",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-11-15",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Tezenis Verona",
+      "sh": null,
+      "sa": null,
+      "game_num": 8,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "l05",
@@ -408,6 +761,22 @@
       "round": 10
     },
     {
+      "id": "maxima_roma_lba_2026-11-22_nutribullet_",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-11-22",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Nutribullet Treviso Basket",
+      "sh": null,
+      "sa": null,
+      "game_num": 9,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l06",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -434,6 +803,22 @@
       "round": 12
     },
     {
+      "id": "bc_roma_spqr_lba_2026-12-06_dolomiti_ene",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-12-06",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Dolomiti Energia Trentino",
+      "sh": null,
+      "sa": null,
+      "game_num": 10,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l07",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -445,6 +830,22 @@
       "sh": null,
       "sa": null,
       "round": 13
+    },
+    {
+      "id": "bc_roma_spqr_lba_2026-12-13_napoli_baske",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-12-13",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Napoli Basketball",
+      "sh": null,
+      "sa": null,
+      "game_num": 11,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "v07",
@@ -473,6 +874,22 @@
       "round": 15
     },
     {
+      "id": "bc_roma_spqr_lba_2026-12-27_acqua_s.bern",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2026-12-27",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Acqua S.Bernardo Cantù",
+      "sh": null,
+      "sa": null,
+      "game_num": 13,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "v08",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
@@ -499,6 +916,22 @@
       "round": 17
     },
     {
+      "id": "maxima_roma_lba_2027-01-03_longobardi_s",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-01-03",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Longobardi Scafati Basket",
+      "sh": null,
+      "sa": null,
+      "game_num": 14,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "v09",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
@@ -512,6 +945,22 @@
       "round": 18
     },
     {
+      "id": "bc_roma_spqr_lba_2027-01-10_armani_olimp",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-01-10",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Armani Olimpia Milano",
+      "sh": null,
+      "sa": null,
+      "game_num": 15,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l10",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -523,6 +972,22 @@
       "sh": null,
       "sa": null,
       "round": 19
+    },
+    {
+      "id": "maxima_roma_lba_2027-01-17_dolomiti_ene",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-01-17",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Dolomiti Energia Trentino",
+      "sh": null,
+      "sa": null,
+      "game_num": 16,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "v10",
@@ -551,6 +1016,22 @@
       "round": 21
     },
     {
+      "id": "bc_roma_spqr_lba_2027-01-24_maxima_roma",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-01-24",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Maxima Roma",
+      "sh": null,
+      "sa": null,
+      "game_num": 17,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l11",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -562,6 +1043,22 @@
       "sh": null,
       "sa": null,
       "round": 22
+    },
+    {
+      "id": "maxima_roma_lba_2027-01-31_virtus_segaf",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-01-31",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Virtus Segafredo Bologna",
+      "sh": null,
+      "sa": null,
+      "game_num": 18,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "v12",
@@ -577,6 +1074,22 @@
       "round": 23
     },
     {
+      "id": "bc_roma_spqr_lba_2027-02-07_pallacanestr",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-02-07",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Pallacanestro Trieste",
+      "sh": null,
+      "sa": null,
+      "game_num": 19,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l12",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -588,6 +1101,22 @@
       "sh": null,
       "sa": null,
       "round": 24
+    },
+    {
+      "id": "maxima_roma_lba_2027-02-14_armani_olimp",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-02-14",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Armani Olimpia Milano",
+      "sh": null,
+      "sa": null,
+      "game_num": 20,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "v13",
@@ -642,6 +1171,38 @@
       "round": 27
     },
     {
+      "id": "bc_roma_spqr_lba_2027-03-07_nutribullet_",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-03-07",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Nutribullet Treviso Basket",
+      "sh": null,
+      "sa": null,
+      "game_num": 21,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
+      "id": "maxima_roma_lba_2027-03-07_tezenis_vero",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-03-07",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Tezenis Verona",
+      "sh": null,
+      "sa": null,
+      "game_num": 22,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l14",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -653,6 +1214,22 @@
       "sh": null,
       "sa": null,
       "round": 28
+    },
+    {
+      "id": "bc_roma_spqr_lba_2027-03-21_virtus_segaf",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-03-21",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Virtus Segafredo Bologna",
+      "sh": null,
+      "sa": null,
+      "game_num": 23,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "l15",
@@ -668,6 +1245,22 @@
       "round": 29
     },
     {
+      "id": "maxima_roma_lba_2027-03-27_apu_old_wild",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-03-27",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "APU Old Wild West Udine",
+      "sh": null,
+      "sa": null,
+      "game_num": 24,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "v15",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
@@ -679,6 +1272,22 @@
       "sh": null,
       "sa": null,
       "round": 30
+    },
+    {
+      "id": "maxima_roma_lba_2027-04-04_pallacanestr",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-04-04",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Pallacanestro Trieste",
+      "sh": null,
+      "sa": null,
+      "game_num": 25,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "l16",
@@ -720,6 +1329,22 @@
       "round": 32
     },
     {
+      "id": "bc_roma_spqr_lba_2027-04-11_una_hotels_r",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-04-11",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "UNA Hotels Reggio Emilia",
+      "sh": null,
+      "sa": null,
+      "game_num": 26,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "l17",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -733,6 +1358,38 @@
       "round": 33
     },
     {
+      "id": "maxima_roma_lba_2027-04-18_napoli_baske",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-04-18",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Napoli Basketball",
+      "sh": null,
+      "sa": null,
+      "game_num": 27,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
+      "id": "bc_roma_spqr_lba_2027-04-25_openjobmetis",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-04-25",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "Openjobmetis Varese",
+      "sh": null,
+      "sa": null,
+      "game_num": 28,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
       "id": "v17",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
@@ -744,6 +1401,38 @@
       "sh": null,
       "sa": null,
       "round": 34
+    },
+    {
+      "id": "maxima_roma_lba_2027-05-02_openjobmetis",
+      "team_key": "maxima_roma",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-05-02",
+      "time": "18:00",
+      "home": "Maxima Roma",
+      "away": "Openjobmetis Varese",
+      "sh": null,
+      "sa": null,
+      "game_num": 29,
+      "sources": [
+        "config_static"
+      ]
+    },
+    {
+      "id": "bc_roma_spqr_lba_2027-05-09_apu_old_wild",
+      "team_key": "bc_roma_spqr",
+      "competition_id": "lba_2627",
+      "phase": "regular",
+      "date": "2027-05-09",
+      "time": "20:00",
+      "home": "BC Roma SPQR",
+      "away": "APU Old Wild West Udine",
+      "sh": null,
+      "sa": null,
+      "game_num": 30,
+      "sources": [
+        "config_static"
+      ]
     },
     {
       "id": "v35_3",
