@@ -169,7 +169,7 @@ header{
 .tab.on.tv{background:var(--red);color:var(--yellow);box-shadow:3px 3px 0 var(--black)}
 .tab.on.tl{background:var(--blue);color:var(--yellow);box-shadow:3px 3px 0 var(--black)}
 .tab.on.tp{background:var(--yellow);color:var(--black);box-shadow:3px 3px 0 var(--red)}
-.tab-crest{
+.tab-crest{display:none;
   background:var(--cream);padding:1px 3px;
   border:1px solid rgba(0,0,0,.5);
   display:inline-flex;align-items:center;
@@ -1044,15 +1044,11 @@ header{
   </div>
   <div class="tabs">
     <button class="tab ta on"  onclick="setTab('all')">TUTTE</button>
-    <button class="tab tv"     onclick="setTab('virtus')">
-      <span class="tab-crest"><img src="assets/virtus-roma.png" alt=""/></span>VIRTUS
-    </button>
-    <button class="tab tl"     onclick="setTab('luiss')">
-      <span class="tab-crest"><img src="assets/luiss-roma.png" alt=""/></span>LUISS
-    </button>
+    <button class="tab tv"     onclick="setTab('virtus')">VIRTUS</button>
+    <button class="tab tl"     onclick="setTab('luiss')">LUISS</button>
     <button class="tab tbr"    onclick="setTab('bc_roma_spqr')">BC ROMA</button>
     <button class="tab tmx"    onclick="setTab('maxima_roma')">MAXIMA</button>
-    <button class="tab tp"     onclick="setTab('post')">PLAYOFF</button>
+    <button class="tab tp" id="tab-post" style="display:none" onclick="setTab('post')">PLAYOFF</button>
   </div>
 </header>
 
@@ -1463,6 +1459,8 @@ function render() {
 
   const filtered = matches.filter(m => currentTab==='all' || m.team===currentTab)
     .sort((a,b)=>a.date.localeCompare(b.date));
+  const tpEl = document.getElementById('tab-post');
+  if(tpEl) tpEl.style.display = matches.some(m=>m.phase!=='regular') ? '' : 'none';
   const upcoming = filtered.filter(m=>!isPast(m.date)||isToday(m.date));
   const past     = filtered.filter(m=>isPast(m.date)&&!isToday(m.date));
 
