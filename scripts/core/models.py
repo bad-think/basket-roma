@@ -59,6 +59,10 @@ class Competition:
     source_slug: str = ""             # slug LNP o equivalente
     rss_section: int | None = None    # solo per pianetabasket fetcher
     phases: list[Phase] = field(default_factory=lambda: ["regular"])
+    enabled: bool = True
+    home_games: list[dict] = field(default_factory=list)
+    legabasket_id: int = 0
+    legabasket_id_slug: str = ""
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "Competition":
@@ -71,6 +75,10 @@ class Competition:
             source_slug=d.get("source_slug", ""),
             rss_section=d.get("rss_section"),
             phases=d.get("phases", ["regular"]),
+            enabled=d.get("enabled", True),
+            home_games=d.get("home_games", []),
+            legabasket_id=d.get("legabasket_id", 0),
+            legabasket_id_slug=d.get("legabasket_id_slug", ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
