@@ -177,6 +177,12 @@ def main() -> int:
         print(f"❌ Errore di caricamento: {type(e).__name__}: {e}")
         return 2
 
+    # Inietta standings vuoti per team senza dati (es. LBA: bc_roma_spqr, maxima_roma)
+    from core.models import Standing
+    for team in state.season.teams:
+        if team.key not in state.standings:
+            state.standings[team.key] = Standing(pos=0, pts=0, w=0, l=0)
+
     s: Season = state.season
     print(f"\n✅ Stagione: {s.season} | Squadre: {len(s.teams)} | "
           f"RSS attivi: {len(s.enabled_rss())}/{len(s.rss_feeds)} | "
