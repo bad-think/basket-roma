@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-24T07:04:18.377240",
+  "last_updated": "2026-09-24T07:57:18.756407",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -674,7 +674,7 @@
       "away": "Pielle Livorno",
       "sh": null,
       "sa": null,
-      "round": 7
+      "round": 6
     },
     {
       "id": "v04",
@@ -687,7 +687,7 @@
       "away": "Benacquista Assicurazioni Latina",
       "sh": null,
       "sa": null,
-      "round": 8
+      "round": 7
     },
     {
       "id": "maxima_roma_lba_2026-11-08_acqua_s.bern",
@@ -716,7 +716,7 @@
       "away": "PSA Napoli Est",
       "sh": null,
       "sa": null,
-      "round": 9
+      "round": 8
     },
     {
       "id": "bc_roma_spqr_lba_2026-11-15_tezenis_vero",
@@ -745,7 +745,7 @@
       "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null,
-      "round": 10
+      "round": 9
     },
     {
       "id": "v05",
@@ -758,7 +758,7 @@
       "away": "Fabo Herons Montecatini",
       "sh": null,
       "sa": null,
-      "round": 11
+      "round": 10
     },
     {
       "id": "maxima_roma_lba_2026-11-22_nutribullet_",
@@ -787,7 +787,7 @@
       "away": "Tema Sinergie Faenza",
       "sh": null,
       "sa": null,
-      "round": 13
+      "round": 12
     },
     {
       "id": "v06",
@@ -800,7 +800,7 @@
       "away": "PSA Napoli Est",
       "sh": null,
       "sa": null,
-      "round": 13
+      "round": 12
     },
     {
       "id": "bc_roma_spqr_lba_2026-12-06_dolomiti_ene",
@@ -829,7 +829,7 @@
       "away": "Ristopro Fabriano",
       "sh": null,
       "sa": null,
-      "round": 14
+      "round": 13
     },
     {
       "id": "bc_roma_spqr_lba_2026-12-13_napoli_baske",
@@ -858,7 +858,7 @@
       "away": "Umana San Giobbe Chiusi",
       "sh": null,
       "sa": null,
-      "round": 15
+      "round": 14
     },
     {
       "id": "l08",
@@ -871,7 +871,7 @@
       "away": "Fabo Herons Montecatini",
       "sh": null,
       "sa": null,
-      "round": 16
+      "round": 15
     },
     {
       "id": "bc_roma_spqr_lba_2026-12-27_acqua_s.bern",
@@ -900,7 +900,7 @@
       "away": "Luiss Roma",
       "sh": null,
       "sa": null,
-      "round": 17
+      "round": 16
     },
     {
       "id": "l09",
@@ -913,7 +913,7 @@
       "away": "Basketball Club Lucca",
       "sh": null,
       "sa": null,
-      "round": 18
+      "round": 17
     },
     {
       "id": "maxima_roma_lba_2027-01-03_longobardi_s",
@@ -942,7 +942,7 @@
       "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null,
-      "round": 19
+      "round": 18
     },
     {
       "id": "bc_roma_spqr_lba_2027-01-10_armani_olimp",
@@ -971,7 +971,7 @@
       "away": "Consorzio Leonardo Dany Quarrata",
       "sh": null,
       "sa": null,
-      "round": 20
+      "round": 19
     },
     {
       "id": "maxima_roma_lba_2027-01-17_dolomiti_ene",
@@ -1000,7 +1000,7 @@
       "away": "OraSì Ravenna",
       "sh": null,
       "sa": null,
-      "round": 21
+      "round": 20
     },
     {
       "id": "v11",
@@ -1013,7 +1013,7 @@
       "away": "Pielle Livorno",
       "sh": null,
       "sa": null,
-      "round": 22
+      "round": 21
     },
     {
       "id": "bc_roma_spqr_lba_2027-01-24_maxima_roma",
@@ -1042,7 +1042,7 @@
       "away": "OraSì Ravenna",
       "sh": null,
       "sa": null,
-      "round": 23
+      "round": 22
     },
     {
       "id": "maxima_roma_lba_2027-01-31_virtus_segaf",
@@ -1071,7 +1071,7 @@
       "away": "Basketball Club Lucca",
       "sh": null,
       "sa": null,
-      "round": 24
+      "round": 23
     },
     {
       "id": "bc_roma_spqr_lba_2027-02-07_pallacanestr",
@@ -1100,7 +1100,7 @@
       "away": "Consultinvest Loreto Pesaro",
       "sh": null,
       "sa": null,
-      "round": 25
+      "round": 24
     },
     {
       "id": "maxima_roma_lba_2027-02-14_armani_olimp",
@@ -1129,7 +1129,7 @@
       "away": "Mens Sana Basketball Siena",
       "sh": null,
       "sa": null,
-      "round": 26
+      "round": 25
     },
     {
       "id": "v25",
@@ -1142,7 +1142,7 @@
       "away": "Sendero Mens Sana Siena",
       "sh": null,
       "sa": null,
-      "round": 26
+      "round": 25
     },
     {
       "id": "l13",
@@ -1155,7 +1155,7 @@
       "away": "Solbat Golfo Piombino",
       "sh": null,
       "sa": null,
-      "round": 27
+      "round": 26
     },
     {
       "id": "v14",
@@ -1168,7 +1168,7 @@
       "away": "Consorzio Leonardo Dany Quarrata",
       "sh": null,
       "sa": null,
-      "round": 28
+      "round": 27
     },
     {
       "id": "bc_roma_spqr_lba_2027-03-07_nutribullet_",
@@ -1213,7 +1213,7 @@
       "away": "Virtus GVM Roma 1960",
       "sh": null,
       "sa": null,
-      "round": 29
+      "round": 28
     },
     {
       "id": "bc_roma_spqr_lba_2027-03-21_virtus_segaf",
@@ -1242,7 +1242,7 @@
       "away": "Allianz Pazienza Cestistica San Severo",
       "sh": null,
       "sa": null,
-      "round": 30
+      "round": 29
     },
     {
       "id": "maxima_roma_lba_2027-03-27_apu_old_wild",
@@ -1271,7 +1271,7 @@
       "away": "Tema Sinergie Faenza",
       "sh": null,
       "sa": null,
-      "round": 31
+      "round": 30
     },
     {
       "id": "maxima_roma_lba_2027-04-04_pallacanestr",
@@ -1300,7 +1300,7 @@
       "away": "Mens Sana Basketball Siena",
       "sh": null,
       "sa": null,
-      "round": 32
+      "round": 31
     },
     {
       "id": "l31",
@@ -1313,7 +1313,7 @@
       "away": "Sendero Mens Sana Siena",
       "sh": null,
       "sa": null,
-      "round": 32
+      "round": 31
     },
     {
       "id": "v16",
@@ -1326,7 +1326,7 @@
       "away": "Solbat Golfo Piombino",
       "sh": null,
       "sa": null,
-      "round": 33
+      "round": 32
     },
     {
       "id": "bc_roma_spqr_lba_2027-04-11_una_hotels_r",
@@ -1355,7 +1355,7 @@
       "away": "Felice Scandone Avellino",
       "sh": null,
       "sa": null,
-      "round": 34
+      "round": 33
     },
     {
       "id": "maxima_roma_lba_2027-04-18_napoli_baske",
@@ -1400,7 +1400,7 @@
       "away": "Ristopro Fabriano",
       "sh": null,
       "sa": null,
-      "round": 35
+      "round": 34
     },
     {
       "id": "maxima_roma_lba_2027-05-02_openjobmetis",
