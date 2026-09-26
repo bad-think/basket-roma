@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-09-25T23:55:33.017873",
+  "last_updated": "2026-09-26T06:58:46.343224",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -477,45 +477,6 @@
   },
   "matches": [
     {
-      "id": "v01",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2026-09-26",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
-      "round": 1
-    },
-    {
-      "id": "v35",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2026-09-26",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
-      "round": 1
-    },
-    {
-      "id": "v35_2",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2026-09-26",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
-      "round": 1
-    },
-    {
       "id": "maxima_roma_lba_2026-09-27_napoli_baske",
       "team_key": "maxima_roma",
       "competition_id": "lba_2627",
@@ -619,6 +580,58 @@
       "round": 4
     },
     {
+      "id": "v01",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-21",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Felice Scandone Avellino",
+      "sh": null,
+      "sa": null,
+      "round": 5
+    },
+    {
+      "id": "v35",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-21",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Felice Scandone Avellino",
+      "sh": null,
+      "sa": null,
+      "round": 5
+    },
+    {
+      "id": "v35_2",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-21",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Felice Scandone Avellino",
+      "sh": null,
+      "sa": null,
+      "round": 5
+    },
+    {
+      "id": "v35_3",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-21",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Felice Scandone Avellino",
+      "sh": null,
+      "sa": null,
+      "round": 5
+    },
+    {
       "id": "v03",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
@@ -674,7 +687,7 @@
       "away": "Pielle Livorno",
       "sh": null,
       "sa": null,
-      "round": 6
+      "round": 7
     },
     {
       "id": "v04",
@@ -687,7 +700,7 @@
       "away": "Benacquista Assicurazioni Latina",
       "sh": null,
       "sa": null,
-      "round": 7
+      "round": 8
     },
     {
       "id": "maxima_roma_lba_2026-11-08_acqua_s.bern",
@@ -716,7 +729,7 @@
       "away": "PSA Napoli Est",
       "sh": null,
       "sa": null,
-      "round": 8
+      "round": 9
     },
     {
       "id": "bc_roma_spqr_lba_2026-11-15_tezenis_vero",
@@ -745,7 +758,7 @@
       "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null,
-      "round": 9
+      "round": 10
     },
     {
       "id": "v05",
@@ -758,7 +771,7 @@
       "away": "Fabo Herons Montecatini",
       "sh": null,
       "sa": null,
-      "round": 10
+      "round": 11
     },
     {
       "id": "maxima_roma_lba_2026-11-22_nutribullet_",
@@ -787,7 +800,7 @@
       "away": "Tema Sinergie Faenza",
       "sh": null,
       "sa": null,
-      "round": 12
+      "round": 13
     },
     {
       "id": "v06",
@@ -800,7 +813,7 @@
       "away": "PSA Napoli Est",
       "sh": null,
       "sa": null,
-      "round": 12
+      "round": 13
     },
     {
       "id": "bc_roma_spqr_lba_2026-12-06_dolomiti_ene",
@@ -829,7 +842,7 @@
       "away": "Ristopro Fabriano",
       "sh": null,
       "sa": null,
-      "round": 13
+      "round": 14
     },
     {
       "id": "bc_roma_spqr_lba_2026-12-13_napoli_baske",
@@ -858,7 +871,7 @@
       "away": "Umana San Giobbe Chiusi",
       "sh": null,
       "sa": null,
-      "round": 14
+      "round": 15
     },
     {
       "id": "l08",
@@ -871,7 +884,7 @@
       "away": "Fabo Herons Montecatini",
       "sh": null,
       "sa": null,
-      "round": 15
+      "round": 16
     },
     {
       "id": "bc_roma_spqr_lba_2026-12-27_acqua_s.bern",
@@ -900,7 +913,7 @@
       "away": "Luiss Roma",
       "sh": null,
       "sa": null,
-      "round": 16
+      "round": 17
     },
     {
       "id": "l09",
@@ -913,7 +926,7 @@
       "away": "Basketball Club Lucca",
       "sh": null,
       "sa": null,
-      "round": 17
+      "round": 18
     },
     {
       "id": "maxima_roma_lba_2027-01-03_longobardi_s",
@@ -942,7 +955,7 @@
       "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null,
-      "round": 18
+      "round": 19
     },
     {
       "id": "bc_roma_spqr_lba_2027-01-10_armani_olimp",
@@ -971,7 +984,7 @@
       "away": "Consorzio Leonardo Dany Quarrata",
       "sh": null,
       "sa": null,
-      "round": 19
+      "round": 20
     },
     {
       "id": "maxima_roma_lba_2027-01-17_dolomiti_ene",
@@ -1000,7 +1013,7 @@
       "away": "OraSì Ravenna",
       "sh": null,
       "sa": null,
-      "round": 20
+      "round": 21
     },
     {
       "id": "v11",
@@ -1013,7 +1026,7 @@
       "away": "Pielle Livorno",
       "sh": null,
       "sa": null,
-      "round": 21
+      "round": 22
     },
     {
       "id": "bc_roma_spqr_lba_2027-01-24_maxima_roma",
@@ -1042,7 +1055,7 @@
       "away": "OraSì Ravenna",
       "sh": null,
       "sa": null,
-      "round": 22
+      "round": 23
     },
     {
       "id": "maxima_roma_lba_2027-01-31_virtus_segaf",
@@ -1071,7 +1084,7 @@
       "away": "Basketball Club Lucca",
       "sh": null,
       "sa": null,
-      "round": 23
+      "round": 24
     },
     {
       "id": "bc_roma_spqr_lba_2027-02-07_pallacanestr",
@@ -1100,7 +1113,7 @@
       "away": "Consultinvest Loreto Pesaro",
       "sh": null,
       "sa": null,
-      "round": 24
+      "round": 25
     },
     {
       "id": "maxima_roma_lba_2027-02-14_armani_olimp",
@@ -1129,7 +1142,7 @@
       "away": "Mens Sana Basketball Siena",
       "sh": null,
       "sa": null,
-      "round": 25
+      "round": 26
     },
     {
       "id": "v25",
@@ -1142,7 +1155,7 @@
       "away": "Sendero Mens Sana Siena",
       "sh": null,
       "sa": null,
-      "round": 25
+      "round": 26
     },
     {
       "id": "l13",
@@ -1155,7 +1168,7 @@
       "away": "Solbat Golfo Piombino",
       "sh": null,
       "sa": null,
-      "round": 26
+      "round": 27
     },
     {
       "id": "v14",
@@ -1168,7 +1181,7 @@
       "away": "Consorzio Leonardo Dany Quarrata",
       "sh": null,
       "sa": null,
-      "round": 27
+      "round": 28
     },
     {
       "id": "bc_roma_spqr_lba_2027-03-07_nutribullet_",
@@ -1213,7 +1226,7 @@
       "away": "Virtus GVM Roma 1960",
       "sh": null,
       "sa": null,
-      "round": 28
+      "round": 29
     },
     {
       "id": "bc_roma_spqr_lba_2027-03-21_virtus_segaf",
@@ -1242,7 +1255,7 @@
       "away": "Allianz Pazienza Cestistica San Severo",
       "sh": null,
       "sa": null,
-      "round": 29
+      "round": 30
     },
     {
       "id": "maxima_roma_lba_2027-03-27_apu_old_wild",
@@ -1271,7 +1284,7 @@
       "away": "Tema Sinergie Faenza",
       "sh": null,
       "sa": null,
-      "round": 30
+      "round": 31
     },
     {
       "id": "maxima_roma_lba_2027-04-04_pallacanestr",
@@ -1300,7 +1313,7 @@
       "away": "Mens Sana Basketball Siena",
       "sh": null,
       "sa": null,
-      "round": 31
+      "round": 32
     },
     {
       "id": "l31",
@@ -1313,7 +1326,7 @@
       "away": "Sendero Mens Sana Siena",
       "sh": null,
       "sa": null,
-      "round": 31
+      "round": 32
     },
     {
       "id": "v16",
@@ -1326,7 +1339,7 @@
       "away": "Solbat Golfo Piombino",
       "sh": null,
       "sa": null,
-      "round": 32
+      "round": 33
     },
     {
       "id": "bc_roma_spqr_lba_2027-04-11_una_hotels_r",
@@ -1355,7 +1368,7 @@
       "away": "Felice Scandone Avellino",
       "sh": null,
       "sa": null,
-      "round": 33
+      "round": 34
     },
     {
       "id": "maxima_roma_lba_2027-04-18_napoli_baske",
@@ -1400,7 +1413,7 @@
       "away": "Ristopro Fabriano",
       "sh": null,
       "sa": null,
-      "round": 34
+      "round": 35
     },
     {
       "id": "maxima_roma_lba_2027-05-02_openjobmetis",
@@ -1433,19 +1446,6 @@
       "sources": [
         "config_static"
       ]
-    },
-    {
-      "id": "v35_3",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2027-09-26",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
-      "round": 35
     }
   ],
   "standings": {
