@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-26T06:58:41.701392",
+  "last_updated": "2026-09-26T19:10:13.425913",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -532,19 +532,31 @@
       "away": "Felice Scandone Avellino",
       "sh": null,
       "sa": null
+    },
+    {
+      "id": "l35",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-10-02",
+      "time": "20:30",
+      "home": "Luiss Roma",
+      "away": "Benacquista Assicurazioni Latina",
+      "sh": null,
+      "sa": null
     }
   ],
   "standings": {
     "virtus": {
-      "pos": 18,
+      "pos": 17,
       "pts": 0,
       "w": 0,
       "l": 0
     },
     "luiss": {
-      "pos": 9,
-      "pts": 0,
-      "w": 0,
+      "pos": 1,
+      "pts": 2,
+      "w": 1,
       "l": 0
     }
   }
