@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-02T21:29:34.081526",
+  "last_updated": "2026-10-02T22:39:14.322920",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -494,6 +494,19 @@
     },
     {
       "id": "l01",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-02",
+      "time": "20:30",
+      "home": "Luiss Roma",
+      "away": "Benacquista Assicurazioni Latina",
+      "sh": null,
+      "sa": null,
+      "round": 2
+    },
+    {
+      "id": "l35",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
       "phase": "regular",
@@ -1446,19 +1459,6 @@
       "sources": [
         "config_static"
       ]
-    },
-    {
-      "id": "l35",
-      "team_key": "luiss",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2027-10-02",
-      "time": "20:30",
-      "home": "Luiss Roma",
-      "away": "Benacquista Assicurazioni Latina",
-      "sh": null,
-      "sa": null,
-      "round": 35
     }
   ],
   "standings": {
