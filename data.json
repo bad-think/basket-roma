@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-02T22:39:09.716164",
+  "last_updated": "2026-10-03T00:21:06.131263",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -278,8 +278,8 @@
       "time": "20:30",
       "home": "Luiss Roma",
       "away": "Benacquista Assicurazioni Latina",
-      "sh": null,
-      "sa": null
+      "sh": 55,
+      "sa": 82
     },
     {
       "id": "l02",
@@ -542,19 +542,19 @@
       "time": "20:30",
       "home": "Luiss Roma",
       "away": "Benacquista Assicurazioni Latina",
-      "sh": null,
-      "sa": null
+      "sh": 55,
+      "sa": 82
     }
   ],
   "standings": {
     "virtus": {
-      "pos": 10,
+      "pos": 9,
       "pts": 0,
       "w": 0,
       "l": 0
     },
     "luiss": {
-      "pos": 5,
+      "pos": 4,
       "pts": 2,
       "w": 1,
       "l": 0
