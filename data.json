@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-03T07:28:34.128102",
+  "last_updated": "2026-10-04T19:29:13.154797",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -544,6 +544,18 @@
       "away": "Benacquista Assicurazioni Latina",
       "sh": 55,
       "sa": 82
+    },
+    {
+      "id": "v35_4",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-10-10",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Consultinvest Loreto Pesaro",
+      "sh": null,
+      "sa": null
     }
   ],
   "standings": {
