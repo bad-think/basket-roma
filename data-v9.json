@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-10T19:58:44.669267",
+  "last_updated": "2026-10-10T20:28:36.027139",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -536,6 +536,19 @@
     },
     {
       "id": "v02",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-10",
+      "time": "20:00",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Consultinvest Loreto Pesaro",
+      "sh": null,
+      "sa": null,
+      "round": 3
+    },
+    {
+      "id": "v35_4",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
       "phase": "regular",
@@ -1459,19 +1472,6 @@
       "sources": [
         "config_static"
       ]
-    },
-    {
-      "id": "v35_4",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2027-10-10",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Consultinvest Loreto Pesaro",
-      "sh": null,
-      "sa": null,
-      "round": 35
     }
   ],
   "standings": {
