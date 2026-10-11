@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-11T08:10:57.929992",
+  "last_updated": "2026-10-11T20:08:30.470346",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -556,11 +556,23 @@
       "away": "Consultinvest Loreto Pesaro",
       "sh": 94,
       "sa": 65
+    },
+    {
+      "id": "l35_2",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-10-18",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Umana San Giobbe Chiusi",
+      "sh": null,
+      "sa": null
     }
   ],
   "standings": {
     "virtus": {
-      "pos": 1,
+      "pos": 4,
       "pts": 4,
       "w": 2,
       "l": 0
@@ -569,7 +581,7 @@
       "pos": 13,
       "pts": 2,
       "w": 1,
-      "l": 1
+      "l": 2
     }
   }
 }

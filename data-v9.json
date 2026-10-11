@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-11T09:29:25.170891",
+  "last_updated": "2026-10-11T20:08:34.867711",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -1472,11 +1472,24 @@
       "sources": [
         "config_static"
       ]
+    },
+    {
+      "id": "l35_2",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2027-10-18",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Umana San Giobbe Chiusi",
+      "sh": null,
+      "sa": null,
+      "round": 35
     }
   ],
   "standings": {
     "virtus": {
-      "pos": 1,
+      "pos": 4,
       "pts": 4,
       "w": 2,
       "l": 0
@@ -1485,7 +1498,7 @@
       "pos": 13,
       "pts": 2,
       "w": 1,
-      "l": 1
+      "l": 2
     },
     "bc_roma_spqr": {
       "pos": 0,
