@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-14T23:49:44.679239",
+  "last_updated": "2026-10-15T06:52:10.728551",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -658,19 +658,6 @@
       "round": 5
     },
     {
-      "id": "v03",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2026-10-24",
-      "time": "20:00",
-      "home": "Virtus GVM Roma 1960",
-      "away": "Allianz Pazienza Cestistica San Severo",
-      "sh": null,
-      "sa": null,
-      "round": 5
-    },
-    {
       "id": "maxima_roma_lba_2026-10-25_apu_old_wild",
       "team_key": "maxima_roma",
       "competition_id": "lba_2627",
@@ -685,6 +672,19 @@
       "sources": [
         "config_static"
       ]
+    },
+    {
+      "id": "v03",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-26",
+      "time": "20:30",
+      "home": "Virtus GVM Roma 1960",
+      "away": "Allianz Pazienza Cestistica San Severo",
+      "sh": null,
+      "sa": null,
+      "round": 6
     },
     {
       "id": "bc_roma_spqr_lba_2026-11-01_longobardi_s",
@@ -1489,13 +1489,13 @@
   ],
   "standings": {
     "virtus": {
-      "pos": 4,
+      "pos": 3,
       "pts": 4,
       "w": 2,
       "l": 0
     },
     "luiss": {
-      "pos": 13,
+      "pos": 12,
       "pts": 2,
       "w": 1,
       "l": 2
