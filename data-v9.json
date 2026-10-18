@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-18T07:32:19.595197",
+  "last_updated": "2026-10-18T18:33:32.108650",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -594,6 +594,19 @@
     },
     {
       "id": "l02",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-18",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Umana San Giobbe Chiusi",
+      "sh": null,
+      "sa": null,
+      "round": 4
+    },
+    {
+      "id": "l35_2",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
       "phase": "regular",
@@ -1474,14 +1487,14 @@
       ]
     },
     {
-      "id": "l35_2",
-      "team_key": "luiss",
+      "id": "v35_5",
+      "team_key": "virtus",
       "competition_id": "b_naz_2526",
       "phase": "regular",
-      "date": "2027-10-18",
-      "time": "18:00",
-      "home": "Luiss Roma",
-      "away": "Umana San Giobbe Chiusi",
+      "date": "2027-10-21",
+      "time": "20:00",
+      "home": "Virtus Roma GVM",
+      "away": "Felice Scandone Avellino",
       "sh": null,
       "sa": null,
       "round": 35
@@ -1489,13 +1502,13 @@
   ],
   "standings": {
     "virtus": {
-      "pos": 6,
+      "pos": 5,
       "pts": 4,
       "w": 2,
       "l": 0
     },
     "luiss": {
-      "pos": 13,
+      "pos": 12,
       "pts": 2,
       "w": 1,
       "l": 2
