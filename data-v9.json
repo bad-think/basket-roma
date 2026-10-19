@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-18T22:57:47.569727",
+  "last_updated": "2026-10-19T07:13:22.561052",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -601,8 +601,8 @@
       "time": "18:00",
       "home": "Luiss Roma",
       "away": "Umana San Giobbe Chiusi",
-      "sh": null,
-      "sa": null,
+      "sh": 91,
+      "sa": 87,
       "round": 4
     },
     {
@@ -614,8 +614,8 @@
       "time": "18:00",
       "home": "Luiss Roma",
       "away": "Umana San Giobbe Chiusi",
-      "sh": null,
-      "sa": null,
+      "sh": 91,
+      "sa": 87,
       "round": 4
     },
     {
@@ -1502,15 +1502,15 @@
   ],
   "standings": {
     "virtus": {
-      "pos": 6,
-      "pts": 4,
-      "w": 2,
+      "pos": 2,
+      "pts": 6,
+      "w": 3,
       "l": 0
     },
     "luiss": {
-      "pos": 13,
-      "pts": 2,
-      "w": 1,
+      "pos": 10,
+      "pts": 4,
+      "w": 2,
       "l": 2
     },
     "bc_roma_spqr": {
