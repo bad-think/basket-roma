@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-21T08:06:28.258319",
+  "last_updated": "2026-10-21T20:01:50.234128",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -665,6 +665,19 @@
       "date": "2026-10-21",
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
+      "away": "Felice Scandone Avellino",
+      "sh": null,
+      "sa": null,
+      "round": 5
+    },
+    {
+      "id": "v35_5",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-10-21",
+      "time": "20:00",
+      "home": "Virtus Roma GVM",
       "away": "Felice Scandone Avellino",
       "sh": null,
       "sa": null,
@@ -1487,14 +1500,14 @@
       ]
     },
     {
-      "id": "v35_5",
+      "id": "v35_6",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
       "phase": "regular",
-      "date": "2027-10-21",
-      "time": "20:00",
+      "date": "2027-10-26",
+      "time": "20:30",
       "home": "Virtus Roma GVM",
-      "away": "Felice Scandone Avellino",
+      "away": "Allianz Pazienza Cestistica San Severo",
       "sh": null,
       "sa": null,
       "round": 35
