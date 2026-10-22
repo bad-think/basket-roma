@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-21T23:57:41.884199",
+  "last_updated": "2026-10-22T06:59:23.599852",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -627,8 +627,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
+      "sh": 76,
+      "sa": 62,
       "round": 5
     },
     {
@@ -640,8 +640,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
+      "sh": 76,
+      "sa": 62,
       "round": 5
     },
     {
@@ -653,8 +653,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
+      "sh": 76,
+      "sa": 62,
       "round": 5
     },
     {
@@ -666,8 +666,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
+      "sh": 76,
+      "sa": 62,
       "round": 5
     },
     {
@@ -679,8 +679,8 @@
       "time": "20:00",
       "home": "Virtus Roma GVM",
       "away": "Felice Scandone Avellino",
-      "sh": null,
-      "sa": null,
+      "sh": 76,
+      "sa": 62,
       "round": 5
     },
     {
@@ -1515,9 +1515,9 @@
   ],
   "standings": {
     "virtus": {
-      "pos": 2,
-      "pts": 6,
-      "w": 3,
+      "pos": 1,
+      "pts": 8,
+      "w": 4,
       "l": 0
     },
     "luiss": {
