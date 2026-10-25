@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-25T07:55:17.147949",
+  "last_updated": "2026-10-25T18:52:23.712335",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -1508,6 +1508,19 @@
       "time": "20:30",
       "home": "Virtus Roma GVM",
       "away": "Allianz Pazienza Cestistica San Severo",
+      "sh": null,
+      "sa": null,
+      "round": 35
+    },
+    {
+      "id": "l35_3",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2027-11-01",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Verodol CBD Pielle Livorno",
       "sh": null,
       "sa": null,
       "round": 35

@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-23T19:54:21.744745",
+  "last_updated": "2026-10-25T18:52:18.228829",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -590,6 +590,18 @@
       "time": "20:30",
       "home": "Virtus Roma GVM",
       "away": "Allianz Pazienza Cestistica San Severo",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "l35_3",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-11-01",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Verodol CBD Pielle Livorno",
       "sh": null,
       "sa": null
     }
