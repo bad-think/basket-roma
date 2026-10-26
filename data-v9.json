@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-25T23:08:30.874028",
+  "last_updated": "2026-10-26T07:20:18.085331",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -1534,10 +1534,10 @@
       "l": 0
     },
     "luiss": {
-      "pos": 10,
+      "pos": 14,
       "pts": 4,
       "w": 2,
-      "l": 2
+      "l": 3
     },
     "bc_roma_spqr": {
       "pos": 0,
