@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-10-27T00:19:52.463111",
+  "last_updated": "2026-10-27T07:11:55.920906",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -708,8 +708,8 @@
       "time": "20:30",
       "home": "Virtus GVM Roma 1960",
       "away": "Allianz Pazienza Cestistica San Severo",
-      "sh": null,
-      "sa": null,
+      "sh": 92,
+      "sa": 77,
       "round": 6
     },
     {
@@ -721,8 +721,8 @@
       "time": "20:30",
       "home": "Virtus Roma GVM",
       "away": "Allianz Pazienza Cestistica San Severo",
-      "sh": null,
-      "sa": null,
+      "sh": 92,
+      "sa": 77,
       "round": 6
     },
     {
@@ -1529,8 +1529,8 @@
   "standings": {
     "virtus": {
       "pos": 1,
-      "pts": 8,
-      "w": 4,
+      "pts": 10,
+      "w": 5,
       "l": 0
     },
     "luiss": {
