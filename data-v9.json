@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-01T09:53:54.080893",
+  "last_updated": "2026-11-01T20:25:07.233608",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -750,6 +750,19 @@
       "time": "18:00",
       "home": "Luiss Roma",
       "away": "Pielle Livorno",
+      "sh": null,
+      "sa": null,
+      "round": 7
+    },
+    {
+      "id": "l35_3",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-11-01",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Verodol CBD Pielle Livorno",
       "sh": null,
       "sa": null,
       "round": 7
@@ -1513,14 +1526,14 @@
       ]
     },
     {
-      "id": "l35_3",
-      "team_key": "luiss",
+      "id": "v35_7",
+      "team_key": "virtus",
       "competition_id": "b_naz_2526",
       "phase": "regular",
-      "date": "2027-11-01",
-      "time": "18:00",
-      "home": "Luiss Roma",
-      "away": "Verodol CBD Pielle Livorno",
+      "date": "2027-11-06",
+      "time": "20:30",
+      "home": "Virtus Roma GVM",
+      "away": "Benacquista Assicurazioni Latina",
       "sh": null,
       "sa": null,
       "round": 35

@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-28T07:50:21.626870",
+  "last_updated": "2026-11-01T20:25:01.955750",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -597,11 +597,23 @@
       "id": "l35_3",
       "team": "luiss",
       "phase": "regular",
-      "round": 35,
-      "date": "2027-11-01",
+      "round": 7,
+      "date": "2026-11-01",
       "time": "18:00",
       "home": "Luiss Roma",
       "away": "Verodol CBD Pielle Livorno",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "v35_7",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-11-06",
+      "time": "20:30",
+      "home": "Virtus Roma GVM",
+      "away": "Benacquista Assicurazioni Latina",
       "sh": null,
       "sa": null
     }
