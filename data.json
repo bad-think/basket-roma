@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-01T20:25:01.955750",
+  "last_updated": "2026-11-02T08:45:13.470874",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -302,8 +302,8 @@
       "time": "18:00",
       "home": "Luiss Roma",
       "away": "Pielle Livorno",
-      "sh": null,
-      "sa": null
+      "sh": 70,
+      "sa": 77
     },
     {
       "id": "l04",
@@ -602,8 +602,8 @@
       "time": "18:00",
       "home": "Luiss Roma",
       "away": "Verodol CBD Pielle Livorno",
-      "sh": null,
-      "sa": null
+      "sh": 70,
+      "sa": 77
     },
     {
       "id": "v35_7",
@@ -621,15 +621,15 @@
   "standings": {
     "virtus": {
       "pos": 1,
-      "pts": 10,
-      "w": 5,
+      "pts": 12,
+      "w": 6,
       "l": 0
     },
     "luiss": {
-      "pos": 14,
+      "pos": 15,
       "pts": 4,
       "w": 2,
-      "l": 3
+      "l": 4
     }
   }
 }
