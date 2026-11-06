@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-06T21:25:53.329712",
+  "last_updated": "2026-11-06T21:56:39.405686",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -781,6 +781,19 @@
       "round": 8
     },
     {
+      "id": "v35_7",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-11-06",
+      "time": "20:30",
+      "home": "Virtus Roma GVM",
+      "away": "Benacquista Assicurazioni Latina",
+      "sh": null,
+      "sa": null,
+      "round": 8
+    },
+    {
       "id": "maxima_roma_lba_2026-11-08_acqua_s.bern",
       "team_key": "maxima_roma",
       "competition_id": "lba_2627",
@@ -1524,19 +1537,6 @@
       "sources": [
         "config_static"
       ]
-    },
-    {
-      "id": "v35_7",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2027-11-06",
-      "time": "20:30",
-      "home": "Virtus Roma GVM",
-      "away": "Benacquista Assicurazioni Latina",
-      "sh": null,
-      "sa": null,
-      "round": 35
     }
   ],
   "standings": {
