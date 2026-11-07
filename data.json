@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-06T21:56:35.053177",
+  "last_updated": "2026-11-07T08:10:57.158423",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -110,8 +110,8 @@
       "time": "20:30",
       "home": "Virtus GVM Roma 1960",
       "away": "Benacquista Assicurazioni Latina",
-      "sh": null,
-      "sa": null
+      "sh": 85,
+      "sa": 60
     },
     {
       "id": "v05",
@@ -614,15 +614,15 @@
       "time": "20:30",
       "home": "Virtus Roma GVM",
       "away": "Benacquista Assicurazioni Latina",
-      "sh": null,
-      "sa": null
+      "sh": 85,
+      "sa": 60
     }
   ],
   "standings": {
     "virtus": {
       "pos": 1,
-      "pts": 12,
-      "w": 6,
+      "pts": 14,
+      "w": 7,
       "l": 0
     },
     "luiss": {
