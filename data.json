@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-12T09:07:37.772650",
+  "last_updated": "2026-11-12T23:55:18.184473",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -621,11 +621,23 @@
       "id": "l35_4",
       "team": "luiss",
       "phase": "regular",
-      "round": 35,
-      "date": "2027-11-12",
+      "round": 9,
+      "date": "2026-11-12",
       "time": "20:30",
       "home": "Luiss Roma",
       "away": "PSA Napoli Est",
+      "sh": null,
+      "sa": null
+    },
+    {
+      "id": "l35_5",
+      "team": "luiss",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-11-15",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null
     }

@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-12T22:55:34.641694",
+  "last_updated": "2026-11-12T23:55:22.875165",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -823,6 +823,19 @@
       "round": 9
     },
     {
+      "id": "l35_4",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-11-12",
+      "time": "20:30",
+      "home": "Luiss Roma",
+      "away": "PSA Napoli Est",
+      "sh": null,
+      "sa": null,
+      "round": 9
+    },
+    {
       "id": "bc_roma_spqr_lba_2026-11-15_tezenis_vero",
       "team_key": "bc_roma_spqr",
       "competition_id": "lba_2627",
@@ -1539,14 +1552,14 @@
       ]
     },
     {
-      "id": "l35_4",
+      "id": "l35_5",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
       "phase": "regular",
-      "date": "2027-11-12",
-      "time": "20:30",
+      "date": "2027-11-15",
+      "time": "18:00",
       "home": "Luiss Roma",
-      "away": "PSA Napoli Est",
+      "away": "Liofilchem Roseto",
       "sh": null,
       "sa": null,
       "round": 35
