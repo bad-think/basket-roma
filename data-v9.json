@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-13T01:45:08.666902",
+  "last_updated": "2026-11-13T08:59:46.407939",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -818,8 +818,8 @@
       "time": "20:30",
       "home": "Luiss Roma",
       "away": "PSA Napoli Est",
-      "sh": null,
-      "sa": null,
+      "sh": 92,
+      "sa": 93,
       "round": 9
     },
     {
@@ -831,8 +831,8 @@
       "time": "20:30",
       "home": "Luiss Roma",
       "away": "PSA Napoli Est",
-      "sh": null,
-      "sa": null,
+      "sh": 92,
+      "sa": 93,
       "round": 9
     },
     {
@@ -1576,7 +1576,7 @@
       "pos": 14,
       "pts": 6,
       "w": 3,
-      "l": 4
+      "l": 5
     },
     "bc_roma_spqr": {
       "pos": 0,
