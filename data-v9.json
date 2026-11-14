@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-14T01:22:35.402263",
+  "last_updated": "2026-11-14T08:28:17.010314",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -823,6 +823,19 @@
       "round": 9
     },
     {
+      "id": "l09_2",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-11-12",
+      "time": "20:30",
+      "home": "Luiss Roma",
+      "away": "Skills4u Napoli Est",
+      "sh": 92,
+      "sa": 93,
+      "round": 9
+    },
+    {
       "id": "l35_4",
       "team_key": "luiss",
       "competition_id": "b_naz_2526",
@@ -915,6 +928,19 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "PSA Napoli Est",
+      "sh": null,
+      "sa": null,
+      "round": 13
+    },
+    {
+      "id": "v13_2",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-12-05",
+      "time": "20:00",
+      "home": "Virtus Roma GVM",
+      "away": "Skills4u Napoli Est",
       "sh": null,
       "sa": null,
       "round": 13
@@ -1573,7 +1599,7 @@
       "l": 0
     },
     "luiss": {
-      "pos": 13,
+      "pos": 14,
       "pts": 6,
       "w": 3,
       "l": 5
