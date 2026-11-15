@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-14T08:28:13.285463",
+  "last_updated": "2026-11-15T20:57:45.644599",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -633,8 +633,8 @@
       "id": "l35_5",
       "team": "luiss",
       "phase": "regular",
-      "round": 35,
-      "date": "2027-11-15",
+      "round": 10,
+      "date": "2026-11-15",
       "time": "18:00",
       "home": "Luiss Roma",
       "away": "Liofilchem Roseto",
@@ -664,6 +664,18 @@
       "away": "Skills4u Napoli Est",
       "sh": 92,
       "sa": 93
+    },
+    {
+      "id": "v35_8",
+      "team": "virtus",
+      "phase": "regular",
+      "round": 35,
+      "date": "2027-11-21",
+      "time": "20:00",
+      "home": "Virtus Roma GVM",
+      "away": "Fabo Herons Montecatini",
+      "sh": null,
+      "sa": null
     }
   ],
   "standings": {

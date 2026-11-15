@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-15T10:08:59.010229",
+  "last_updated": "2026-11-15T20:57:49.470175",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -878,6 +878,19 @@
       "round": 10
     },
     {
+      "id": "l35_5",
+      "team_key": "luiss",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-11-15",
+      "time": "18:00",
+      "home": "Luiss Roma",
+      "away": "Liofilchem Roseto",
+      "sh": null,
+      "sa": null,
+      "round": 10
+    },
+    {
       "id": "v05",
       "team_key": "virtus",
       "competition_id": "b_naz_2526",
@@ -1578,14 +1591,14 @@
       ]
     },
     {
-      "id": "l35_5",
-      "team_key": "luiss",
+      "id": "v35_8",
+      "team_key": "virtus",
       "competition_id": "b_naz_2526",
       "phase": "regular",
-      "date": "2027-11-15",
-      "time": "18:00",
-      "home": "Luiss Roma",
-      "away": "Liofilchem Roseto",
+      "date": "2027-11-21",
+      "time": "20:00",
+      "home": "Virtus Roma GVM",
+      "away": "Fabo Herons Montecatini",
       "sh": null,
       "sa": null,
       "round": 35
