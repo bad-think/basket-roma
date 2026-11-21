@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-21T10:26:49.430898",
+  "last_updated": "2026-11-21T21:33:43.093329",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -904,6 +904,19 @@
       "round": 11
     },
     {
+      "id": "v35_8",
+      "team_key": "virtus",
+      "competition_id": "b_naz_2526",
+      "phase": "regular",
+      "date": "2026-11-21",
+      "time": "20:00",
+      "home": "Virtus Roma GVM",
+      "away": "Fabo Herons Montecatini",
+      "sh": null,
+      "sa": null,
+      "round": 11
+    },
+    {
       "id": "maxima_roma_lba_2026-11-22_nutribullet_",
       "team_key": "maxima_roma",
       "competition_id": "lba_2627",
@@ -1589,19 +1602,6 @@
       "sources": [
         "config_static"
       ]
-    },
-    {
-      "id": "v35_8",
-      "team_key": "virtus",
-      "competition_id": "b_naz_2526",
-      "phase": "regular",
-      "date": "2027-11-21",
-      "time": "20:00",
-      "home": "Virtus Roma GVM",
-      "away": "Fabo Herons Montecatini",
-      "sh": null,
-      "sa": null,
-      "round": 35
     }
   ],
   "standings": {
