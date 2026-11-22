@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-21T21:33:38.436624",
+  "last_updated": "2026-11-22T09:13:48.101735",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -122,8 +122,8 @@
       "time": "20:00",
       "home": "Virtus GVM Roma 1960",
       "away": "Fabo Herons Montecatini",
-      "sh": null,
-      "sa": null
+      "sh": 71,
+      "sa": 61
     },
     {
       "id": "v06",
@@ -674,15 +674,15 @@
       "time": "20:00",
       "home": "Virtus Roma GVM",
       "away": "Fabo Herons Montecatini",
-      "sh": null,
-      "sa": null
+      "sh": 71,
+      "sa": 61
     }
   ],
   "standings": {
     "virtus": {
       "pos": 1,
-      "pts": 16,
-      "w": 8,
+      "pts": 18,
+      "w": 9,
       "l": 1
     },
     "luiss": {
