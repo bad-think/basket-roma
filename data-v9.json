@@ -1,6 +1,6 @@
 {
   "$schema_version": "9.0",
-  "last_updated": "2026-11-28T03:11:55.039068",
+  "last_updated": "2026-11-28T09:42:49.011743",
   "season": "2026-27",
   "config": {
     "season": "2026-27",
@@ -938,7 +938,7 @@
       "competition_id": "b_naz_2526",
       "phase": "regular",
       "date": "2026-12-05",
-      "time": "18:30",
+      "time": "17:00",
       "home": "Luiss Roma",
       "away": "Tema Sinergie Faenza",
       "sh": null,
